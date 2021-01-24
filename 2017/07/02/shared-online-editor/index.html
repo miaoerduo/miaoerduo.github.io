@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话：写这篇博客的初衷是因为看到了室友电脑面试的时候，面试官要求在线写代码。然后就想到，如果两个人能够在同一个页面进行编辑工作，不就能更方便的调试代码了吗？（PS.懂linux的screen或tmux的可以绕道了。）代码十分简单，在一个月前就写完了，只是一直没有时间写博客说明一下。  github：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;shared-editor 欢迎">
+<meta property="og:type" content="article">
+<meta property="og:title" content="小喵的在线共享编辑器">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2017&#x2F;07&#x2F;02&#x2F;shared-online-editor&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话：写这篇博客的初衷是因为看到了室友电脑面试的时候，面试官要求在线写代码。然后就想到，如果两个人能够在同一个页面进行编辑工作，不就能更方便的调试代码了吗？（PS.懂linux的screen或tmux的可以绕道了。）代码十分简单，在一个月前就写完了，只是一直没有时间写博客说明一下。  github：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;shared-editor 欢迎">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;shared-online-editor-update.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;shared-online-editor-new-user.png">
+<meta property="article:published_time" content="2017-07-02T16:49:50.000Z">
+<meta property="article:modified_time" content="2017-07-02T16:49:50.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;shared-online-editor-update.png">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2017/07/02/shared-online-editor/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>小喵的在线共享编辑器 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2017/07/02/shared-online-editor/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          小喵的在线共享编辑器
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-07-02 16:49:50" itemprop="dateCreated datePublished" datetime="2017-07-02T16:49:50+00:00">2017-07-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Miscellanea/" itemprop="url" rel="index"><span itemprop="name">Miscellanea</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nodejs/" itemprop="url" rel="index"><span itemprop="name">Nodejs</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/07/02/shared-online-editor/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/07/02/shared-online-editor/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>2.5k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>4 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话：写这篇博客的初衷是因为看到了室友电脑面试的时候，面试官要求在线写代码。然后就想到，如果两个人能够在同一个页面进行编辑工作，不就能更方便的调试代码了吗？（PS.懂linux的screen或tmux的可以绕道了。）代码十分简单，在一个月前就写完了，只是一直没有时间写博客说明一下。</p>
+</blockquote>
+<p>github：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9zaGFyZWQtZWRpdG9y" title="https://github.com/miaoerduo/shared-editor">https://github.com/miaoerduo/shared-editor<i class="fa fa-external-link"></i></span> 欢迎 <strong>fork</strong> 和 <strong>star</strong>。</p>
+<p>那么，实现一个这样的在线的共享编辑器需要哪些工作呢？我们下面一点一点的说明。</p>
+<a id="more"></a>
+<h2 id="一写在前面">一、写在前面</h2>
+<p>熟悉Linux的同学都知道screen和tmux这两个工具。通常我们可以使用他们来执行一些长时间的任务，也可以使用他们的共享终端的功能。在结对编程中，这是很有效的一个工具。</p>
+<p>本文要实现的，是和上述两个工具类似的共享编辑器。要说优点的话，可能就是更亲民一些，打开网页就能使用。很适合远程帮女票看个代码啥的（好像很多公司里面会截断websocket，这样就没法用了）。</p>
+<p>实现一个这样的编辑器，主要有两个部分。编辑器和同步数据的服务端。下面我们依次介绍。</p>
+<h2 id="二在线编辑器">二、在线编辑器</h2>
+<p>首先，我们需要一个好看的编辑器。调研了一下，找到了ACE这个编辑器，网址是 <span class="exturl" data-url="aHR0cHM6Ly9hY2UuYzkuaW8=" title="https://ace.c9.io">https://ace.c9.io<i class="fa fa-external-link"></i></span> ，简单的了解了一下这个编辑器，发现居然连Github用的都是这个编辑器！看来我们选择这个编辑器是没错的啦。</p>
+<p>使用起来也异常的简单，官方的Demo如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE <span class="meta-keyword">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span> <span class="attr">lang</span>=<span class="string">"en"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">title</span>&gt;</span>ACE in Action<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">style</span> <span class="attr">type</span>=<span class="string">"text/css"</span> <span class="attr">media</span>=<span class="string">"screen"</span>&gt;</span></span><br><span class="line"><span class="css">  <span class="selector-id">#editor</span> &#123;</span></span><br><span class="line">    position: absolute;</span><br><span class="line">    top: 0;</span><br><span class="line">    right: 0;</span><br><span class="line">    bottom: 0;</span><br><span class="line">    left: 0;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">"editor"</span>&gt;</span>function foo(items) &#123;</span><br><span class="line">  var x = "All this is syntax highlighted";</span><br><span class="line">  return x;</span><br><span class="line">  &#125;<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"/ace-builds/src-noconflict/ace.js"</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">charset</span>=<span class="string">"utf-8"</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="actionscript">  <span class="keyword">var</span> editor = ace.edit(<span class="string">"editor"</span>);</span></span><br><span class="line"><span class="actionscript">  editor.setTheme(<span class="string">"ace/theme/monokai"</span>);</span></span><br><span class="line"><span class="actionscript">  editor.getSession().setMode(<span class="string">"ace/mode/javascript"</span>);</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>上面的script中的src可能需要换成可以访问的链接。之后就能预览到编辑器的效果。大致和前面小喵的效果类似。 具体的其他的用法可以在官网中查到，这里小喵就不着重介绍了。</p>
+<h2 id="三消息同步机制">三、消息同步机制</h2>
+<p>选择好合适的编辑器之后，我们需要做的就是消息通信的功能了。</p>
+<p>这里主要有四种情况：</p>
+<h3 id="文档同步">1. 文档同步</h3>
+<p>当用户修改文档的时候，其修改的部分必须同步到所有的阅读改文档的用户。这里只同步修改的部分，因为每次都同步整个文档，那么会很消耗带宽（总不能输入一个 "hello world"都同步十几次文档吧）。</p>
+<p>下图是一个示例（强势安利一下：<span class="exturl" data-url="aHR0cHM6Ly93d3cucHJvY2Vzc29uLmNvbQ==" title="https://www.processon.com">https://www.processon.com<i class="fa fa-external-link"></i></span> 这个画图的工具）。用户1编辑了文档，文档更新的内容发送给了服务器，服务器将更新的内容组播到所有打开相同文档的用户（注意，这里不是广播，广播是向所有的用户发送），同时更新自己的远程备份。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/shared-online-editor-update.png" /></p>
+<center>
+图1 文档更新
+</center>
+<h3 id="文档副本">2. 文档副本</h3>
+<p>当用户第一次访问已经存在的文档的时候。这个时候，该用户需要加载页面的所有的内容。因此我们的服务器端需要存放完整的文档的副本。</p>
+<p>如下图，用户3打开了这个文档，这时候会请求服务器发送完整的文档信息。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/shared-online-editor-new-user.png" /></p>
+<center>
+图2 新增用户
+</center>
+<h3 id="文档销毁">3. 文档销毁</h3>
+<p>小喵这里的文档的内容是直接在内存中保存的。这样的好处是很方便，不需要额外的控制数据库啥的。但是弊端也很明显，虽然每个文档可能比较小，但如果文档创建的比较多，就会一直消耗内存。所以当没有用户使用文档的时候，需要删除文档，这样服务器端就需要保存一个引用计数。计数为0，就删除文档。</p>
+<h3 id="冲突解决">4. 冲突解决</h3>
+<p>考虑到网络可能会出现故障，用户在编辑文档之后，其他的用户可能并没有即使同步，这样就出现文档落后的情况。一个简单的策略就是，每次文档修改之后都返回一个时间戳，下一次修改文档的时候要将这个时间戳作为参数发送到服务器，如果时间戳不是最新的，那么就刷新整个文档。当然这个策略也有很多的不足之处，如果大家能有什么改进，烦请告诉小喵一下~</p>
+<p>上面就是设计部分，具体实现的话，需要用到WebSocket技术，这是浏览器和服务器实时通信的一个很好的工具。WebSocket有很多语言的实现，小喵这里选择的是比较容易上手的 <span class="exturl" data-url="aHR0cHM6Ly9zb2NrZXQuaW8=" title="https://socket.io">socket.io<i class="fa fa-external-link"></i></span>。</p>
+<p>socket.io 不仅支持用户和服务器的点对点通信，还支持组播、广播的操作。简单的学习一下，就可以完成上面的设计。</p>
+<p>这里，小喵也不在代码层面上解释实现了。感兴趣的同学可以看看小喵的github: <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9zaGFyZWQtZWRpdG9y" title="https://github.com/miaoerduo/shared-editor">https://github.com/miaoerduo/shared-editor<i class="fa fa-external-link"></i></span></p>
+<p>能够给小喵提交一些PR的话就更好了。</p>
+<h2 id="四写在后面">四、写在后面</h2>
+<p>终于写完这篇博客了，拖了快两个月了。之前迟迟没有动手的一个原因是比较忙，更多的可能因为自己有点懒，一直不想画解释原理的示意图。现在终于写完了，还是挺开心的。</p>
+<p>这次的博客相比之前的，更多的是介绍设计的思路。反正代码都在github上了，大家可以随意食用~ 希望能和大家一起进步！</p>
+<p><strong>转载</strong> 请注明出处，谢谢~</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/03/14/cartoon-cat-server/" rel="prev" title="简易漫画网站搭建-漫画喵Server版">
+      <i class="fa fa-chevron-left"></i> 简易漫画网站搭建-漫画喵Server版
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/01/08/dlib-landmark-model-compression/" rel="next" title="dlib人脸关键点检测的模型分析与压缩">
+      dlib人脸关键点检测的模型分析与压缩 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一写在前面"><span class="nav-text">一、写在前面</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二在线编辑器"><span class="nav-text">二、在线编辑器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三消息同步机制"><span class="nav-text">三、消息同步机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#文档同步"><span class="nav-text">1. 文档同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文档副本"><span class="nav-text">2. 文档副本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文档销毁"><span class="nav-text">3. 文档销毁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#冲突解决"><span class="nav-text">4. 冲突解决</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四写在后面"><span class="nav-text">四、写在后面</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2017/07/02/shared-online-editor/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

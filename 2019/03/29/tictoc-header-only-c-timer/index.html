@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="感觉最近的更新频率略高啊～哈哈～ 这次的带来的是一个十分简单便利的C++计时库。 项目地址：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;tictoc 欢迎Start和提MR。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TICTOC: Header Only C++ Timer">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2019&#x2F;03&#x2F;29&#x2F;tictoc-header-only-c-timer&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="感觉最近的更新频率略高啊～哈哈～ 这次的带来的是一个十分简单便利的C++计时库。 项目地址：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;tictoc 欢迎Start和提MR。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-03-29T01:24:00.000Z">
+<meta property="article:modified_time" content="2019-03-29T01:24:00.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2019/03/29/tictoc-header-only-c-timer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>TICTOC: Header Only C++ Timer | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2019/03/29/tictoc-header-only-c-timer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          TICTOC: Header Only C++ Timer
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-03-29 01:24:00" itemprop="dateCreated datePublished" datetime="2019-03-29T01:24:00+00:00">2019-03-29</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Miscellanea/" itemprop="url" rel="index"><span itemprop="name">Miscellanea</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2019/03/29/tictoc-header-only-c-timer/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2019/03/29/tictoc-header-only-c-timer/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>4.2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>7 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>感觉最近的更新频率略高啊～哈哈～</p>
+<p>这次的带来的是一个十分简单便利的C++计时库。</p>
+<p>项目地址：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by90aWN0b2M=" title="https://github.com/miaoerduo/tictoc">https://github.com/miaoerduo/tictoc<i class="fa fa-external-link"></i></span></p>
+<p>欢迎<strong>Start</strong>和提<strong>MR</strong>。</p>
+<a id="more"></a>
+<p>项目中有详细的说明和Demo，可以很直观的体验到这个库的易用性。</p>
+<p>先看一下效果，如果我们正确使用的话，大致会出现类似下面的信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">demo.cpp @ main [    8,   13]   elapsed:      0.025 s      24.786 ms       24786 us</span><br><span class="line">demo.cpp @ main [    8,   18]   elapsed:      0.049 s      48.709 ms       48709 us</span><br><span class="line">demo.cpp @ main [    8,   23]   elapsed:      0.072 s      72.211 ms       72211 us</span><br><span class="line">demo.cpp @ main [    8,   24]   elapsed:      0.072 s      72.225 ms       72225 us</span><br><span class="line">demo.cpp @ main [   30,   36]   elapsed:      0.022 s      21.747 ms       21747 us</span><br><span class="line">demo.cpp @ main [   36,   41]   elapsed:      0.021 s      21.463 ms       21463 us</span><br></pre></td></tr></table></figure>
+<p>可以显示，我们的每个区域的代码（包括行号）的消耗时间。精确到微秒。</p>
+<p>起因是这样的，之前有很长时间的工作内容是优化一些特定的函数，保证新旧的SDK的速度的对齐。然后C++虽然有一些工具可以分析运行状态，但通常还是简单的打印时间来的方便 <span style="color: green">/* Print大法好 */</span>。</p>
+<p>之后，和工程的小伙伴一起Debug的时候，就发现他写了一个头文件，然后用绝对路径的方式去include，而头文件里面就是各种常用的小工具，而最常用到的就是时间的打印。</p>
+<p>之后，我专门要到了他的百宝箱，仔细分析了一下，发现计时器模块仍然存在一些问题：</p>
+<ol type="1">
+<li>在Debug的时候，如果加上工具代码，在Release的时候，还得一点点删掉，很麻烦。</li>
+<li>修改时间精度的话，需要修改源码，略麻烦。</li>
+<li>打印的时间戳的信息不完整，看不出来该段时间具体的代码的范围。</li>
+<li>计时器如果在多个文件中都用到，会有各种奇怪的错误，重复定义变量啊，或者找不到变量啥的。</li>
+<li>对更复杂的程序，比如各种库的编译，多个库的链接调用不支持。</li>
+</ol>
+<p>上面说的问题，说大不大，说小不小。如果能有个工具能解决上面5个问题，那也是一件十分惬意的事情。所以，也就有了本文和 <code>TICTOC</code> 这个库。接下来，我们会从上面的5个问题开始，一点一点介绍C++的小技巧。</p>
+<h3 id="设计思路">〇、设计思路</h3>
+<p>其实计时器的思路很简单，就是定义两个宏 <code>TIC</code> 和 <code>TOC</code>，如果插入 <code>TIC</code>，则记录为起始时间，当插入 <code>TOC</code> 的时候，则计算与上一次 <code>TIC</code> 之间的时间，并打印出来。</p>
+<p>比较麻烦的是，如果我在使用 <code>TIC</code> 的时候，生成一个变量，那连续使用两次 <code>TIC</code> 的话，就会出现变量的重复定义。另一个方案就是在全局定义一个时间的变量，但这样会带来另一个问题，就是所有函数都共享这个变量，如果函数内部再运行一次 <code>TIC</code>，会覆盖掉这个时间戳，但是其他的 <code>TOC</code> 的结果不直观。</p>
+<p>所以，这里就使用了一个字典，来存放 <code>TIC</code> 的时间戳。这个字典本身是使用单例模式去生成和维护的。每次 <code>TIC</code> 的时候都会初始化一次它，但是由于是单例，所以只有第一次会耗时。而字典的键是个字符串，由文件名+函数名联合构成。这样针对每个函数，都会有自己的一个计时器，就不用担心冲突了。之后运行 <code>TOC</code> 的时候，也会检查当前的文件名和函数名，从而与对应的 <code>TIC</code> 时间戳相减。是不是听起来很简单！</p>
+<p>当然还会碰到很多奇怪的问题，其中最无语的是，当动态库使用这个库，而主程序也使用这个库的时候，所谓的单例模式就失效了，两段程序里面都会有这个字典，然后就冲突了，出现 <code>double free</code> 的情况。查了半天，才发现是动态库只在静态表导出这个单例，动态连接器默认查询动态表，没找到，从而主程序自己又重复构建了这个实例，导致了存在两个实例。最终用 <code>-rdynamic</code> 的方式编译就可以解决。但是用这种方式的话，又会显得很麻烦。我采用的解决方法是匿名命名空间，在每个文件中生成自己的单例。细节我们在后面会谈到。</p>
+<h3 id="一debug-or-release">一、Debug or Release</h3>
+<p>因为我们不希望在Deliver的时候，再修改代码，所以有没有办法，使用不同的宏来控制我们的程序呢？当然是可以的。<code>C/C++</code> 最常用到的预处理语句：<code>#define</code>, <code>#ifdef</code>, <code>#ifndef</code>，<code>#else</code>, <code>#endif</code>。采用下面的方式来进行就可以。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> TICTOC_HPP</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TICTOC_HPP</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> WITH_TICTOC</span></span><br><span class="line"><span class="comment">// 一些计时器的逻辑单元</span></span><br><span class="line"><span class="comment">// 函数啥的</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"><span class="comment">// 一些假的信息</span></span><br><span class="line"><span class="comment">// 比如宏函数，内容空的，免得编译不过</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>首先，这个 <code>TICTOC_HPP</code> 的宏定义，是为了防止头文件的多次包含。不然在多处include这个头文件的时候，会出现函数重复定义的问题。是一个良好的编程习惯。</p>
+<p><code>WITH_TICTOC</code> 这个宏才是用来控制我们的Debug/Release的关键。在Debug的时候，编译加入一个宏定义，用g++直接编译的话，就是编译的时候加上 <code>-DWITH_TICTOC</code>。用CMakeLists的话，就是另一套了，自己查一下吧。在Release的时候，去掉这个宏定义就行，这样编译走的就是 <code>#else</code> 的分之，里面可以不写代码（我这里还是写了几行，定义了一些宏，但是宏的操作是空的）。</p>
+<p>总之，灵活的使用宏定义，就可以让我们的编译器按照我们的想法去工作！</p>
+<h3 id="二多种精度">二、多种精度</h3>
+<p>问题二就比较简单了，既然每设置一种精度，都要修改一下代码，不如一次性的将所有的精度都打印出来了！这部分似乎没有什么好说的，就简单的说一下，我这里用到的计时的函数吧。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">struct timeval &#123;</span></span><br><span class="line"><span class="comment">    time_t       tv_sec;     // seconds</span></span><br><span class="line"><span class="comment">    suseconds_t  tv_usec;    // microseconds</span></span><br><span class="line"><span class="comment">&#125;;</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function">struct timeval <span class="title">get_tick</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">time</span>;</span></span><br><span class="line">    gettimeofday(&amp;time, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="keyword">return</span> time;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>timeval</code> 是一个表示时间的结构体，可以精确到微秒级别，完全够我们使用了。</p>
+<h3 id="三打印完整的信息">三、打印完整的信息</h3>
+<p>首先，对于一个计时器，为了方便调试，我们希望知道什么信息呢？这里列出来我比较关心的：</p>
+<ol type="1">
+<li>这个时间戳所在的位置，包括：文件名，函数名</li>
+<li>时间戳是哪一段代码产生的，即：起始和结束的代码行号</li>
+<li>具体的时间（按不同精度显示）</li>
+</ol>
+<p>对于3，上文已经介绍了。那么如何获取文件名、函数名以及行号呢？</p>
+<p>其实C++中（C语言中也有的）早就给我们定义好了一些宏。这里就简单的列一下常用的几个，大家感兴趣也可以自己去查询：</p>
+<ol type="1">
+<li><code>__FILE__</code> : 宏所在的文件名</li>
+<li><code>__FUNCTION__</code> : 宏所在的函数名</li>
+<li><code>__LINE__</code> : 当前行号</li>
+<li><code>__DATE__</code>, <code>__TIME__</code> : 最后一次编译的时间</li>
+<li><code>__TIMESTAMP__</code> : 文件最后的修改时间</li>
+</ol>
+<p>所以，我们这里主要用到三个：<code>__FILE__</code>, <code>__FUNCTION__</code>, <code>__LINE__</code> 。</p>
+<h3 id="四working-everywhere">四、Working Everywhere</h3>
+<p>上面的问题4和5，放在一起介绍。</p>
+<p>针对问题4，是我们在多个文件同时使用了计时器，如果通过全局变量的方式去存储时间戳，那么每个文件都会有自己的时间戳，从而导致冲突（当然，把时间戳改成 <code>static</code> 的可能可以解决）。而且，同一个文件中，如果出现函数调用，也有修改这个全局的时间戳，导致打印时间很不友好。</p>
+<p>这里使用字典来存放时间戳，给每个文件都创建自己的时间戳，从而解决了这个问题。在〇章中，也有介绍。</p>
+<p>那么问题5就很复杂了，多个动态库同时使用时，会崩溃。首先，为了让字典在程序中，只存在一份，我这里使用了单例模式。如果把所有的文件都编译在一起，是完全OK的。问题就出在，如果动态库使用了这个工具，而主程序也使用该工具，且又链接了动态库，那么程序中就会出现多个字典，在程序退出析构的时候，就会出现多次 <code>free</code> 的情况（很奇怪吧，明明是两个实例，居然两次析构函数都调用同一个实例）。之前也说了，用 <code>-rdynamic</code> 的方式编译会很麻烦，而且我们不可能给整个大项目的每个部分都加这个编译选项吧。我们的工具库要足够的独立！</p>
+<p>按照之前的分析，我们其实只需要给每个函数都分配自己的一个键就可以了，其实完全没必要只有一个Global的字典，只需要给每个文件都生成自己的字典不就OK了吗。但是，怎么去实现呢？</p>
+<p>常见的方法有两个：</p>
+<ol type="1">
+<li><code>static 变量</code>，<code>static</code> 关键字有一个功能，是保证这个变量只在该文件中使用。不会导出。</li>
+<li>匿名命名空间，也叫匿名名字空间，这里采用的就是这个方案。</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> &#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">print</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"hello world"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面就是最简单的匿名命名空间，如果我们在代码中这么定义，其等价于：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> thisisaspecificnamespace &#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">print</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"hello world"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> thisisaspecificnamespace;</span><br></pre></td></tr></table></figure>
+<p>里面的这个大长串是啥意思？</p>
+<p>其实thisisaspecificnamespace这个名字是我瞎写的，对于编译器，他会给这个匿名命名空间生成一个独一无二的名字，保证一定不重复，然后在改文件中，using它。所以自然就只有这个文件本身能够调用里面的函数了。</p>
+<p>我们的工具是一个纯头文件，所有的库想依赖该文件，都会直接include它，而include操作其实就是简单的copy文件的内容，所以这段代码就会进入每个文件自身中，成为其源码的一部分。如此，只要我们把单例维护的代码放在匿名命名空间中，就可以保证其在每个文件中有且只有一个。就不用担心不同的库之间的冲突了。</p>
+<h3 id="五补充">五、补充</h3>
+<p>最后，我编写的这个库，并没有花费太多的时间，不过编程的过程中，确实还是感受到一点快乐的。不知不觉，现在写代码的时候，更喜欢以一种工具或是框架的角度去审核自己的作品。相比于追求编程的速度，慢慢蜕变成追求更优雅的设计，更简洁和实用的功能以及尽可能好的兼容性。</p>
+<p>这里，小喵与你共同进步！</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/03/23/easy-pipeline/" rel="prev" title="Easy Pipeline，一种轻量级的Python Pipeline库">
+      <i class="fa fa-chevron-left"></i> Easy Pipeline，一种轻量级的Python Pipeline库
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/04/02/2019-04-02/" rel="next" title="随笔">
+      随笔 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#设计思路"><span class="nav-text">〇、设计思路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#一debug-or-release"><span class="nav-text">一、Debug or Release</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二多种精度"><span class="nav-text">二、多种精度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三打印完整的信息"><span class="nav-text">三、打印完整的信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四working-everywhere"><span class="nav-text">四、Working Everywhere</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#五补充"><span class="nav-text">五、补充</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2019/03/29/tictoc-header-only-c-timer/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

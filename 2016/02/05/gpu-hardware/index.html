@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话：没想到研究生的生活这么繁忙，居然还有考试。小喵都快累成狗了。终于稍微闲下来一点了，开始继续写博客。这次的题目，其实是差不多一个月之前就想好的，但是一直碰到许多的事情，就耽搁了。  这片文章主要介绍一下GPU的硬件结构。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GPU硬件结构">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2016&#x2F;02&#x2F;05&#x2F;gpu-hardware&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话：没想到研究生的生活这么繁忙，居然还有考试。小喵都快累成狗了。终于稍微闲下来一点了，开始继续写博客。这次的题目，其实是差不多一个月之前就想好的，但是一直碰到许多的事情，就耽搁了。  这片文章主要介绍一下GPU的硬件结构。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;GPU_hardware.jpg">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;GPU_hardware.jpg">
+<meta property="article:published_time" content="2016-02-05T14:26:57.000Z">
+<meta property="article:modified_time" content="2016-02-05T14:26:57.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;GPU_hardware.jpg">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2016/02/05/gpu-hardware/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>GPU硬件结构 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2016/02/05/gpu-hardware/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          GPU硬件结构
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2016-02-05 14:26:57" itemprop="dateCreated datePublished" datetime="2016-02-05T14:26:57+00:00">2016-02-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CUDA/" itemprop="url" rel="index"><span itemprop="name">CUDA</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2016/02/05/gpu-hardware/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2016/02/05/gpu-hardware/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话：没想到研究生的生活这么繁忙，居然还有考试。小喵都快累成狗了。终于稍微闲下来一点了，开始继续写博客。这次的题目，其实是差不多一个月之前就想好的，但是一直碰到许多的事情，就耽搁了。</p>
+</blockquote>
+<p>这片文章主要介绍一下GPU的硬件结构。</p>
+<a id="more"></a>
+<p>首先，给大家看一张示意图（图片资源来自网上）。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/GPU_hardware.jpg" alt="GPU（G80/GT200）卡的组成模块图" /></p>
+<center>
+图1 GPU（G80/GT200）卡的组成模块图
+</center>
+<p><img data-src="http://cdn.miaoerduo.com/images/GPU_hardware.jpg" alt="GPU硬件结构示意图" /></p>
+<center>
+图2 GPU结构示意图
+</center>
+<p>这里，我们主要了解需要有以下几个认识：</p>
+<h3 id="一个主机可以有多个gpu">1，一个主机可以有多个GPU**</h3>
+<p>像我们一般的PC机，就大多数有集显和独显。一般的运算服务器，也是可以一个机器上有多显卡。不同的主板上的有不同数目的显卡的插槽，需要强大的计算性能就可以考虑多卡的结构。当然电源和散热可能就会成为新的问题。</p>
+<h3 id="smstreaming-multiprocessors-and-spstream-processor">2，SM(Streaming Multiprocessors) and SP(Stream Processor)</h3>
+<p>GPU是一种<strong>SPMD</strong>（single program, multiple data）的工作方式是<strong>SIMD</strong>（Single Instruction Multiple Data）的一个升华。在同一时间，多个处理器运行同一套程序，但是处理的数据可以不同。这样带来的效果就是，如果简单的重复的任务特别多的话（比如向量的加法），GPU可以在同一时间处理多条数据。而且每个处理器需要处理的程序是相同的，因此只需要一次指令的取操作，所有处理器可以共同执行，效率上大大提高了。 流处理器簇（SM）的概念与CPU的核心类似，GPU的程序的执行单位就是SM，GPU的SM的数目通常有15-16个，一个SM中包含了多个SP，通常是32个，SP是实际的执行单元。对于一堆任务，GPU会按照以32个为一个单位分配到每个SM中执行。 举个例子，对于向量的加法，假设有两个向量长度分别为1024，每个SP都执行一个加法，那么一共会有1024/32=32批任务，如果每个GPU有16个SM，则每个SM被调用了32/16=2次。<strong>不考虑内存读写，指令优化，或其他的延时，只考虑计算时间</strong>。那么可以理解该次计算只需要2个计算的周期（切记，这里有取指令，取数据，运算和写数据的各种时间）。而对于一个四核的CPU机器而言，需要1024/4=256次计算周期。100倍的差距。</p>
+<h3 id="内存">3，内存</h3>
+<p>GPU的内存通常称为显存，是GPU上高速读写的存储介质，功能上和PC的内存类似。但GPU上的内存分为多种，具体有：寄存器内存，共享内存，全局内存，纹理内存，常量内存。看到这么多种内存，有没有和小喵一样目瞪口呆？</p>
+<p>下面表格里是内存的带宽和延时</p>
+**
+<center>
+Access Time by Memory Type
+</center>
+<p>**</p>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 29%" />
+<col style="width: 18%" />
+<col style="width: 19%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Storage Type</th>
+<th>Registers Shared Memory</th>
+<th>Texture Memory</th>
+<th>Constant Memory</th>
+<th>Global Memory</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Bandwidth</td>
+<td>~8 TB/s ~1.5 TB/s</td>
+<td>~200 MB/s</td>
+<td>~200 MB/s</td>
+<td>~200 MB/s</td>
+</tr>
+<tr class="even">
+<td>Latency</td>
+<td>1 cycle</td>
+<td>1 to 32 cycles</td>
+<td>~400 to 600</td>
+<td>~400 to 600</td>
+</tr>
+</tbody>
+</table>
+<h4 id="寄存器内存">寄存器内存</h4>
+<p>读写最高效的内存，在CPU上，可用的寄存器内存微乎其微。</p>
+<p>于是小喵专门Google了一下：</p>
+<blockquote>
+<p>Registers are memories located within the Central Processing Unit (CPU). They are few in number (there are rarely more than 64 registers) and also small in size, typically a register is less than <strong>64 bits</strong> in size.[1]</p>
+</blockquote>
+<p>但是GPU上，每个SM就提供了至少8192个寄存器！也就是说，如果一个SM上只运行32个线程，平均每个线程可以得到8192/32=256个寄存器（虽然通常不会只运行这么少的线程）。</p>
+<p>GPU为了能够高效的工作，在粗细两个粒度对内存和任务进行管理。合理的使用各种内存可以使自己的程序更加高效。</p>
+<h4 id="共享内存">共享内存</h4>
+<p>顾名思义，是指数据能够共享的一块内存。该内存主要在每个SM内部，同一个SM中的所有的SP都可以访问该块内存。而且读写速度仅次于寄存器内存，因此在线程间进行通信用共享内存最适合不过了。</p>
+<h4 id="全局内存">全局内存</h4>
+<p>在整个GPU上，任何部件都能访问的内存，我们平时说的显存1G等等的就是说的全局内存。全局内存是GPU上最大的内存，也是我们最常打交道的内存。相比于寄存器内存和共享内存，全局内存的读写速度慢了几个数量级。所以我们在设计GPU的程序的时候，要尽量充分利用寄存器内存和共享内存，才能设计出高效的程序。</p>
+<h4 id="常量内存">常量内存</h4>
+<p>存放常量，大小通常是32K（本质上和L2缓存共享了内存，可以通过API修改模式）。</p>
+<h4 id="纹理内存">纹理内存</h4>
+<p>这个现在的作用比较少了，但功能很特殊，在后面会详细介绍。 以上就是GPU的硬件结构的简单介绍。感兴趣的同学可以访问NVIDIA的官网，获取更多的信息。</p>
+<p>[1]<span class="exturl" data-url="aHR0cDovL3d3dy5kb2MuaWMuYWMudWsvfmVlZHdhcmRzL2NvbXBzeXMvbWVtb3J5Lw==" title="http://www.doc.ic.ac.uk/~eedwards/compsys/memory/">http://www.doc.ic.ac.uk/~eedwards/compsys/memory/<i class="fa fa-external-link"></i></span></p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/01/26/tutorial-to-build-caffe/" rel="prev" title="从0到1，手把手教你配置Caffe环境">
+      <i class="fa fa-chevron-left"></i> 从0到1，手把手教你配置Caffe环境
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2016/02/07/hello-cuda/" rel="next" title="Hello CUDA - CUDA程序简单入门">
+      Hello CUDA - CUDA程序简单入门 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一个主机可以有多个gpu"><span class="nav-text">1，一个主机可以有多个GPU**</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#smstreaming-multiprocessors-and-spstream-processor"><span class="nav-text">2，SM(Streaming Multiprocessors) and SP(Stream Processor)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#内存"><span class="nav-text">3，内存</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#寄存器内存"><span class="nav-text">寄存器内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#共享内存"><span class="nav-text">共享内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#全局内存"><span class="nav-text">全局内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#常量内存"><span class="nav-text">常量内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#纹理内存"><span class="nav-text">纹理内存</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2016/02/05/gpu-hardware/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

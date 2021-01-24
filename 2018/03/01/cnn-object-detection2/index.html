@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="这次介绍的是2015年的Kaiming He的一篇论文：Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition，以下简称SPP-net。 SPP-net的主要贡献是提出了一种新的pooling的方式，spatial pyramid pooling，简称为SPP。使用这种pooling的方式，可以将">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CNN的目标检测概述（二）">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2018&#x2F;03&#x2F;01&#x2F;cnn-object-detection2&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="这次介绍的是2015年的Kaiming He的一篇论文：Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition，以下简称SPP-net。 SPP-net的主要贡献是提出了一种新的pooling的方式，spatial pyramid pooling，简称为SPP。使用这种pooling的方式，可以将">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-object-detection-crop-and-warp.jpg">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-and-spp-net.jpg">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-object-detection-spp-framework.jpg">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-object-detection-multi-scale-test.jpg">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-object-detection-full-image-train.jpg">
+<meta property="article:published_time" content="2018-03-01T17:10:59.000Z">
+<meta property="article:modified_time" content="2018-03-01T17:10:59.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cnn-object-detection-crop-and-warp.jpg">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2018/03/01/cnn-object-detection2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>CNN的目标检测概述（二） | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2018/03/01/cnn-object-detection2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          CNN的目标检测概述（二）
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-03-01 17:10:59" itemprop="dateCreated datePublished" datetime="2018-03-01T17:10:59+00:00">2018-03-01</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Deep-Learning/" itemprop="url" rel="index"><span itemprop="name">Deep Learning</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2018/03/01/cnn-object-detection2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/03/01/cnn-object-detection2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>4.9k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>8 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>这次介绍的是2015年的Kaiming He的一篇论文：Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition，以下简称SPP-net。 SPP-net的主要贡献是提出了一种新的pooling的方式，spatial pyramid pooling，简称为SPP。使用这种pooling的方式，可以将任意大小的输入feature map给pooling到固定的大小。使用这种pooling的方式，最终在分类和检测任务上均有一定的效果。</p>
+</blockquote>
+<a id="more"></a>
+<h3 id="二spp-net">二、SPP-net</h3>
+<h4 id="问题描述">1）问题描述</h4>
+<p>在介绍SPP这个pooling方式之前，我们先说一下，为什么需要这种特殊的pooling。</p>
+<p>一般来看，CNN结构通常都由两个部分组成：卷积层和全连接层。比如7层的AlexNet，就是由5层的卷积层和2层的全连接层组成。对于卷积层，它可以处理任意尺度的输入（= = 请忽略极端情况）。而全连接层需要固定大小的输入。因此最终，我们的CNN结构的输入大小是由全连接层所固定。</p>
+<p>那么固定大小的输入会造成什么问题呢？一般图像的大小并不是固定的，但是CNN要求输入固定，这样我们通常会采取两种方式得到固定大小的图像：裁剪和变形（仿射变换，缩放等）。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/cnn-object-detection-crop-and-warp.jpg" /></p>
+<p>裁剪操作很难正好的包含需要的目标，而变形的方式会导致目标发生形变。两种方式都不能很好的处理图片的尺度问题。</p>
+<p>而SPP这种pooling方式的引入，就可以突破CNN固定输入的约束。SPP可以将任意大小的输入feature map给pooling到固定的大小。将SPP层加在最后一个卷积层的后面，这样就可以pooling出固定的大小，之后再接上全连接层。这样得到的CNN结构，就可以以任意尺度的图像作为输出了，而使用了SPP层的网络，就成为SPP-net。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/cnn-and-spp-net.jpg" /></p>
+<p>这张图就是一般的CNN结构（上）和SPP-net（下）的结构示意图。</p>
+<h4 id="spp层工作流程">2）SPP层工作流程</h4>
+<p>使用SPP层的CNN结构如下：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/cnn-object-detection-spp-framework.jpg" /></p>
+<p>这里重点介绍一下SPP层的工作方式，之前查阅其他的博客，发现都没有得到很好地解释，为此专门阅读了Caffe的SPPLayer实现代码，发现实现的方式很简单。</p>
+<p>上图中，最下方是CNN的卷积部分，黑色的部分是最后一个卷积层的输出，在这个图里面，卷积的最终输出的通道数为256。</p>
+<p>对于一个feature map，我们按照固定的方式对他进行划分。比如现在有一个feature map的宽和高分别是W和H，通道数不妨就取256。我们使用MAX-Pooling的方式做处理，金字塔的层数设置为3。</p>
+<p>首先，我们将这个feature map复制为3份。每一份都看成金字塔的一层。</p>
+<ol type="1">
+<li>对于第一层，也就是顶层，即图中最右边的示意图。我们将整个feature map看做一个整体。这样使用一个 <code>(W, H)</code> 的kernel来进行pooling，这样就得到了 <code>1*1*256</code> 的输出。</li>
+<li>对于第二层，即图中的中间的示意图。我们将feature map看成 <code>2*2</code> 个独立的区域，每个区域单独的pooling。实现上即使用了kernel大小为 <span class="math inline">\((\lceil \frac{W}{2}\rceil ,\lceil \frac{H}{2}\rceil )\)</span>，stride大小为 <span class="math inline">\((\lceil \frac{W}{2}\rceil ,\lceil \frac{H}{2}\rceil )\)</span> 的一个pooling层进行pooling。最终得到了 <code>2*2*256</code> 的输出。</li>
+<li>同理，第三层，即图中的左边的示意图。将feature map看成 <code>4*4</code> 个独立的区域，单独pooling。使用kernel大小为 <span class="math inline">\((\lceil \frac{W}{4}\rceil ,\lceil \frac{H}{4}\rceil )\)</span>，stride大小为 <span class="math inline">\((\lceil \frac{W}{4}\rceil ,\lceil \frac{H}{4}\rceil )\)</span> 的pooling层进行pooling。最终得到 <code>4*4*256</code> 的输出。</li>
+<li>总结下来，就是对于第N层，我们将整个feature map划分成 <span class="math inline">\((2^{N-1}*2^{N-1})\)</span> 的区域，分别pooling。实现上使用kernel为 <span class="math inline">\((\lceil \frac{W}{2^{N-1}}\rceil ,\lceil \frac{H}{2^{N-1}}\rceil )\)</span>，stride为 <span class="math inline">\((\lceil \frac{W}{2^{N-1}}\rceil ,\lceil \frac{H}{2^{N-1}}\rceil )\)</span> 的pooling层进行pooling即可，最终得到 <span class="math inline">\((2^{N-1}*2^{N-1}*dim)\)</span> 的输出。</li>
+</ol>
+<p>最终将所有的pooling的结果进行flatten，最后concat在一起就完成。这里由于输入的feature map的大小可能不能被 <span class="math inline">\(2^N\)</span>整除，采取了向上取整的做法，因此有时候需要额外的pad来填充feature map。</p>
+<p>还有，这里使用的 <span class="math inline">\(2^N\)</span> 这种区域划分的策略，那么我们能不能使用其他的策略呢？比如划分成 <code>1*1</code>，<code>3*3</code>，<code>5*5</code>，<code>7*7</code>...这个样子呢？这里，其实是可以的。SPP提供的是一个pooling的策略，只要能理解他的原理，我们完全可以设计一个自己的pooling方式。事实上，作者也使用了<code>1*1</code>，<code>2\*2</code>，<code>3*3</code>这样的三级划分。</p>
+<p>以上就是SPP层的实现原理，总结下来就是，对输入feature map使用多个不同大小的pooling层进行无重叠的pooling操作，最终再合并。</p>
+<p>如果这里解释的还不够清楚地话，可以参看一下Caffe的源码，相信聪慧的你一定能轻松的理解。</p>
+<h4 id="spp层的特性">3）SPP层的特性</h4>
+<p>这里直接照搬论文的说法：</p>
+<blockquote>
+<p>We note that SPP has several remarkable properties for deep CNNs: 1) SPP is able to generate a fixed-length output regardless of the input size, while the sliding window pooling used in the previous deep networks cannot; 2) SPP uses multi-level spatial bins, while the sliding window pooling uses only a single window size. Multi-level pooling has been shown to be robust to object deformations; 3) SPP can pool features extracted at variable scales thanks to the flexibility of input scales. Through experiments we show that all these factors elevate the recognition accuracy of deep networks.</p>
+</blockquote>
+<p>SPP有很多特性：</p>
+<ol type="1">
+<li>SPP能够对于任意大小的输入，得到固定大小的输出。（强调输出大小固定）</li>
+<li>SPP使用了多级的pooling维度（从上面的SPP工作流程就能看出来，他有各式各样的pooling尺寸），而传统的pooling策略是固定pooling大小的，多级pooling对目标的变形等有很好的鲁棒性。</li>
+<li>SPP能够处理任意大小的输入。（强调输入大小可变）</li>
+</ol>
+<h4 id="分类任务中的spp">4）分类任务中的SPP</h4>
+<p>分类不是这个系列要研究的重点，这里就简单的介绍一下，作者如何训练SPP-net的。</p>
+<h5 id="单尺度训练">1 单尺度训练</h5>
+<p>单尺度训练和一般的CNN的训练没有什么不同，图像经过缩放，然后截取224*224的区域用来训练。</p>
+<h5 id="多尺度训练">2 多尺度训练</h5>
+<p>由于SPP可以处理任意尺度的输入，这就使得多尺度的输入图像的训练成为可能。但是各种CNN框架的卷积的实现都是使用矩阵的操作来完成的，一个mini-batch中的图像的大小必须是相同的。这里，作者先使用一个尺度的图像进行训练，1个epoch之后，再换成另一种尺度进行训练，这样不断的改变尺度。</p>
+<p>最终，训练的收敛情况和一般的单尺度训练是差不多的，但是测试的效果要好了一些。</p>
+<p>上面是训练上的技巧，细节可以看原论文。在测试的时候，也有相应的不同策略。以下简单说明一下作者的实验和结论：</p>
+<h5 id="多级pooling提高准确率">1 多级Pooling提高准确率</h5>
+<p>将一般的网络，ZFNet，OverFeat等的最后一个卷积替换成SPP层，发现最终的效果有提升。</p>
+<h5 id="多尺度训练可以提高准确率">2 多尺度训练可以提高准确率</h5>
+<p><img data-src="http://cdn.miaoerduo.com/images/cnn-object-detection-multi-scale-test.jpg" /></p>
+<p>多尺度训练即上面训练中的策略。多尺度训练的结果要比单尺度好。</p>
+<h5 id="使用整张图片会提高准确率">3 使用整张图片会提高准确率</h5>
+<p><img data-src="http://cdn.miaoerduo.com/images/cnn-object-detection-full-image-train.jpg" /></p>
+<p>这里作者做了两组实验。一是中心crop的224*224的图像作为输入，另一个是将图像的短边缩放到256像素并保证长宽比，然后输入网络做前馈。</p>
+<h5 id="multi-view的测试方式">4 Multi-View的测试方式</h5>
+<p>这部分和之后的目标检测的方式类似。</p>
+<h4 id="目标检测中的spp">5）目标检测中的SPP</h4>
+<p>在R-CNN中，需要先是用selective search等方法，生成候选框，然后使用候选框的图像进行分类和回归的训练。在SPP-net，可以很大的简化这一流程，加速训练和测试。</p>
+<h5 id="目标检测中spp的训练">1 目标检测中SPP的训练</h5>
+<p>首先使用selective search得到2K的候选框。之后将图像缩放到短边固定大小（可以是多种尺度，这样可以一定程度提升性能），然后使用一个预训练好的网络的卷积的部分（比如ZFNet的前5层）进行前馈，得到整张图的feature map。根据候选框的位置，可以推出候选框在feature map上相应的位置，对这些位置上的feature map进行SPP操作，从而可以得到候选框的特征向量。</p>
+<p>作者做了两个方式的训练，一个是使用SVM做的类别分类器，另一种是fine-tune预训练的模型。 对于SVM的训练，目的是给每一种类别都训练一个二分类的分类器。因此总共需要训练20个SVM分类器。根据和groundtruth的iou来选择正负样本，具体的选择策略和R-CNN相同。最终得到了20个分类器，给每个候选框打分，最终的结果使用NMS来处理。</p>
+<p>预训练模型的fine-tune。这里只fune-tune了fc层。保留了前面的卷积部分。这样的话，就也只需要使用前面提取的候选框的特征向量作为输入了。训练十分的迅速。回归的训练，和R-CNN相同，使用了最后的pool5的特征来训练线性回归模型。</p>
+<h5 id="目标检测的测试流程">2 目标检测的测试流程</h5>
+<p>和训练部分类似，目标检测的首先使用selective search得到候选框，之后将图像缩放成固定尺度（可以是多个尺度，这样会有更好的效果），使用卷积部分前馈得到整张图的feature map。使用SPP得到每个候选框的特征向量。之后将特征向量输入到SVM或者fine-tune之后的网络的fc层，从而得到最终的框的得分和位置。最终使用NMS处理即可。</p>
+<h5 id="多模型融合">3 多模型融合</h5>
+<p>多模型融合可以很好的提高最终的准确率。论文中，作者使用了两种不同的网络，分别按照上面的方式得到候选框的得分和位置。之后将两个网络的候选框放在一起，使用NMS处理之后，作为最终的结果。检测的效果的确有了一些提升。</p>
+<h4 id="个人总结">6）个人总结</h4>
+<p>总体来说，本文最重要的部分还是在于SPP层的提出。这个层可以有效的将各种尺度的输入pooling到固定大小的输出。在分类任务上，多级pooling的策略可以从各种维度上保留特征的信息，在检测任务上，又可以通过一次性计算全图的feature map，再pooling出每个候选区域的特征，极大地减小特征提取部分的计算量。</p>
+<p>论文中有大量的实验和训练中的细节，这里并没有介绍到。感兴趣的同学最好还是看一下原文，相信应该可以收获更多。</p>
+<p>在检测部分，该方法还是有一些缺点的。首先是这个的训练过程和R-CNN还是差不多的，相比于之后的目标检测的方法，可以看出这里还是需要大量的人工的参与。其次，这里的特征是固定的，在SVM或者模型的fine-tune过程中，都是直接使用网络的卷积层的输出，并没有对卷及部分进行训练。那么图像的特征在检测任务中是否还具有优化的潜力呢？我相信还是有的。</p>
+<p>技术总是在不断的进步的。这里的SPP层的提出。可以说，一定程度上造就了另一个经典的目标检测方法Fast R-CNN的提出，Fast R-CNN就是下一篇博客的主角！</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/02/26/cnn-object-detection1/" rel="prev" title="CNN的目标检测概述（一）">
+      <i class="fa fa-chevron-left"></i> CNN的目标检测概述（一）
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/04/03/cnn-object-detection3/" rel="next" title="CNN的目标检测概述（三）">
+      CNN的目标检测概述（三） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#二spp-net"><span class="nav-text">二、SPP-net</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#问题描述"><span class="nav-text">1）问题描述</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#spp层工作流程"><span class="nav-text">2）SPP层工作流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#spp层的特性"><span class="nav-text">3）SPP层的特性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分类任务中的spp"><span class="nav-text">4）分类任务中的SPP</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#单尺度训练"><span class="nav-text">1 单尺度训练</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#多尺度训练"><span class="nav-text">2 多尺度训练</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#多级pooling提高准确率"><span class="nav-text">1 多级Pooling提高准确率</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#多尺度训练可以提高准确率"><span class="nav-text">2 多尺度训练可以提高准确率</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#使用整张图片会提高准确率"><span class="nav-text">3 使用整张图片会提高准确率</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#multi-view的测试方式"><span class="nav-text">4 Multi-View的测试方式</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#目标检测中的spp"><span class="nav-text">5）目标检测中的SPP</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#目标检测中spp的训练"><span class="nav-text">1 目标检测中SPP的训练</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#目标检测的测试流程"><span class="nav-text">2 目标检测的测试流程</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#多模型融合"><span class="nav-text">3 多模型融合</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#个人总结"><span class="nav-text">6）个人总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2018/03/01/cnn-object-detection2/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

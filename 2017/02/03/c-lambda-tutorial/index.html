@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话: 寒假之后，小喵在家里无所事事，最近用C++写代码的时候，用到了std::sort这个函数，每次用这个函数，小喵似乎都得查一下lambda表达式的写法。正好最近很闲，不如总结一下。 在Bing上搜索_C++ lambda_，第一条记录就是MSDN上的C++ lambda的介绍。本文也是基于这篇文章来写的。 那么接下来，我们分几个部分来介绍。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C++ Lambda表达式">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2017&#x2F;02&#x2F;03&#x2F;c-lambda-tutorial&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话: 寒假之后，小喵在家里无所事事，最近用C++写代码的时候，用到了std::sort这个函数，每次用这个函数，小喵似乎都得查一下lambda表达式的写法。正好最近很闲，不如总结一下。 在Bing上搜索_C++ lambda_，第一条记录就是MSDN上的C++ lambda的介绍。本文也是基于这篇文章来写的。 那么接下来，我们分几个部分来介绍。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;lambdaexpsyntax.png">
+<meta property="article:published_time" content="2017-02-03T00:13:58.000Z">
+<meta property="article:modified_time" content="2017-02-03T00:13:58.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;lambdaexpsyntax.png">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2017/02/03/c-lambda-tutorial/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>C++ Lambda表达式 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2017/02/03/c-lambda-tutorial/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          C++ Lambda表达式
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-02-03 00:13:58" itemprop="dateCreated datePublished" datetime="2017-02-03T00:13:58+00:00">2017-02-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/02/03/c-lambda-tutorial/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/02/03/c-lambda-tutorial/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>11k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>19 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话: 寒假之后，小喵在家里无所事事，最近用C++写代码的时候，用到了std::sort这个函数，每次用这个函数，小喵似乎都得查一下lambda表达式的写法。正好最近很闲，不如总结一下。 在Bing上搜索_C++ lambda_，第一条记录就是MSDN上的C++ lambda的介绍。本文也是基于这篇文章来写的。 那么接下来，我们分几个部分来介绍。</p>
+</blockquote>
+<a id="more"></a>
+<h2 id="一什么是lambda表达式">一、什么是Lambda表达式</h2>
+<p>MSDN上对lambda表达式的解释：</p>
+<blockquote>
+<p>在 C++ 11 中，lambda 表达式（通常称为 "lambda"）是一种在被调用的位置或作为参数传递给函数的位置定义匿名函数对象的简便方法。 Lambda 通常用于封装传递给算法或异步方法的少量代码行。<span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS9kZDI5MzYwOC5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">[1]<i class="fa fa-external-link"></i></span></p>
+</blockquote>
+<p>看了这个解释，相信大家已经理解lambda表达式是什么。简而言之，lambda表达式就是一种定义函数的简单的方法。</p>
+<p>举一个简单的例子：求一个数的阶乘。这是一般的函数的写法：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这里要求n&gt;=0，同时n的取值不能太大，会溢出</span></span><br><span class="line"><span class="comment">// 为了方便，这里并没有处理上面说到的问题</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">factorial</span><span class="params">(<span class="keyword">int</span> n)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> fact = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= n; ++ i) fact *= i;</span><br><span class="line">    <span class="keyword">return</span> fact;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Lambda表达式的写法：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">auto</span> factorial = [](<span class="keyword">int</span> n) &#123;</span><br><span class="line">    <span class="keyword">int</span> fact = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= n; ++ i) fact *= i;</span><br><span class="line">    <span class="keyword">return</span> fact;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>乍一看，这两种定义方式十分的相似。但其实这是两种完全不同的方式，前一种是函数定义式，而后一种是一个表达式。<code>factorial</code>是变量名，等于号后面的是值，也就是一个<code>lambda表达式</code>，本质上是一个匿名的函数。最终<code>factorial</code>就是一个函数。</p>
+<p>很多时候，我们只是直接书写<code>lambda表达式</code>，而不需要给他一个名字。比如排序的时候，sort可以接受一个自定义的比较函数，这时候直接书写lambda表达式即可。</p>
+<h2 id="二lambda表达式的作用">二、Lambda表达式的作用</h2>
+<p>由于lambda本身其实也就是一种函数的定义方式。因此它的主要作用还是和一般函数一样。但是lambda表达式相对于一般函数，又有一些功能之外的作用。参考了知乎上的一些回答<span class="exturl" data-url="aHR0cHM6Ly93d3cuemhpaHUuY29tL3F1ZXN0aW9uLzIwMTI1MjU2" title="https://www.zhihu.com/question/20125256">[2]<i class="fa fa-external-link"></i></span>，小喵也进行了总结。 1) 可以用表达式来定义函数，这样使得函数的定义和调用在一起，语意和逻辑上更为紧凑。同时，对于只是用一次的短小的函数，直接调用匿名的lambda表达式是最好的选择，这样就不需要给每个函数起名字了。<span style="color: green">/* 起名字一直是一个很令人头疼的问题 */</span> 2) 闭包(Closure)。这个小喵的写javascript的时候时常会用到。闭包本质上就是能够访问上下文环境中变量的代码块。</p>
+<p>这里我们简单的举个例子，还是之前的求阶乘的问题，现在我们有些提高需求。 现在需要完成下面的三种阶乘的运算：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">n! &#x3D; n * (n - 1) * (n - 2) * ...</span><br><span class="line">n!! &#x3D; n * (n - 2) * (n - 4) * ...</span><br><span class="line">n!!! &#x3D; n * (n - 3) * (n - 6) * ...</span><br></pre></td></tr></table></figure>
+<p>要求编写3个函数，分别完成上述3种计算。 使用一般的方式写很容易实现，我们这里直接使用lambda表达式来实现：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;functional&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="built_in">std</span>::function&lt;<span class="keyword">int</span>(<span class="keyword">int</span>)&gt; getFactorialFunc(<span class="keyword">int</span> n) &#123;</span><br><span class="line">    <span class="keyword">return</span> [n](<span class="keyword">int</span> x) &#123;</span><br><span class="line">        <span class="keyword">int</span> fact = <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">for</span> (; x &gt;= <span class="number">1</span>; x -= n) fact *= x;</span><br><span class="line">        <span class="keyword">return</span> fact;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 构造要求的三个函数</span></span><br><span class="line">    <span class="keyword">auto</span> factorial1 = getFactorialFunc(<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">auto</span> factorial2 = getFactorialFunc(<span class="number">2</span>);</span><br><span class="line">    <span class="keyword">auto</span> factorial3 = getFactorialFunc(<span class="number">3</span>);</span><br><span class="line">    <span class="comment">// 调用</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial1(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial2(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial3(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译的时候要注意，lambda表达式是C++11开始支持的，所以需要指定一下C++的版本。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">g++ factorial_lambda.cpp -o factorial_lambda.out --std=c++11</span><br></pre></td></tr></table></figure>
+<p>运行之后的结果为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;factorial_lambda.out</span><br><span class="line">3628800</span><br><span class="line">3840</span><br><span class="line">280</span><br></pre></td></tr></table></figure>
+<p>这里作为返回值的lambda表达式，可以访问先前传入的参数，这也就是闭包。具体的语法，我们后面会讲到。</p>
+<ol start="3" type="1">
+<li>柯里化(Currying)。这部分小喵也是第一次接触，维基百科有如下解释：</li>
+</ol>
+<blockquote>
+<p>在计算机科学中，柯里化（英语：Currying），又译为卡瑞化或加里化，是把接受多个参数的函数变换成接受一个单一参数（最初函数的第一个参数）的函数，并且返回接受余下的参数而且返回结果的新函数的技术。<span class="exturl" data-url="aHR0cHM6Ly96aC53aWtpcGVkaWEub3JnL3dpa2kv5p+v6YeM5YyW" title="https://zh.wikipedia.org/wiki/柯里化">[3]<i class="fa fa-external-link"></i></span></p>
+</blockquote>
+<p>下面给出一个例子（也是实现之前的阶乘）：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;functional&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 两个参数的阶乘</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">factorial</span><span class="params">(<span class="keyword">int</span> n, <span class="keyword">int</span> step)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> r = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">for</span> (; n &gt;= <span class="number">1</span>; n -= step) &#123;</span><br><span class="line">        r *= n;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> r;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// curring化的阶乘</span></span><br><span class="line"><span class="built_in">std</span>::function&lt;<span class="keyword">int</span>(<span class="keyword">int</span>)&gt; currying_factorial(<span class="keyword">int</span> step) &#123;</span><br><span class="line">    <span class="keyword">return</span> [step](<span class="keyword">int</span> n) &#123;</span><br><span class="line">        <span class="keyword">return</span> factorial(n, step);</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 调用普通函数</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial(<span class="number">10</span>, <span class="number">1</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial(<span class="number">10</span>, <span class="number">2</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; factorial(<span class="number">10</span>, <span class="number">3</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 调用currying函数</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; currying_factorial(<span class="number">1</span>)(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; currying_factorial(<span class="number">2</span>)(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; currying_factorial(<span class="number">3</span>)(<span class="number">10</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="4" type="1">
+<li>lambda表达式整体可以被当做函数的参数或者返回值。 闭包和currying的例子就是将整个lambda表达式作为返回值。现在再举一个作为参数的例子：</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;functional&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">operate</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">int</span> y, <span class="keyword">const</span> <span class="built_in">std</span>::function&lt;<span class="keyword">int</span>(<span class="keyword">int</span>, <span class="keyword">int</span>)&gt; &amp;op)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> op(x, y);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> add = [](<span class="keyword">int</span> x, <span class="keyword">int</span> y) &#123; <span class="keyword">return</span> x + y;&#125;;</span><br><span class="line">    <span class="keyword">auto</span> mul = [](<span class="keyword">int</span> x, <span class="keyword">int</span> y) &#123; <span class="keyword">return</span> x - y;&#125;;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; operate(<span class="number">10</span>, <span class="number">5</span>, add) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; operate(<span class="number">10</span>, <span class="number">5</span>, mul) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行的结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">15</span><br><span class="line">5</span><br></pre></td></tr></table></figure>
+<p>其实函数也可以当参数传入的（函数指针），但是lambda表达式要更为直观和灵活一些。谁能一眼看出<code>int (*func(int))(int)</code>究竟是什么意思呢（这是一个函数的定义，输入的参数是int，返回值是一个函数指针，函数指针对应的函数的输入和输出类型都是int）。</p>
+<h2 id="三lambda表达式的语法">三、Lambda表达式的语法</h2>
+<p>看到前面的lambda表达式的各种有趣的功能，现在是不是非常迫切的想尝试一把？</p>
+<p>ISO C++ 标准展示了作为第三个参数传递给 <code>std::sort()</code> 函数的简单 lambda：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;algorithm&gt;  </span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;cmath&gt;  </span></span></span><br><span class="line">  </span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">abssort</span><span class="params">(<span class="keyword">float</span>* x, <span class="keyword">unsigned</span> n)</span> </span>&#123;  </span><br><span class="line">    <span class="built_in">std</span>::sort(x, x + n,  </span><br><span class="line">        <span class="comment">// Lambda expression begins  </span></span><br><span class="line">        [](<span class="keyword">float</span> a, <span class="keyword">float</span> b) &#123;</span><br><span class="line">            <span class="keyword">return</span> (<span class="built_in">std</span>::<span class="built_in">abs</span>(a) &lt; <span class="built_in">std</span>::<span class="built_in">abs</span>(b));  </span><br><span class="line">        &#125; <span class="comment">// end of lambda expression  </span></span><br><span class="line">    );  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lambda表达式的组成部分见下图：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/lambdaexpsyntax.png" alt="lambda expression syntax" /></p>
+<ol type="1">
+<li>Capture 子句（在 C++ 规范中也称为 lambda 引导。）</li>
+<li>参数列表（可选）。 （也称为 lambda 声明符)</li>
+<li>可变规范（可选）。</li>
+<li>异常规范（可选）。</li>
+<li>尾随返回类型（可选）。</li>
+<li>“lambda 体”</li>
+</ol>
+<p>接下来我们需要学习这6个部分。</p>
+<h3 id="capture-子句">1、Capture 子句</h3>
+<p>我们知道，一般情况下，函数只能访问自己的参数和外部的全局变量。而lambda表达式却可以访问上下文的变量（参见闭包的例子）。那么如何指定要访问的变量，以及访问的方式（值或者引用）呢？这就是Capture 子句要解决的问题。</p>
+<p><code>Lambda</code> 可在其主体中引入新的变量（用 C++14），它还可以访问（或“捕获”）周边范围内的变量。<code>Lambda</code> 以 <code>Capture</code> 子句（标准语法中的 <code>lambda</code> 引导）开头，它指定要捕获的变量以及是通过值还是引用进行捕获:</p>
+<ul>
+<li>有与号 (<code>&amp;</code>) 前缀的变量通过引用访问，没有该前缀的变量通过值访问。</li>
+<li>空 <code>capture</code> 子句 <code>[ ]</code> 指示 lambda 表达式的主体不访问封闭范围中的变量。可以使用默认捕获模式（标准语法中的 <code>capture-default</code>）来指示如何捕获 <code>lambda</code> 中引用的任何外部变量：
+<ul>
+<li><code>[&amp;]</code> 表示通过引用捕获引用的所有变量</li>
+<li><code>[=]</code> 表示通过值捕获它们。</li>
+</ul></li>
+<li>可以使用默认捕获模式，然后为特定变量显式指定相反的模式。</li>
+</ul>
+<p>例如，如果 <code>lambda</code> 体通过引用访问外部变量 <code>total</code> 并通过值访问外部变量 <code>factor</code>，则以下 <code>capture</code> 子句等效：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[&amp;total, factor]</span><br><span class="line">[factor, &amp;total]</span><br><span class="line">[&amp;, factor]</span><br><span class="line">[factor, &amp;]</span><br><span class="line">[=, &amp;total]</span><br><span class="line">[&amp;total, =]</span><br></pre></td></tr></table></figure>
+<p>我们之前的闭包中使用的就是通过值访问。</p>
+<ul>
+<li>使用 <code>capture-default</code> 时，只有 <code>lambda</code> 中提及的变量才会被捕获。</li>
+<li>如果 capture 子句包含 <code>capture-default</code> <code>&amp;</code>，则该 capture 子句的 <code>identifier</code> 中没有任何 <code>capture</code> 可采用 <code>&amp; identifier</code> 形式。</li>
+<li>同样，如果 capture 子句包含 <code>capture-default</code> <code>=</code>，则该 capture 子句的 <code>capture</code> 不能采用 <code>= identifier</code> 形式。</li>
+<li>identifier 或 <code>this</code> 在 capture 子句中出现的次数不能超过一次。</li>
+</ul>
+<p>以下代码片段给出了一些示例。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">S</span> &#123;</span> <span class="function"><span class="keyword">void</span> <span class="title">f</span><span class="params">(<span class="keyword">int</span> i)</span></span>; &#125;;  </span><br><span class="line">  </span><br><span class="line"><span class="keyword">void</span> S::f(<span class="keyword">int</span> i) &#123;  </span><br><span class="line">    [&amp;, i]&#123;&#125;;    <span class="comment">// OK  </span></span><br><span class="line">    [=, &amp;i]&#123;&#125;;   <span class="comment">// OK</span></span><br><span class="line">    [&amp;, &amp;i]&#123;&#125;;   <span class="comment">// ERROR: i preceded by &amp; when &amp; is the default  </span></span><br><span class="line">    [=, <span class="keyword">this</span>]&#123;&#125;; <span class="comment">// ERROR: this when = is the default  </span></span><br><span class="line">    [i, i]&#123;&#125;;    <span class="comment">// ERROR: i repeated  </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>capture</code> 后跟省略号是包扩展，如以下可变参数模板<span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS9kbjQzOTc3OS5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/dn439779.aspx">[4]<i class="fa fa-external-link"></i></span>示例中所示：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;<span class="class"><span class="keyword">class</span>... <span class="title">Args</span>&gt;  </span></span><br><span class="line"><span class="class"><span class="title">void</span> <span class="title">f</span>(<span class="title">Args</span>... <span class="title">args</span>) &#123;</span>  </span><br><span class="line">    <span class="keyword">auto</span> x = [args...] &#123; <span class="keyword">return</span> g(args...); &#125;;  </span><br><span class="line">    x();  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>要在类方法的正文中使用 <code>lambda</code> 表达式，需要将 <code>this</code> 指针传递给 <code>Capture</code> 子句，以提供对封闭类的方法和数据成员的访问权限。</p>
+<p>这里大家可能觉得有点奇怪，将this指针传给Capture子句？</p>
+<p>其实我们常使用的成员函数也是用类似的方法实现的。我们知道，使用成员函数需要有一个类实例，但是调用类函数就不需要。这是因为成员函数的第一个参数是this，当然这个参数我们编写代码的时候不需要自己手动写出，而是默认的。使用像python这样的语言的时候就是需要显示的写出的。在使用类实例调用成员函数的时候，会默认将this指针传入。成员函数有这么一个参数，就可以访问类实例的各种变量和方法。而类函数是没有这个参数的，也就是没有this这个指针，因此它的调用并不需要类实例，当然也就不能访问类实例的变量。</p>
+<p>在使用 capture 子句时，要记住以下几点（尤其是使用采取多线程的 lambda 时）：</p>
+<ol type="1">
+<li>引用捕获可用于修改外部变量，而值捕获却不能实现此操作。（mutable允许修改副本，而不能修改原始项。）</li>
+<li>引用捕获会反映外部变量的更新，而值捕获却不会反映。</li>
+<li>引用捕获引入生存期依赖项，而值捕获却没有生存期依赖项。当 lambda 以异步方式运行时，这一点尤其重要。 如果在异步 lambda 中通过引用捕获本地变量，该本地变量将很可能在 lambda 运行时消失，从而导致运行时访问冲突。</li>
+</ol>
+<p>通用捕获 (C++14) 在 C++14 中，可在 <code>Capture</code> 子句中引入并初始化新的变量，而无需使这些变量存在于 lambda 函数的封闭范围内。</p>
+<p>初始化可以任何任意表达式表示；且将从该表达式生成的类型推导新变量的类型。此功能的一个好处是，在 C++14 中，可从周边范围捕获只移动的变量（例如 <code>std::unique_ptr</code>）并在 <code>lambda</code> 中使用它们。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">pNums = make_unique&lt;<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&gt;(nums);  </span><br><span class="line"><span class="comment">//...  </span></span><br><span class="line"><span class="keyword">auto</span> a = [ptr = move(pNums)]()  </span><br><span class="line">&#123;  </span><br><span class="line">    <span class="comment">// use ptr  </span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="参数列表">2、参数列表</h3>
+<p>除了捕获变量，lambda 还可接受输入参数。 参数列表（在标准语法中称为 <em>lambda 声明符</em>）是可选的，它在大多数方面类似于函数的参数列表。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">auto</span> add = [] (<span class="keyword">int</span> first, <span class="keyword">int</span> second)  </span><br><span class="line">&#123;  </span><br><span class="line">    <span class="keyword">return</span> first + second;  </span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在 C++14 中，如果参数类型是泛型，则可以使用 <code>auto</code> 关键字作为类型说明符。 这将告知编译器将函数调用运算符创建为模板。参数列表中的每个 <code>auto</code> 实例等效于一个不同的类型参数。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">auto</span> add = [] (<span class="keyword">auto</span> first, <span class="keyword">auto</span> second)  </span><br><span class="line">&#123;  </span><br><span class="line">    <span class="keyword">return</span> first + second;  </span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><code>lambda 表达式</code>可以将另一个 <code>lambda 表达式</code>作为其参数。</p>
+<p>由于参数列表是可选的，因此在不将参数传递到 lambda 表达式，并且其 <code>lambda-declarator:</code> 不包含 <code>exception-specification</code>、<code>trailing-return-type</code> 或 <code>mutable</code> 的情况下，可以省略空括号。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[]&#123;&#125;; <span class="comment">// 这就是最简单的lambda表达式</span></span><br></pre></td></tr></table></figure>
+<h3 id="可变规范">3、可变规范</h3>
+<p>通常，<code>lambda</code> 的函数调用运算符为 <code>const-by-value</code>，但对 <code>mutable</code> 关键字的使用可将其取消。它不会生成可变的数据成员。利用可变规范，<code>lambda 表达式</code>的主体可以修改通过值捕获的变量。本文后面的一些示例将显示如何使用 <code>mutable</code>。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> n = <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">auto</span> lambda1 = [n](<span class="keyword">int</span> x) &#123;</span><br><span class="line">        <span class="comment">/* ++ n; */</span> <span class="comment">// 这句编译会出错，错误信息如下：</span></span><br><span class="line">                    <span class="comment">// error: cannot assign to a variable captured</span></span><br><span class="line">                    <span class="comment">// by copy in a non-mutable lambda</span></span><br><span class="line">        <span class="keyword">return</span> x + n;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">auto</span> lambda2 = [n](<span class="keyword">int</span> x) <span class="keyword">mutable</span> &#123;</span><br><span class="line">        ++ n;</span><br><span class="line">        <span class="keyword">return</span> x + n;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; lambda1(<span class="number">5</span>) &lt;&lt; <span class="string">" "</span> &lt;&lt; n &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; lambda2(<span class="number">5</span>) &lt;&lt; <span class="string">" "</span> &lt;&lt; n &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出的结果是：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">15 10</span><br><span class="line">16 10</span><br></pre></td></tr></table></figure>
+<p>可以看出n确实是通过值来访问，在<code>lambda1</code>中，我们运行<code>++ n</code>，在编译的时候会报错。使用<code>mutable</code>修饰之后，就可以修改参数（副本）的值。</p>
+<h3 id="异常规范">4、异常规范</h3>
+<p>你可以使用 <code>throw()</code> 异常规范来指示 <code>lambda 表达式</code>不会引发任何异常。与普通函数一样，如果 <code>lambda 表达式</code>声明 <span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS84NGUyendoaC5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/84e2zwhh.aspx">C4297<i class="fa fa-external-link"></i></span> 异常规范且 <code>lambda 体</code>引发异常，Visual C++ 编译器将生成警告 <code>throw()</code>，如下所示：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// throw\_lambda\_expression.cpp  </span></span><br><span class="line"><span class="comment">// compile with: /W4 /EHsc</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> <span class="comment">// C4297 expected  </span></span></span><br><span class="line"><span class="function"></span>&#123;  </span><br><span class="line">   []() <span class="keyword">throw</span>() &#123; <span class="keyword">throw</span> <span class="number">5</span>; &#125;();  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在MSDN的异常规范<span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS93ZmEwZWR5cy5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx">[5]<i class="fa fa-external-link"></i></span>中，明确指出异常规范是在 C++11 中弃用的 C++ 语言功能。因此这里不建议大家使用。</p>
+<h3 id="返回类型">5、返回类型</h3>
+<p>将自动推导 <code>lambda 表达式</code>的返回类型。无需使用 <code>auto</code> 关键字，除非指定<code>尾随返回类型</code>。<code>trailing-return-type</code> 类似于普通方法或函数的返回类型部分。但是，返回类型必须跟在参数列表的后面，你必须在返回类型前面包含 <code>trailing-return-type</code> 关键字 <code>-&gt;</code>。 如果 <code>lambda 体</code>仅包含一个返回语句或其表达式不返回值，则可以省略 <code>lambda 表达式</code>的<code>返回类型部分</code>。如果 <code>lambda 体</code>包含单个返回语句，编译器将从返回表达式的类型推导返回类型。否则，编译器会将返回类型推导为 <code>void</code>。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;typeinfo&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> lambda1 = [](<span class="keyword">int</span> i) &#123;<span class="keyword">return</span> i;&#125;;</span><br><span class="line">    <span class="keyword">auto</span> lambda2 = [](<span class="keyword">int</span> i) -&gt; <span class="keyword">bool</span> &#123;<span class="keyword">return</span> i;&#125;;</span><br><span class="line">    <span class="keyword">auto</span> lambda3 = [](<span class="keyword">int</span> i) -&gt; <span class="keyword">float</span> &#123;<span class="keyword">return</span> i;&#125;;</span><br><span class="line">    <span class="comment">/* auto lambda4 = []&#123; return &#123;1, 2&#125;; &#125;;*/</span> <span class="comment">// ERROR: return type is void</span></span><br><span class="line">                                              <span class="comment">// cannot deduce lambda return type</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> x1 = lambda1(<span class="number">10</span>);</span><br><span class="line">    <span class="keyword">auto</span> x2 = lambda2(<span class="number">10</span>);</span><br><span class="line">    <span class="keyword">auto</span> x3 = lambda3(<span class="number">10</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; x1 &lt;&lt; <span class="string">" "</span> &lt;&lt; <span class="keyword">typeid</span>(x1).name() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; x2 &lt;&lt; <span class="string">" "</span> &lt;&lt; <span class="keyword">typeid</span>(x2).name() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; x3 &lt;&lt; <span class="string">" "</span> &lt;&lt; <span class="keyword">typeid</span>(x3).name() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>typeinfo的功能是获取一个变量的类型，由于它的实现依赖于编译器，所以在不同平台下的输出可能不完全一样。小喵这边的输出是：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">10 i</span><br><span class="line">1 b</span><br><span class="line">10 f</span><br></pre></td></tr></table></figure>
+<p>可以看出，三个lambda的输出是不相同的。默认情况下，会返回一个最直接的类型。</p>
+<h3 id="lambda体">6、lambda体</h3>
+<p>lambda体其实和函数体几乎完全相同。 <code>lambda 表达式</code>的 <code>lambda 体</code>（标准语法中的 <code>compound-statement</code>）可包含普通方法或函数的主体可包含的任何内容。普通函数和 <code>lambda 表达式</code>的主体均可访问以下变量类型：</p>
+<ul>
+<li>从封闭范围捕获变量，如前所述（Capture）。</li>
+<li>参数</li>
+<li>本地声明变量</li>
+<li>类数据成员（在类内部声明并且捕获 <code>this</code> 时）</li>
+<li>具有静态存储持续时间的任何变量（例如，全局变量）</li>
+</ul>
+<p>这里要注意我们在<code>Capture 规范</code>中说到的值访问和引用访问的特点。</p>
+<p>下面的例子都是MSDN上给出的。以下示例包含显式捕获变量 <code>n</code> 和引用隐式捕获变量 <code>m</code> 的 lambda 表达式：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// captures_lambda_expression.cpp  </span></span><br><span class="line"><span class="comment">// compile with: /W4 /EHsc</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;  </span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;  </span><br><span class="line">  </span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span>  </span></span><br><span class="line"><span class="function"></span>&#123;  </span><br><span class="line">   <span class="keyword">int</span> m = <span class="number">0</span>;  </span><br><span class="line">   <span class="keyword">int</span> n = <span class="number">0</span>;  </span><br><span class="line">   [&amp;, n] (<span class="keyword">int</span> a) <span class="keyword">mutable</span> &#123; m = ++n + a; &#125;(<span class="number">4</span>);  </span><br><span class="line">   <span class="built_in">cout</span> &lt;&lt; m &lt;&lt; <span class="built_in">endl</span> &lt;&lt; n &lt;&lt; <span class="built_in">endl</span>;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">5</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+<p>由于变量 <code>n</code> 是通过值捕获的，因此在调用 <code>lambda 表达式</code>后，变量的值仍保持 <code>0</code> 不变。  <code>mutable</code> 规范允许在 lambda 中修改 <code>n</code>。</p>
+<p>尽管 <code>lambda 表达式</code>只能捕获具有自动存储持续时间的变量，但你可以在 <code>lambda 表达式</code>的主体中使用具有静态存储持续时间的变量。</p>
+<p>以下示例使用 <code>generate</code> 函数和 <code>lambda 表达式</code>为 <code>vector</code> 对象中的每个元素赋值。 <code>lambda 表达式</code>将修改静态变量以生成下一个元素的值。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">fillVector</span><span class="params">(<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&amp; v)</span>  </span></span><br><span class="line"><span class="function"></span>&#123;  </span><br><span class="line">    <span class="comment">// A local static variable.  </span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> nextValue = <span class="number">1</span>;  </span><br><span class="line">  </span><br><span class="line">    <span class="comment">// The lambda expression that appears in the following call to  </span></span><br><span class="line">    <span class="comment">// the generate function modifies and uses the local static</span></span><br><span class="line">    <span class="comment">// variable nextValue.  </span></span><br><span class="line">    generate(v.begin(), v.end(), [] &#123; <span class="keyword">return</span> nextValue++; &#125;);</span><br><span class="line">    <span class="comment">//WARNING: this is not thread-safe and is shown for illustration only  </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="四应用lambda的比较函数的编写">四、应用Lambda的比较函数的编写</h2>
+<p>为什么要补充这一部分呢？因为我们在写程序的时候，往往最常用到lambda的地方就是数组的sort。 首先，我们知道std::sort默认是接受2个参数的，表示需要排序的序列的开始和结尾。对于一些复杂的数据类型，我们可以给它添加一个用来比较的函数 <code>operator &lt;</code>。但更多的是通过给sort添加第三个参数来实现。而这个参数就是一个比较器。</p>
+<p>sort默认使用 <code>&lt;</code> 比较符来进行比较，排序的结果是升序。我们写的比较函数的功能就是代替 <code>&lt;</code>。记住这个特点，就不会在编写比较函数的时候理不清思路。</p>
+<p>这里举一个小例子，给一组点坐标，按欧氏距离排序：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;algorithm&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;vector&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">vector</span>&lt; pair&lt;<span class="keyword">int</span>, <span class="keyword">int</span>&gt; &gt; arr;</span><br><span class="line">    arr.push_back(make_pair(<span class="number">1</span>, <span class="number">4</span>));</span><br><span class="line">    arr.push_back(make_pair(<span class="number">2</span>, <span class="number">3</span>));</span><br><span class="line">    arr.push_back(make_pair(<span class="number">5</span>, <span class="number">7</span>));</span><br><span class="line">    arr.push_back(make_pair(<span class="number">6</span>, <span class="number">2</span>));</span><br><span class="line"></span><br><span class="line">    sort(arr.begin(), arr.end(),</span><br><span class="line">        [](pair&lt;<span class="keyword">int</span>, <span class="keyword">int</span>&gt; left, pair&lt;<span class="keyword">int</span>, <span class="keyword">int</span>&gt; right) &#123;</span><br><span class="line">            <span class="keyword">int</span> d1 = left.first * left.first + left.second * left.second;</span><br><span class="line">            <span class="keyword">int</span> d2 = right.first * right.first + right.second * right.second;</span><br><span class="line">            <span class="keyword">return</span> d1 &lt; d2;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;p: arr) &#123;</span><br><span class="line">        <span class="built_in">cout</span> &lt;&lt; <span class="string">"("</span> &lt;&lt; p.first &lt;&lt; <span class="string">", "</span> &lt;&lt; p.second &lt;&lt; <span class="string">")"</span> &lt;&lt; <span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(2, 3)</span><br><span class="line">(1, 4)</span><br><span class="line">(6, 2)</span><br><span class="line">(5, 7)</span><br></pre></td></tr></table></figure>
+<p>唯一需要注意的是，我们的比较函数取代的是 <code>&lt;</code>。</p>
+<p>至此，关于<code>Lambda 表达式</code>的介绍也就结束了。说得不够详细的地方，请大家参考MSDN的官方文档，写的真心不错。小喵这里有一些地方都是直接照搬过来的。<span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS9kZDI5MzYwOC5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">https://msdn.microsoft.com/zh-cn/library/dd293608.aspx<i class="fa fa-external-link"></i></span></p>
+<h2 id="五补充">五、补充</h2>
+<p>最近在类中使用了<code>lambda表达式</code>，结果出现奇怪的问题，故记录下来。<code>lambda表达式</code>可以允许捕获局部变量，但是类成员变量并不是局部变量，因此不能被lambda捕获。我们想要在lambda中使用类成员变量的话，只需要捕获<code>this</code>指针就可以。之后在lambda函数体中就可以随时使用成员变量了。对于this的捕获，永远是值传递的方式，即使指定了默认捕获的方式为引用，另外<code>[&amp;this]</code>这样的捕获方式是不允许的。</p>
+<p><strong>转载请注明出处~</strong></p>
+<ul>
+<li>[1] <span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS9kZDI5MzYwOC5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">https://msdn.microsoft.com/zh-cn/library/dd293608.aspx<i class="fa fa-external-link"></i></span></li>
+<li>[2] <span class="exturl" data-url="aHR0cHM6Ly93d3cuemhpaHUuY29tL3F1ZXN0aW9uLzIwMTI1MjU2" title="https://www.zhihu.com/question/20125256">https://www.zhihu.com/question/20125256<i class="fa fa-external-link"></i></span></li>
+<li>[3] <span class="exturl" data-url="aHR0cHM6Ly96aC53aWtpcGVkaWEub3JnL3dpa2kv5p+v6YeM5YyW" title="https://zh.wikipedia.org/wiki/柯里化">https://zh.wikipedia.org/wiki/柯里化<i class="fa fa-external-link"></i></span></li>
+<li>[4] <span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS9kbjQzOTc3OS5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/dn439779.aspx">https://msdn.microsoft.com/zh-cn/library/dn439779.aspx<i class="fa fa-external-link"></i></span></li>
+<li>[5] <span class="exturl" data-url="aHR0cHM6Ly9tc2RuLm1pY3Jvc29mdC5jb20vemgtY24vbGlicmFyeS93ZmEwZWR5cy5hc3B4" title="https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx">https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx<i class="fa fa-external-link"></i></span></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/01/01/face-verify-annotate-tool/" rel="prev" title="一个简单粗暴的人脸认证标注工具的实现">
+      <i class="fa fa-chevron-left"></i> 一个简单粗暴的人脸认证标注工具的实现
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/02/19/cartoon-cat-client/" rel="next" title="爬虫-漫画喵的100行逆袭">
+      爬虫-漫画喵的100行逆袭 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一什么是lambda表达式"><span class="nav-text">一、什么是Lambda表达式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二lambda表达式的作用"><span class="nav-text">二、Lambda表达式的作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三lambda表达式的语法"><span class="nav-text">三、Lambda表达式的语法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#capture-子句"><span class="nav-text">1、Capture 子句</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参数列表"><span class="nav-text">2、参数列表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#可变规范"><span class="nav-text">3、可变规范</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#异常规范"><span class="nav-text">4、异常规范</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#返回类型"><span class="nav-text">5、返回类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#lambda体"><span class="nav-text">6、lambda体</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四应用lambda的比较函数的编写"><span class="nav-text">四、应用Lambda的比较函数的编写</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五补充"><span class="nav-text">五、补充</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2017/02/03/c-lambda-tutorial/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

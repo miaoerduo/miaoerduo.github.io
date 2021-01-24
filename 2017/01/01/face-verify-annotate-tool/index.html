@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话：话说最近小喵也要开始写论文了，想了两周还是没有头绪，不知道该写些什么。恰好又被分配了一点标注数据的工作，于是乎想写点代码，休闲一下。结果也就是这篇博客。对了，小喵对GUI编程一窍不通，只知道Windows有MFC，Mac上的不知道。。。恰好听说过QT，而且知道这个界面库是跨平台的，也就选用了这个工具了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一个简单粗暴的人脸认证标注工具的实现">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2017&#x2F;01&#x2F;01&#x2F;face-verify-annotate-tool&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话：话说最近小喵也要开始写论文了，想了两周还是没有头绪，不知道该写些什么。恰好又被分配了一点标注数据的工作，于是乎想写点代码，休闲一下。结果也就是这篇博客。对了，小喵对GUI编程一窍不通，只知道Windows有MFC，Mac上的不知道。。。恰好听说过QT，而且知道这个界面库是跨平台的，也就选用了这个工具了。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;annotate-pro.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-create-project.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-main-window-ui.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-goto-slot.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-create-resource-file.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;annotate-tool-files.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-resource-image-files.png">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;qt-project-publish.png">
+<meta property="article:published_time" content="2017-01-01T17:34:04.000Z">
+<meta property="article:modified_time" content="2017-01-01T17:34:04.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;annotate-pro.png">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2017/01/01/face-verify-annotate-tool/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>一个简单粗暴的人脸认证标注工具的实现 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2017/01/01/face-verify-annotate-tool/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          一个简单粗暴的人脸认证标注工具的实现
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-01-01 17:34:04" itemprop="dateCreated datePublished" datetime="2017-01-01T17:34:04+00:00">2017-01-01</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/QT/" itemprop="url" rel="index"><span itemprop="name">QT</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/01/01/face-verify-annotate-tool/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/01/01/face-verify-annotate-tool/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>11k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>19 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话：话说最近小喵也要开始写论文了，想了两周还是没有头绪，不知道该写些什么。恰好又被分配了一点标注数据的工作，于是乎想写点代码，休闲一下。结果也就是这篇博客。对了，小喵对GUI编程一窍不通，只知道Windows有MFC，Mac上的不知道。。。恰好听说过QT，而且知道这个界面库是跨平台的，也就选用了这个工具了。</p>
+</blockquote>
+<a id="more"></a>
+<p>那么现在开始和小喵一起瞎猫似的捯饬QT吧~ 先看一眼效果图： <img data-src="http://cdn.miaoerduo.com/images/annotate-pro.png" alt="annotate pro" /></p>
+<p>是不是乍一看还挺炫酷。功能上也还好，至少简单的标注工作都能完成了。那么让我们来一步一步的完成这个工具吧。</p>
+<h2 id="一功能需求">一、功能需求</h2>
+<p>这个程序主要的功能是完成一个人脸认证的标注工具。 具体来说，就是给定很多对人脸的图片，要标注一下这一对是不是同一个人。同时，每一对的图片的人脸一张是生活照，一张是证件照，需要同时标注出哪张是证件照，那张是生活照。照片都是经过检测和对齐的，这个工具只需要完成简单的显示、标注、保存记录的工作就可以。 当然考虑到有时候需要标注的list可能很大，可以加入跳转的功能。标注结果都保存在内存，用户可以随时更改，点击保存，则写入硬盘。</p>
+<h2 id="二数据结构">二、数据结构</h2>
+<p>那么是不是现在就可以动手写代码了呢？当然不是！ 小喵写这个软件一共用了3天的时间，第一天完成了一个超简单demo程序，熟悉了一下QT的事件添加，路径选择和显示图片的几个功能。之后又仔细的思考了一下各种数据的结构，才动手做了这一版工具。没有一个清晰的数据的概念，会造成许多的无用功。所以，大家在写程序的时候，要在准备阶段多花一点时间来思考，毕竟写代码才是最简单的事情不是吗？</p>
+<ol type="1">
+<li>输入数据格式：因为小喵的工作环境下，大家都对linux有一些了解，所以可以自行生成好图片的路径的list，这里统一要求，list必须是偶数行（2n行），代表n对，相邻的图片为一对。</li>
+<li>标注数据存储：考虑到我们不仅需要标注是不是一对，还得标注哪张是证件照，所以不妨直接在读数据的时候就分成两份，这样就用两个 <code>std::vector&lt;std::string&gt;</code> 来存储就行了。</li>
+<li>标注过程的状态：我们需要知道标注过程中的那些信息呢？主要应该有：总数据量，当前已标注的对数。</li>
+<li>标注结果：每一对都有一组对应地 结果，考虑到有4中情况：未标注，不确定，不匹配，匹配这四种，我们定义一个枚举的状态表 <code>enum AnnoState</code> 就好。之后用一个 <code>std::vector&lt;enum AnnoState&gt;</code> 来存储标注结果。</li>
+</ol>
+<h2 id="三界面制作">三、界面制作</h2>
+<p>GUI程序的界面一直是个很让人头疼的问题，记得在本科学习Java的时候，需要自己手写一个控件，使用new JButton()类似的方式创建按钮，然后添加到主界面上，位置什么的都得调用这个对象来设置，十分的繁琐。那么QT能不能简化这个过程呢？答案是肯定的。</p>
+<p>创建项目-&gt;选择Application-&gt;Qt Widgets Application。然后项目名改成Anno Pro，其他全部默认设置，就创建好了一个项目了。这个初始的项目里面有3个文件夹：头文件，源文件和界面文件，以及一个.pro结尾的项目配置文件。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-create-project.png" alt="qt-create-project" /></p>
+<p>既然需要编辑界面，我们自然会想查看一下界面文件了，双击 <code>MainWindow.ui</code> (我这里全部都是默认的名字)。出现的是一个充满各种控件的可视化界面编辑器。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-main-window-ui.png" alt="qt-main-window-ui" /></p>
+<p>按照我们之前的界面样式，拖动左边的控件，就可以完成界面的编写了。小喵这里只用到了几种控件：</p>
+<ul>
+<li><code>QPushButton</code>：各种按钮</li>
+<li><code>QLabel</code>：所以显示文字和图像的区域都是这这个控件</li>
+<li><code>QFrame</code>：一个容器，小喵用它只是为了结构上更清晰</li>
+<li><code>QSlider</code>：滑动条，小喵用的是水平滑动条</li>
+<li><code>QStatusBar</code>：状态栏，这应该是自带的，如果删掉的话，在MainWindow控件点击右键就可以创建了</li>
+</ul>
+<p>拖动完成后，双击空间，就可以给空间设置文本，同时注意给每个控件起一个好听的名字（起名字很重要的！《代码大全》中甚至用一章，好几十页的篇幅介绍如何命名）。</p>
+<p>至于其他的控件，大家可以自行研究。反正小喵现在的道行应该才是筑基。 那么我们就愉快的完成了界面的编写了~点击左右下的运行图标（三角形的那个），就可以看到自己的运行程序了！</p>
+<h2 id="四数据定义与初始化">四、数据定义与初始化</h2>
+<p>我们先前已经分析了我们需要的数据了，这部分开始使用代码的定义这些结构。打开我们头文件<code>mianwindow.h</code>，添加需要的变量，小喵就直接把自己的头文件复制下来了：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> MAINWINDOW_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MAINWINDOW_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;QMainWindow&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;vector&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string&gt;</span></span></span><br><span class="line"><span class="keyword">namespace</span> Ui &#123;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainWindow</span>;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainWindow</span> :</span> <span class="keyword">public</span> QMainWindow</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">enum</span> AnnoState &#123;</span><br><span class="line">        UNKNOWN = <span class="number">0</span>,  <span class="comment">// 未标注</span></span><br><span class="line">        YES = <span class="number">1</span>,      <span class="comment">// 匹配</span></span><br><span class="line">        NO = <span class="number">2</span>,       <span class="comment">// 不匹配</span></span><br><span class="line">        UNSURE = <span class="number">3</span>    <span class="comment">// 不确定</span></span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">MainWindow</span><span class="params">(QWidget *parent = <span class="number">0</span>)</span></span>;</span><br><span class="line">    ~MainWindow();</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    Ui::MainWindow *ui; <span class="comment">// 自带的，ui界面的接口</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">string</span>&gt; image_list_1;  <span class="comment">// 用来存放左边的图片的list</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">string</span>&gt; image_list_2;  <span class="comment">// 用来存放右边的图片的list</span></span><br><span class="line">    <span class="keyword">int</span> current_idx;                        <span class="comment">// 当前图片对的id</span></span><br><span class="line">    <span class="keyword">int</span> total_pair_num;                     <span class="comment">// 总共的图片对的数目</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt; AnnoState &gt; annotation_list;  <span class="comment">// 标注的结果</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// MAINWINDOW_H</span></span></span><br></pre></td></tr></table></figure>
+<p>可以看出，小喵添加了一个 <code>enum</code> 的类型，用来表示标注结果的类型。虽然只有4个状态，我们甚至可以直接约定几个 <code>int</code> 值来表示，但相信我，为这么4个状态定义一个枚举类型是完全有必要的。之后我们所有的成员变量都是 <code>private</code> 的。具体含义，注释中也有写明。</p>
+<p>下一步就是初始化了。初始化的过程当然得写在构造函数里，这里，小喵在初始化的时候强迫用户选择一个标注的list，如果不这么做，会有很多的意外情况。请原谅小喵的怠惰。。。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">MainWindow::MainWindow(QWidget *parent) :</span><br><span class="line">    QMainWindow(parent),</span><br><span class="line">    ui(<span class="keyword">new</span> Ui::MainWindow)</span><br><span class="line">&#123;</span><br><span class="line">    ui-&gt;setupUi(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 选择输入文件</span></span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        QString file_name = QFileDialog::getOpenFileName(<span class="keyword">this</span>, <span class="string">"choose a file to annotate"</span>, <span class="string">"."</span>);</span><br><span class="line">        <span class="keyword">if</span> (file_name.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">int</span> ok = QMessageBox::information(<span class="keyword">this</span>, <span class="string">"choose a file to annotate"</span>, <span class="string">"Don't want to work now?"</span>, QMessageBox::Ok | QMessageBox::Cancel);</span><br><span class="line">            <span class="keyword">if</span> (ok == QMessageBox::Ok) &#123;</span><br><span class="line">                <span class="built_in">exit</span>(<span class="number">0</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">std</span>::<span class="function">ifstream <span class="title">is</span><span class="params">(file_name.toStdString())</span></span>;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">string</span> image_name;</span><br><span class="line">        <span class="keyword">bool</span> is_odd = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">while</span> (is &gt;&gt; image_name) &#123;</span><br><span class="line">            <span class="keyword">if</span> (is_odd) &#123;</span><br><span class="line">                <span class="keyword">this</span>-&gt;image_list_1.push_back(image_name);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">this</span>-&gt;image_list_2.push_back(image_name);</span><br><span class="line">            &#125;</span><br><span class="line">            is_odd = !is_odd;</span><br><span class="line">        &#125;</span><br><span class="line">        is.close();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (image_list_1.size() != image_list_2.size()) &#123;</span><br><span class="line">            QMessageBox::information(<span class="keyword">this</span>, <span class="string">"choose a file to annotate"</span>, <span class="string">"this image list is not even"</span>, QMessageBox::Ok);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (<span class="number">0</span> == image_list_1.size()) &#123;</span><br><span class="line">            QMessageBox::information(<span class="keyword">this</span>, <span class="string">"choose a file to annotate"</span>, <span class="string">"this image list is empty"</span>, QMessageBox::Ok);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    assert(image_list_1.size() == image_list_2.size());</span><br><span class="line">    <span class="comment">// 初始化其他参数</span></span><br><span class="line">    <span class="keyword">this</span>-&gt;total_pair_num = image_list_1.size();</span><br><span class="line">    <span class="keyword">this</span>-&gt;current_idx = <span class="number">0</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;AnnoState&gt; annotation_list(<span class="keyword">this</span>-&gt;total_pair_num, AnnoState::UNKNOWN);</span><br><span class="line">    <span class="keyword">this</span>-&gt;annotation_list.swap(annotation_list);</span><br><span class="line"></span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里用了两个QT的组件：</p>
+<ul>
+<li><code>QFileDialog</code>：这个组件是一个文件对话框，其中有两个十分有用的函数：
+<ul>
+<li><code>getOpenFileName</code> 用于选择一个文件，并返回文件名；</li>
+<li><code>getSaveFileName</code> 用于选择一个文件来保存数据，并返回一个文件名。</li>
+<li>这两个函数的参数很多，小喵只用到了前面的3个，用到的参数依次是：父组件，标题，初始目录。其他的参数的功能，喵粉可以去官网查一下。</li>
+</ul></li>
+<li>QMessageBox::information，这个函数的功能是显示一个消息窗口。四个参数分别表示：父组件，标题，内容，按钮样式。</li>
+</ul>
+<p>相信大家懂一点点C++的知识的话，很容易看懂这段代码。 这里就是使用了一个循环，让用户选择文件，如果选择成功了，则读取数据到我们的list中，最终初始化了其他的参数，在调用display函数来显示。这个display函数是我们自己编写的，后面会说到。另外，assert函数是断言，他保证了断言的数据的合法性，如果不合法，程序会退出。想使用这个函数，需要包含头文件 <code>assert.h</code>。</p>
+<h2 id="五添加事件响应">五，添加事件响应</h2>
+<p>小喵之前了解到，QT使用的是一种信号和槽的事件机制，是一种十分高级的机制。那么有没有什么简单的方法，为我们的每个控件绑定自己的的事件呢？</p>
+<p>在界面编辑界面下，<strong>右击</strong>需要添加事件的空间，然后选择<strong>转到槽</strong>。这时候会有很多选项，这里直接选择 <code>clicked</code> 就可以。然后你会发现我们的mainwindow类中，多了一个pivate slot的函数（也就是槽函数）。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-goto-slot.png" alt="qt-goto-slot" /></p>
+<p>我们可以给每一个需要添加事件的函数都用这种方式来绑定事件，最终头文件中会出现这样的声明（函数名称的规则是：<code>on_控件名_信号类型</code>）：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> slots:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_save_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_ok_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_no_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_unsure_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_next_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_prev_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_pushButton_switch_clicked</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">on_horizontalSlider_progress_sliderReleased</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
+<p>在源文件中，也会生成空的函数定义。我们只需要自己完成函数定义就大功告成！</p>
+<p>下面给出的是除了save的所有的函数的定义。主要工作是，给每个事件编写修改数据的代码，而不去负责任何界面相关的部分。各个控件可以通过 <code>this-&gt;ui</code> 来设置和获取。使用Qt Creator的时候，要充分利用智能提示。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_ok_clicked</span></span><br><span class="line"><span class="comment"> * 标注为"匹配"</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_ok_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">this</span>-&gt;annotation_list[<span class="keyword">this</span>-&gt;current_idx] = MainWindow::AnnoState::YES;</span><br><span class="line">    ++ <span class="keyword">this</span>-&gt;current_idx;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_no_clicked</span></span><br><span class="line"><span class="comment"> * 标注为"不匹配"</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_no_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">this</span>-&gt;annotation_list[<span class="keyword">this</span>-&gt;current_idx] = MainWindow::AnnoState::NO;</span><br><span class="line">    ++ <span class="keyword">this</span>-&gt;current_idx;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_unsure_clicked</span></span><br><span class="line"><span class="comment"> * 标注为"不确定"</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_unsure_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">this</span>-&gt;annotation_list[<span class="keyword">this</span>-&gt;current_idx] = MainWindow::AnnoState::UNSURE;</span><br><span class="line">    ++ <span class="keyword">this</span>-&gt;current_idx;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_next_clicked</span></span><br><span class="line"><span class="comment"> * 移动到下一组</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_next_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    ++ <span class="keyword">this</span>-&gt;current_idx;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_prev_clicked</span></span><br><span class="line"><span class="comment"> * 移动到上一组</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_prev_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    -- <span class="keyword">this</span>-&gt;current_idx;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_switch_clicked</span></span><br><span class="line"><span class="comment"> * 交换两边的图片</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_switch_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> tmp = <span class="keyword">this</span>-&gt;image_list_1[<span class="keyword">this</span>-&gt;current_idx];</span><br><span class="line">    <span class="keyword">this</span>-&gt;image_list_1[<span class="keyword">this</span>-&gt;current_idx] = <span class="keyword">this</span>-&gt;image_list_2[<span class="keyword">this</span>-&gt;current_idx];</span><br><span class="line">    <span class="keyword">this</span>-&gt;image_list_2[<span class="keyword">this</span>-&gt;current_idx] = tmp;</span><br><span class="line">    display();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_horizontalSlider_progress_sliderReleased</span></span><br><span class="line"><span class="comment"> * 拖放进度条，控制进度</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_horizontalSlider_progress_sliderReleased()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> pos = <span class="keyword">this</span>-&gt;ui-&gt;horizontalSlider_progress-&gt;value();</span><br><span class="line">    <span class="keyword">this</span>-&gt;current_idx = pos;</span><br><span class="line">    <span class="keyword">this</span>-&gt;display();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此，我们的大体的功能逻辑就编写完了。 那么怎么让界面上显示我们的系统状态呢？注意到了我们上面的每一个函数都调用了display这个函数了吗？这个函数正式负责绘制界面的功能。 部分主要介绍三个函数：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> UNSURE_FILE = <span class="string">":File/images/unsure.png"</span>;</span><br><span class="line"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> YES_FILE = <span class="string">":File/images/yes.gif"</span>;</span><br><span class="line"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> NO_FILE = <span class="string">":File/images/no.gif"</span>;</span><br><span class="line"><span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> UNKNOWN_FILE = <span class="string">":File/images/unknown.png"</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief set_image 将图像设置到label上，图像自动根据label的大小来缩放</span></span><br><span class="line"><span class="comment"> * @param label</span></span><br><span class="line"><span class="comment"> * @param image</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">set_image</span><span class="params">(QLabel *label, <span class="keyword">const</span> QPixmap &amp;image)</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">float</span> <span class="title">ratio</span><span class="params">(<span class="number">0.</span>)</span></span>;</span><br><span class="line">    ratio = <span class="number">1.</span> * label-&gt;width() / image.width();</span><br><span class="line">    ratio = fmin( <span class="number">1.</span> * label-&gt;height() / image.height(), ratio );</span><br><span class="line">    QPixmap m = image.scaled(<span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>&gt;(image.width() * ratio), <span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>&gt;(image.height() * ratio));</span><br><span class="line">    label-&gt;setPixmap(m);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">set_image</span><span class="params">(QLabel *label, <span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> image_path)</span> </span>&#123;</span><br><span class="line">    <span class="function">QPixmap <span class="title">image</span><span class="params">(image_path.c_str())</span></span>;</span><br><span class="line">    set_image(label, image);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::display</span></span><br><span class="line"><span class="comment"> * 根据系统中的所有的变量来设置当前界面中的各个部分的内容</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::display() &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>-&gt;current_idx &gt;= <span class="keyword">this</span>-&gt;total_pair_num) &#123;</span><br><span class="line">        QMessageBox::information(<span class="keyword">this</span>, <span class="string">"annotation over"</span>, <span class="string">"Congratulations! You've finished all the job! Please save your work :)"</span>, QMessageBox::Ok);</span><br><span class="line">        <span class="keyword">this</span>-&gt;current_idx = <span class="keyword">this</span>-&gt;total_pair_num - <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>-&gt;current_idx &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        QMessageBox::information(<span class="keyword">this</span>, <span class="string">"annotation warning"</span>, <span class="string">"You must start at 0 (not a negative position, I konw you wanna challenge this app) :)"</span>, QMessageBox::Ok);</span><br><span class="line">        <span class="keyword">this</span>-&gt;current_idx = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 进度条</span></span><br><span class="line">    <span class="keyword">this</span>-&gt;ui-&gt;horizontalSlider_progress-&gt;setRange(<span class="number">0</span>, <span class="keyword">this</span>-&gt;total_pair_num - <span class="number">1</span>);</span><br><span class="line">    <span class="keyword">this</span>-&gt;ui-&gt;horizontalSlider_progress-&gt;setValue(<span class="keyword">this</span>-&gt;current_idx);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 状态栏</span></span><br><span class="line">    <span class="keyword">this</span>-&gt;ui-&gt;statusBar-&gt;showMessage(QString((<span class="built_in">std</span>::to_string(<span class="keyword">this</span>-&gt;current_idx + <span class="number">1</span>) + <span class="string">" / "</span> + <span class="built_in">std</span>::to_string(<span class="keyword">this</span>-&gt;total_pair_num)).c_str()));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 文件名</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> image_name_1 = <span class="keyword">this</span>-&gt;image_list_1[<span class="keyword">this</span>-&gt;current_idx];</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> image_base_name_1 = image_name_1.substr(image_name_1.find_last_of(<span class="string">"/"</span>) + <span class="number">1</span>);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> image_name_2 = <span class="keyword">this</span>-&gt;image_list_2[<span class="keyword">this</span>-&gt;current_idx];</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> image_base_name_2 = image_name_2.substr(image_name_2.find_last_of(<span class="string">"/"</span>) + <span class="number">1</span>);</span><br><span class="line">    <span class="keyword">this</span>-&gt;ui-&gt;label_image_name_1-&gt;setText(image_base_name_1.c_str());</span><br><span class="line">    <span class="keyword">this</span>-&gt;ui-&gt;label_image_name_2-&gt;setText(image_base_name_2.c_str());</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 显示图像</span></span><br><span class="line">    set_image(<span class="keyword">this</span>-&gt;ui-&gt;label_image_view_1, image_name_1);</span><br><span class="line">    set_image(<span class="keyword">this</span>-&gt;ui-&gt;label_image_view_2, image_name_2);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 显示标注结果</span></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> show_image_name = UNKNOWN_FILE;</span><br><span class="line">    <span class="keyword">switch</span> (<span class="keyword">this</span>-&gt;annotation_list[<span class="keyword">this</span>-&gt;current_idx]) &#123;</span><br><span class="line">    <span class="keyword">case</span> AnnoState::UNKNOWN:</span><br><span class="line">        show_image_name = UNKNOWN_FILE;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> AnnoState::YES:</span><br><span class="line">        show_image_name = YES_FILE;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> AnnoState::NO:</span><br><span class="line">        show_image_name = NO_FILE;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> AnnoState::UNSURE:</span><br><span class="line">        show_image_name = UNSURE_FILE;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    set_image(<span class="keyword">this</span>-&gt;ui-&gt;label_image_compare_status, show_image_name);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最开始我们定义了4个图片的路径。这可以是绝对路径或者相对路径。我们这里的路径设置的比较奇怪，在下面我们会讲到。<code>set_image</code> 负责将给定的图片绘制到 <code>QLabel</code> 上，为了显示的好看，图像会按照 <code>QLabel</code> 的尺寸来动态的缩放。这样就不会出现有个图像太大或太小的情况了。<code>display</code> 则是负责各个区域的绘制。</p>
+<p>还差一步是保存结果：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @brief MainWindow::on_pushButton_save_clicked</span></span><br><span class="line"><span class="comment"> * 保存结果文件</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">void</span> MainWindow::on_pushButton_save_clicked()</span><br><span class="line">&#123;</span><br><span class="line">    QString file_name = QFileDialog::getSaveFileName(<span class="keyword">this</span>, <span class="string">"choose a file to save"</span>, <span class="string">"."</span>);</span><br><span class="line">    <span class="keyword">if</span> (file_name.isEmpty()) &#123;</span><br><span class="line">        QMessageBox::information(<span class="keyword">this</span>, <span class="string">"choose a file to save"</span>, <span class="string">"please enter a legal file name"</span>, QMessageBox::Ok);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function">ofstream <span class="title">os</span><span class="params">(file_name.toStdString())</span></span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> idx = <span class="number">0</span>; idx &lt; <span class="keyword">static_cast</span>&lt;<span class="keyword">int</span>&gt;(<span class="keyword">this</span>-&gt;annotation_list.size()); ++ idx) &#123;</span><br><span class="line">        os &lt;&lt; <span class="keyword">this</span>-&gt;image_list_1[idx] &lt;&lt; <span class="string">" "</span> &lt;&lt; <span class="keyword">this</span>-&gt;image_list_2[idx] &lt;&lt; <span class="string">" "</span> &lt;&lt; <span class="keyword">this</span>-&gt;annotation_list[idx] &lt;&lt; <span class="string">"\n"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    os.close();</span><br><span class="line">    QMessageBox::information(<span class="keyword">this</span>, <span class="string">"save"</span>, <span class="string">"save result success"</span>, QMessageBox::Ok);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="六添加资源">六、添加资源</h2>
+<p>由于我们的程序是需要publish出去的，因此图片文件等资源，必须包含在程序中。那么Qt怎么添加文件资源呢？</p>
+<p>在项目视图下，右键项目-&gt;添加新文件-&gt;Qt-&gt;Qt Resource File。就可以创建一个qrc文件了。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-create-resource-file.png" alt="qt-create-resource-file" /></p>
+<p>我这里给这个文件取名为image。</p>
+<p>之后，建议在项目的根目录里面新建一个文件夹，用来存放资源。小喵的结构是这个样子的：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/annotate-tool-files.png" alt="annotate-tool-files" /></p>
+<p>小喵的项目根目录新建了一个文件夹images，并将图像素材放入了这个文件夹。</p>
+<p>之后回到QT，我们刚建好的image.qrc文件-&gt;Open in Editor。</p>
+<p>先添加前缀，这里写上/File。之后点击新建的/File目录，再点击添加-&gt;添加文件，选择我们的素材文件。最终的效果图如下：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-resource-image-files.png" alt="qt-resource-image-files" /></p>
+<p>之后，我们就可以在程序中直接访问这些资源了。这也就是我们之前的那四个奇怪的路径的由来了。</p>
+<h2 id="七发布">七、发布</h2>
+<p>此时此刻，相信每一个喵粉的程序都能在自己的电脑上愉快的玩耍了。这么有意思的程序，怎么分享给其他人呢？</p>
+<p>和Windows上常用的VS类似，Qt Creator的左下角有个发布选项：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/qt-project-publish.png" alt="qt-project-publish" /></p>
+<p>选择Release，然后构建整个项目就可以了。之后找到我们的程序，双击就可以运行。</p>
+<p>这时候你会愉快的把这个程序发给你的好伙伴，得到的反应一定是：这是啥！我打不开！ 为什么呢？ 虽然Qt是一个跨平台的界面库，但如果对方的电脑上没有安装Qt，那么就不能运行。不过不用失落，Qt中早已给出一个绝妙的解决办法。</p>
+<p>小喵的电脑是Mac的，所以找到的解决方案也是Mac的，Windows和Linux上也有类似的办法，大家可以自行查找。</p>
+<p><span class="exturl" data-url="aHR0cDovL3d3dy5jbmJsb2dzLmNvbS9FNzg2OEEvYXJjaGl2ZS8yMDEyLzEyLzAyLzI3OTgyMjUuaHRtbA==" title="http://www.cnblogs.com/E7868A/archive/2012/12/02/2798225.html">http://www.cnblogs.com/E7868A/archive/2012/12/02/2798225.html<i class="fa fa-external-link"></i></span></p>
+<p>参考上述博客，我们使用 <code>macdeployqt</code> 这个工具来处理一下release的程序就搞定。这时候你会发现原本100k的程序变成了22M。但是直接发给别人的时候，是可以直接运行的！</p>
+<p>至此，本次的博客结束了。 完整的项目在github上可以下载： <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9Bbm5vX3Bybw==" title="https://github.com/miaoerduo/Anno_pro">https://github.com/miaoerduo/Anno_pro<i class="fa fa-external-link"></i></span></p>
+<p><strong>转载请注明出处~</strong></p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/11/15/openmp-tutorial/" rel="prev" title="应用OpenMP的一个简单的设计模式">
+      <i class="fa fa-chevron-left"></i> 应用OpenMP的一个简单的设计模式
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/02/03/c-lambda-tutorial/" rel="next" title="C++ Lambda表达式">
+      C++ Lambda表达式 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一功能需求"><span class="nav-text">一、功能需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二数据结构"><span class="nav-text">二、数据结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三界面制作"><span class="nav-text">三、界面制作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四数据定义与初始化"><span class="nav-text">四、数据定义与初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五添加事件响应"><span class="nav-text">五，添加事件响应</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#六添加资源"><span class="nav-text">六、添加资源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#七发布"><span class="nav-text">七、发布</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2017/01/01/face-verify-annotate-tool/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

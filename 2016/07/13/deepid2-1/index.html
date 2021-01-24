@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话：小喵最近在做人脸识别的工作，打算将汤晓鸥前辈的DeepID，DeepID2等算法进行实验和复现。DeepID的方法最简单，而DeepID2的实现却略微复杂，并且互联网上也没有比较好的资源。因此小喵在试验之后，确定了实验结果的正确性之后，才准备写这篇博客，分享给热爱Deep Learning的小伙伴们。  能够看到这篇博客的小伙伴们，相信已经对Deep Learning有了比较深入的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于Caffe的DeepID2实现（上）">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2016&#x2F;07&#x2F;13&#x2F;deepid2-1&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话：小喵最近在做人脸识别的工作，打算将汤晓鸥前辈的DeepID，DeepID2等算法进行实验和复现。DeepID的方法最简单，而DeepID2的实现却略微复杂，并且互联网上也没有比较好的资源。因此小喵在试验之后，确定了实验结果的正确性之后，才准备写这篇博客，分享给热爱Deep Learning的小伙伴们。  能够看到这篇博客的小伙伴们，相信已经对Deep Learning有了比较深入的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;caffe_with_python_layer.png">
+<meta property="article:published_time" content="2016-07-13T16:39:02.000Z">
+<meta property="article:modified_time" content="2016-07-13T16:39:02.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;caffe_with_python_layer.png">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2016/07/13/deepid2-1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>基于Caffe的DeepID2实现（上） | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2016/07/13/deepid2-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          基于Caffe的DeepID2实现（上）
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2016-07-13 16:39:02" itemprop="dateCreated datePublished" datetime="2016-07-13T16:39:02+00:00">2016-07-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Deep-Learning/" itemprop="url" rel="index"><span itemprop="name">Deep Learning</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2016/07/13/deepid2-1/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2016/07/13/deepid2-1/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>7.2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>12 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话：小喵最近在做人脸识别的工作，打算将汤晓鸥前辈的DeepID，DeepID2等算法进行实验和复现。DeepID的方法最简单，而DeepID2的实现却略微复杂，并且互联网上也没有比较好的资源。因此小喵在试验之后，确定了实验结果的正确性之后，才准备写这篇博客，分享给热爱Deep Learning的小伙伴们。</p>
+</blockquote>
+<p>能够看到这篇博客的小伙伴们，相信已经对Deep Learning有了比较深入的了解。因此，小喵对亲作了如下的假定：</p>
+<ol type="1">
+<li>了解Deep Learning的基本知识</li>
+<li>目前在做人脸识别的相关工作</li>
+<li>仔细阅读过DeepID和DeepID2的论文</li>
+<li>使用Caffe作为训练框架</li>
+<li>即使不满足上述4个条件，也会持之以恒的学习</li>
+</ol>
+<a id="more"></a>
+<p>如果亲发现对上述的条件都不满足的话，那么这篇博文可能内容还是略显枯涩乏味，你可以从了解Caffe开始，慢慢学习。</p>
+<p>相关资源：</p>
+<ul>
+<li>DeepID：<span class="exturl" data-url="aHR0cDovL21tbGFiLmllLmN1aGsuZWR1LmhrL3BkZi9ZaVN1bl9DVlBSMTQucGRm" title="http://mmlab.ie.cuhk.edu.hk/pdf/YiSun_CVPR14.pdf">http://mmlab.ie.cuhk.edu.hk/pdf/YiSun_CVPR14.pdf<i class="fa fa-external-link"></i></span></li>
+<li>DeepID2：<span class="exturl" data-url="aHR0cDovL3BhcGVycy5uaXBzLmNjL3BhcGVyLzU0MTYtYW5hbG9nLW1lbW9yaWVzLWluLWEtYmFsYW5jZWQtcmF0ZS1iYXNlZC1uZXR3b3JrLW9mLWUtaS1uZXVyb25z" title="http://papers.nips.cc/paper/5416-analog-memories-in-a-balanced-rate-based-network-of-e-i-neurons">http://papers.nips.cc/paper/5416-analog-memories-in-a-balanced-rate-based-network-of-e-i-neurons<i class="fa fa-external-link"></i></span></li>
+<li>Caffe：<span class="exturl" data-url="aHR0cDovL2NhZmZlLmJlcmtlbGV5dmlzaW9uLm9yZy8=" title="http://caffe.berkeleyvision.org/">http://caffe.berkeleyvision.org/<i class="fa fa-external-link"></i></span></li>
+</ul>
+<p>由于篇幅较大，这里会分成几个部分，依次讲解。</p>
+<h2 id="一设计我们独特的data层">一、设计我们独特的Data层</h2>
+<p>在DeepID2中，有两种监督信号。一是<strong>Identity signal</strong>，这和DeepID中的实现方法一样，用给定label的人脸数据，进行分类的训练，这里使用 <code>softmax_with_loss</code> 层来实现(<code>softmax + cross-entropy loss</code>)。这里不再介绍。另一种就是<strong>verification signal</strong>，也就是人脸比对的监督。这里要求，输入的数据时成对存在，每一对都有一个公共的label，是否是同一个类别。如果是同一个identity，则要求他们的特征更接近，如果是不同的identity，则要求他们的特征尽可能远离。</p>
+<p>不论最终怎么实现，我们的第一步是确定的，构造合适的数据。</p>
+<p>使用Caffe训练的时候，第一步是打Batch，将训练数据写入LMDB或者LevelDB数据库中，训练的时候Caffe会从数据库中读取图片，因此一个简单的实现方法就是构造许多的pair，然后打Batch的时候就能保证每对图片都是相连的，然后在训练的时候做一些小Trick就可以实现。</p>
+<p>但是就如上面所说，打Batch的同时，图片的顺序就已经是确定的了，因此网络输入的图片pair也是固定的，这样似乎就缺乏了一些灵活性。</p>
+<p>那么如何动态的构造我们的训练数据呢？</p>
+<p><strong>设计我们独特的data层。</strong></p>
+<p>这里为了方便，使用Python来拓展Caffe的功能。Python是一门简洁的语言，非常适合做这种工作。不过Caffe中如果使用了Python的层，那么就不能使用多GPU了，这点需要注意（希望以后能增加这个支持）。</p>
+<h3 id="让你的caffe支持python拓展">1）让你的Caffe支持Python拓展</h3>
+<p>在Caffe根目录的Makefile.config中，有这么一句话。</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/caffe_with_python_layer.png" alt="with_python_layer" /></p>
+<p>我们需要使用Python层，因此需要取消这个注释。之后Make一下你的Caffe和pycaffe。这样Caffe就支持Python层了。</p>
+<h3 id="编写data层">2）编写data层</h3>
+<p>基于Python的data层的编写，Caffe是给了一个简单的例子的，在<code>/caffe_home/examples/pycaffe/layers/</code>中。我们简单的照着这个例子来写。</p>
+<p>首先，我们定义自己需要的参数。这里，我们需要：</p>
+<ol type="1">
+<li>batch_size: batch的大小，没什么好解释的，要求这个数是大于0的偶数</li>
+<li>mean_file：图像的均值文件的路径</li>
+<li>scale：图像减均值后变换的尺度</li>
+<li>image_root_dir：训练数据的根目录</li>
+<li>source：训练数据的list路径</li>
+<li>crop_size：图像crop的大小</li>
+<li>ratio：正样本所占的比例（0~1）</li>
+</ol>
+<p>caffe在train.prototxt中定义网络结构的时候，可以传入这些参数。我们目前只需要知道，这些参数一定可以获取到，就可以了。另外，source表示训练数据的list的文件地址，这里用到的训练数据的格式和Caffe打batch的数据一样。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">file_path1 label1</span><br><span class="line">file_path2 label2</span><br></pre></td></tr></table></figure>
+<p>这样的格式。</p>
+<p>Data层的具体实现，首先需要继承caffe.Layer这个类，之后实现setup, forward, backward和reshape，不过data层并不需要backward和reshape。setup主要是为了初始化各种参数，并且设置top的大小。对于Data层来说，forward则是生成数据和label。</p>
+<p>闲话少说，代码来见。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#-*- encoding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> caffe</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> os.path <span class="keyword">as</span> osp</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> cv2</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">id2_data_layer</span><span class="params">(caffe.Layer)</span>:</span></span><br><span class="line">    <span class="string">"""</span></span><br><span class="line"><span class="string">    这个python的data layer用于动态的构造训练deepID2的数据</span></span><br><span class="line"><span class="string">    每次forward会产生多对数据，每对数据可能是相同的label或者不同的label</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">setup</span><span class="params">(self, bottom, top)</span>:</span></span><br><span class="line">        self.top_names = [<span class="string">'data'</span>, <span class="string">'label'</span>]</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 读取输入的参数</span></span><br><span class="line">        params = eval(self.param_str)</span><br><span class="line">        <span class="keyword">print</span> <span class="string">"init data layer"</span></span><br><span class="line">        <span class="keyword">print</span> params</span><br><span class="line"></span><br><span class="line">        self.batch_size = params[<span class="string">'batch_size'</span>]  <span class="comment"># batch_size</span></span><br><span class="line">        self.ratio = float(params[<span class="string">'ratio'</span>])</span><br><span class="line">        self.scale = float(params[<span class="string">'scale'</span>])</span><br><span class="line">        <span class="keyword">assert</span> self.batch_size &gt; <span class="number">0</span> <span class="keyword">and</span> self.batch_size % <span class="number">2</span> == <span class="number">0</span>, <span class="string">"batch size must be 2X"</span></span><br><span class="line">        <span class="keyword">assert</span> self.ratio &gt; <span class="number">0</span> <span class="keyword">and</span> self.ratio &lt; <span class="number">1</span>, <span class="string">"ratio must be in (0, 1)"</span></span><br><span class="line">        self.image_root_dir = params[<span class="string">'image_root_dir'</span>]</span><br><span class="line">        self.mean_file = params[<span class="string">'mean_file'</span>]       </span><br><span class="line">        self.source = params[<span class="string">'source'</span>]</span><br><span class="line">        self.crop_size = params[<span class="string">'crop_size'</span>]</span><br><span class="line"></span><br><span class="line">        top[<span class="number">0</span>].reshape(self.batch_size, <span class="number">3</span>, params[<span class="string">'crop_size'</span>], params[<span class="string">'crop_size'</span>])</span><br><span class="line">        top[<span class="number">1</span>].reshape(self.batch_size, <span class="number">1</span>)</span><br><span class="line">        self.batch_loader = BatchLoader(self.image_root_dir, self.mean_file, self.scale, self.source, self.batch_size, self.ratio)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">forward</span><span class="params">(self, bottom, top)</span>:</span></span><br><span class="line">        blob, label_list = self.batch_loader.get_mini_batch()</span><br><span class="line">        top[<span class="number">0</span>].data[...] = blob</span><br><span class="line">        top[<span class="number">1</span>].data[...] = label_list</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">backward</span><span class="params">(self, bottom, top)</span>:</span></span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">reshape</span><span class="params">(self, bottom, top)</span>:</span></span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BatchLoader</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, root_dir, mean_file, scale, image_list_path, batch_size, ratio)</span>:</span></span><br><span class="line">        <span class="keyword">print</span> <span class="string">"init batch loader"</span></span><br><span class="line">        self.batch_size = batch_size</span><br><span class="line">        self.ratio = ratio <span class="comment"># true pair / false pair</span></span><br><span class="line">        self.image2label = &#123;&#125;   <span class="comment"># key:image_name    value:label</span></span><br><span class="line">        self.label2images = &#123;&#125;  <span class="comment"># key:label         value: image_name array</span></span><br><span class="line">        self.images = []        <span class="comment"># store all image_name</span></span><br><span class="line">        self.mean = np.load(mean_file)</span><br><span class="line">        self.scale = scale</span><br><span class="line">        self.root_dir = root_dir</span><br><span class="line">        <span class="keyword">with</span> open(image_list_path) <span class="keyword">as</span> fp:</span><br><span class="line">            <span class="keyword">for</span> line <span class="keyword">in</span> fp:</span><br><span class="line">                data = line.strip().split()</span><br><span class="line">                image_name = data[<span class="number">0</span>]</span><br><span class="line">                label = data[<span class="number">-1</span>]</span><br><span class="line">                self.images.append(image_name)</span><br><span class="line">                self.image2label[image_name] = label</span><br><span class="line">                <span class="keyword">if</span> label <span class="keyword">not</span> <span class="keyword">in</span> self.label2images:</span><br><span class="line">                    self.label2images[label] = []</span><br><span class="line">                self.label2images[label].append(image_name)</span><br><span class="line">        self.labels = self.label2images.keys()</span><br><span class="line">        self.label_num = len(self.labels)</span><br><span class="line">        self.image_num = len(self.image2label)</span><br><span class="line">        <span class="keyword">print</span> <span class="string">"init batch loader over"</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_mini_batch</span><span class="params">(self)</span>:</span></span><br><span class="line">        image_list, label_list = self._get_batch(self.batch_size / <span class="number">2</span>)</span><br><span class="line">        cv_image_list = map(<span class="keyword">lambda</span> image_name: (self.scale * (cv2.imread(os.path.join(self.root_dir, image_name)).astype(np.float32, copy=<span class="literal">False</span>).transpose((<span class="number">2</span>, <span class="number">0</span>, <span class="number">1</span>)) - self.mean)), image_list)</span><br><span class="line">        blob = np.require(cv_image_list)</span><br><span class="line">        label_blob = np.require(label_list, dtype=np.float32).reshape((self.batch_size, <span class="number">1</span>))</span><br><span class="line">        <span class="keyword">return</span> blob, label_blob</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_get_batch</span><span class="params">(self, pair_num)</span>:</span></span><br><span class="line">        image_list = []</span><br><span class="line">        label_list = []</span><br><span class="line">        <span class="keyword">for</span> pair_idx <span class="keyword">in</span> xrange(pair_num):</span><br><span class="line">            <span class="keyword">if</span> random.random() &lt; self.ratio: <span class="comment"># true pair</span></span><br><span class="line">                <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                    label_idx = random.randint(<span class="number">0</span>, self.label_num - <span class="number">1</span>)</span><br><span class="line">                    label = self.labels[label_idx]</span><br><span class="line">                    <span class="keyword">if</span> len(self.label2images[label]) &gt; <span class="number">5</span>:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                first_idx = random.randint(<span class="number">0</span>, len(self.label2images[label]) - <span class="number">1</span>)</span><br><span class="line">                second_id = random.randint(<span class="number">0</span>, len(self.label2images[label]) - <span class="number">2</span>)</span><br><span class="line">                <span class="keyword">if</span> second_id &gt;= first_idx:</span><br><span class="line">                    second_id += <span class="number">1</span></span><br><span class="line">                image_list.append(self.label2images[label][first_idx])</span><br><span class="line">                image_list.append(self.label2images[label][second_id])</span><br><span class="line">                label_list.append(int(label))</span><br><span class="line">                label_list.append(int(label))</span><br><span class="line">            <span class="keyword">else</span>:                   <span class="comment"># false pair</span></span><br><span class="line">                <span class="keyword">for</span> i <span class="keyword">in</span> xrange(<span class="number">2</span>):</span><br><span class="line">                    image_id = random.randint(<span class="number">0</span>, self.image_num - <span class="number">1</span>)</span><br><span class="line">                    image_name = self.images[image_id]</span><br><span class="line">                    label = self.image2label[image_name]</span><br><span class="line">                    image_list.append(image_name)</span><br><span class="line">                    label_list.append(int(label))</span><br><span class="line">        <span class="keyword">return</span> image_list, label_list</span><br></pre></td></tr></table></figure>
+<p>上述的代码可以根据给定的list，batch size，ratio等参数生成符合要求的data和label。这里还有一些问题需要注意：</p>
+<ol type="1">
+<li>对输入的参数没有检验。</li>
+<li>没有对读取图像等操作做异常处理。因此如果很不幸地读到的图片路径不合法，那么程序突然死掉都是有可能的。。。小喵的数据都是可以读的，所以木有问题。</li>
+<li>在选取正负样本对的时候，对于正样本对，只有样本对应的label中的图片数大于5的时候，才选正样本（小喵的训练数据每个人都有至少几十张图片，所以木有出现问题），如果样本比较少的话，可以更改这个数（特别是有测试集的时候，测试集通常数目都很少，小喵训练的时候都是不用测试集的，因为会死循环。。。）。对于选取负样本对的时候，只是随便选了两张图片，而并没有真的保证这一对是不同label，这里考虑到训练数据是比较多的，所以不大可能选中同一个label的样本，因此可以近似代替负样本对。</li>
+<li>这里有个减均值的操作，这个均值文件是经过特殊转换求出的numpy的数组。Caffe生成的均值文件是不能直接用的，但是可以通过仿照Caffe中Classifier中的写法来代替（caffe.io.Transformer工具）。另外这里的图片数据和均值文件是一样大小的，但实际上可能并不一定相等。如果需要对输入图片做各种随机化的操作，还需要自己修改代码。</li>
+</ol>
+<p>至此，我们就完成了一个简单的Data层了。</p>
+<p>那么怎么调用自己的data层呢？</p>
+<p>这里有一个十分简单的写法。在我们用来训练的prototxt中，将Data层的定义改成如下的方式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">layer &#123;</span><br><span class="line">    name: &quot;data&quot;</span><br><span class="line">    type: &quot;Python&quot;</span><br><span class="line">    top: &quot;data&quot;</span><br><span class="line">    top: &quot;label&quot;</span><br><span class="line">    include &#123;</span><br><span class="line">        phase: TRAIN</span><br><span class="line">    &#125;    </span><br><span class="line">    python_param &#123;</span><br><span class="line">        module: &quot;id2_data_layer&quot;</span><br><span class="line">        layer: &quot;id2_data_layer&quot;</span><br><span class="line">        param_str: &quot;&#123;&#39;crop_size&#39; : 128, &#39;batch_size&#39; : 96, &#39;mean_file&#39;: &#39;&#x2F;your&#x2F;data&#x2F;root&#x2F;mean.npy&#39;, &#39;scale&#39;: 0.0078125, &#39;source&#39;: &#39;&#x2F;path&#x2F;to&#x2F;your&#x2F;train_list&#39;, &#39;image_root_dir&#39;: &#39;&#x2F;path&#x2F;to&#x2F;your&#x2F;image_root&#x2F;&#39;&#125;&quot;    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>python_param中的这三个参数需要注意：</p>
+<p><code>module</code>：模块名，我们先前编写的data层，本身就是一个文件，也就是一个模块，因此模块名就是文件名。</p>
+<p><code>layer</code>：层的名字，我们在文件中定义的类的名字。这里比较巧合，module和layer的名字相同。</p>
+<p><code>param_str</code>：所有的需要传给data层的参数都通过这个参数来传递。这里简单的使用了Python字典的格式的字符串，在data层中使用eval来执行（o(╯□╰)o  这其实并不是一个好习惯），从而获取参数，当然也可以使用别的方式来传递，比如json或者xml等。</p>
+<p>最后，你在训练的时候可能会报错，说找不到你刚刚的层，或者找不到caffe，只需要把这个层的代码所在的文件夹的路径加入到PYTHONPATH中即可。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> PYTHONPATH=PYTHONPATH:/path/to/your/layer/:/path/to/caffe/python</span><br></pre></td></tr></table></figure>
+<p>这样就完成了我们的Data层的编写，是不是非常简单？</p>
+<div style="background-color: #ddd; padding: 20px">
+<p>重要更新：<br/> 1，小喵最近发现直接在image_data_layer.cpp中进行修改，可以更好的实现这个目标，而且支持多GPU。<br/> 2，训练的数据可以只用正样本对，因为identity signal已经十分强调不同identity的feature之间的距离，因此verification signal只需要强调相同的identity的feature相近就好。<br/> 3，小喵新的训练数据，构造pair的方式也做了修改。每次使用所有的数据构造pair，然后用来训练，每个epoch后都重新生成一次list。这样可以保证identity signal能够每次训练所有的图片，而verification signal也能每次训练不同的样本对。</p>
+</div>
+<p><strong>转载</strong>请注明出处~</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/06/11/redis-list/" rel="prev" title="三、Redis基本操作——List">
+      <i class="fa fa-chevron-left"></i> 三、Redis基本操作——List
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2016/07/15/deepid2-2/" rel="next" title="基于Caffe的DeepID2实现（中）">
+      基于Caffe的DeepID2实现（中） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一设计我们独特的data层"><span class="nav-text">一、设计我们独特的Data层</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#让你的caffe支持python拓展"><span class="nav-text">1）让你的Caffe支持Python拓展</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编写data层"><span class="nav-text">2）编写data层</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2016/07/13/deepid2-1/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

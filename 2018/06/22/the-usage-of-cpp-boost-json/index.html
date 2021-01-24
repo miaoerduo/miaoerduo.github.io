@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="最近在写一个C++项目的时候，有大量的配置信息，于是将这些配置信息整合进一个文本文件中，选择了JSON这种数据格式。C++在处理JSON数据的库有很多，比如Jsoncpp，Boost等，这个项目中由于本身就已经用到了Boost这个库，因此，也就选用Boost来进行JSON的解析了。  Boost的JSON解析，使用的是property_tree这个数据类型，它可以方便的解析XML和JSON。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C++ Boost JSON解析库的使用">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2018&#x2F;06&#x2F;22&#x2F;the-usage-of-cpp-boost-json&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="最近在写一个C++项目的时候，有大量的配置信息，于是将这些配置信息整合进一个文本文件中，选择了JSON这种数据格式。C++在处理JSON数据的库有很多，比如Jsoncpp，Boost等，这个项目中由于本身就已经用到了Boost这个库，因此，也就选用Boost来进行JSON的解析了。  Boost的JSON解析，使用的是property_tree这个数据类型，它可以方便的解析XML和JSON。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-06-22T20:22:54.000Z">
+<meta property="article:modified_time" content="2018-06-22T20:22:54.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2018/06/22/the-usage-of-cpp-boost-json/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>C++ Boost JSON解析库的使用 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2018/06/22/the-usage-of-cpp-boost-json/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          C++ Boost JSON解析库的使用
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-06-22 20:22:54" itemprop="dateCreated datePublished" datetime="2018-06-22T20:22:54+00:00">2018-06-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2018/06/22/the-usage-of-cpp-boost-json/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/06/22/the-usage-of-cpp-boost-json/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>8.1k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>14 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>最近在写一个C++项目的时候，有大量的配置信息，于是将这些配置信息整合进一个文本文件中，选择了JSON这种数据格式。C++在处理JSON数据的库有很多，比如Jsoncpp，Boost等，这个项目中由于本身就已经用到了Boost这个库，因此，也就选用Boost来进行JSON的解析了。</p>
+</blockquote>
+<p>Boost的JSON解析，使用的是property_tree这个数据类型，它可以方便的解析XML和JSON。</p>
+<a id="more"></a>
+<h2 id="一boost-json解析库的几个注意事项">一、Boost JSON解析库的几个注意事项</h2>
+<p>在具体介绍之前，必须要强调一下，这个库默认不是线程安全的！不是线程安全的！不是线程安全的！不做任何处理的情况下，如果直接在多线程的程序中使用Boost解析JSON，可能会在奇怪的时候报段错误。这是由于Boost的JSON解析是基于SPIRIT语法解析的，而SPIRIT本身就不是线程安全的，我们如果需要它支持线程安全，就必须加入一个宏<code>#define BOOST_SPIRIT_THREADSAFE</code>，把它放在引用boost的头文件的最开始就行。理论上，在编译的时候加入宏也是可以的。另一个需要注意的是，一般网上找的教程中，property_tree都是不支持unicode编码的，如果想要支持unicode，需要一些额外的操作。这个从网上可以查到，我尝试了一下，最终还是放弃了。取而代之的一个方案就是把中文的各种路径啥的，用软链接替换成英文和数字。之后世界就美好了。</p>
+<h2 id="二boostproperty_treeptree-类型">二、boost::property_tree::ptree 类型</h2>
+<p>对于JSON或者XML，boost将他们解析之后都会生成一个ptree的数据结构。类似于下面的结构。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ptree</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    data_type data;                         <span class="comment">// data associated with the node</span></span><br><span class="line">    <span class="built_in">list</span>&lt; pair&lt;key_type, ptree&gt; &gt; children; <span class="comment">// ordered list of named children</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>可以看出，这是一个很标准的树的结构。对于树中的每一个节点，都有自己的数值和子节点，每个子节点都有一个唯一的名字。<code>data_type</code>和<code>key_type</code>通常是<code>std::string</code>或<code>std::wstring</code>。如果希望处理unicode的字符串的话，就需要用到<code>std::wstring</code>了。下面的例子中，使用的全部都是<code>std::string</code>。</p>
+<h2 id="三json文件的解析">三、JSON文件的解析</h2>
+<p>首先，我们用一个小栗子，来介绍一下Boost是如何读取JSON数据的。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/ptree.hpp&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/json_parser.hpp&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> s = <span class="string">"&#123; \"a\": 100, \"b\": [1, 2, 3, 4] &#125;"</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function"><span class="built_in">stringstream</span> <span class="title">ss</span><span class="params">(s)</span></span>;</span><br><span class="line">    boost::property_tree::ptree ptree;</span><br><span class="line">    <span class="comment">// 读取JSON数据</span></span><br><span class="line">    boost::property_tree::read_json(ss, ptree);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; ptree.get_child(<span class="string">"a"</span>).data() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="comment">// 写回JSON数据</span></span><br><span class="line">    boost::property_tree::write_json(<span class="string">"./tmp.json"</span>, ptree);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里首先我们需要定义一个<code>boost::property_tree::ptree</code>类型的对象，之后通过<code>boost::property_tree::read_json</code>函数进行数据的读取，之后就可以使用各种ptree的接口进行数据的操作了。在<code>boost/property_tree/json_parser.hpp</code>文件中我们可以看到读写JSON的一些接口。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> boost &#123;</span><br><span class="line">    <span class="keyword">namespace</span> property_tree &#123;</span><br><span class="line">        <span class="keyword">namespace</span> json_parser &#123;</span><br><span class="line">            <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Ptree&gt; </span><br><span class="line">            <span class="function"><span class="keyword">void</span> <span class="title">read_json</span><span class="params">(<span class="built_in">std</span>::basic_istream&lt; <span class="keyword">typename</span> Ptree::key_type::value_type &gt; &amp;, </span></span></span><br><span class="line"><span class="function"><span class="params">                           Ptree &amp;)</span></span>;</span><br><span class="line">            <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Ptree&gt; </span><br><span class="line">            <span class="function"><span class="keyword">void</span> <span class="title">read_json</span><span class="params">(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> &amp;, Ptree &amp;, </span></span></span><br><span class="line"><span class="function"><span class="params">                            <span class="keyword">const</span> <span class="built_in">std</span>::locale &amp; = <span class="built_in">std</span>::locale())</span></span>;</span><br><span class="line">            <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Ptree&gt; </span><br><span class="line">            <span class="function"><span class="keyword">void</span> <span class="title">write_json</span><span class="params">(<span class="built_in">std</span>::basic_ostream&lt; <span class="keyword">typename</span> Ptree::key_type::value_type &gt; &amp;, </span></span></span><br><span class="line"><span class="function"><span class="params">                            <span class="keyword">const</span> Ptree &amp;, <span class="keyword">bool</span> = <span class="literal">true</span>)</span></span>;</span><br><span class="line">            <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Ptree&gt; </span><br><span class="line">            <span class="function"><span class="keyword">void</span> <span class="title">write_json</span><span class="params">(<span class="keyword">const</span> <span class="built_in">std</span>::<span class="built_in">string</span> &amp;, <span class="keyword">const</span> Ptree &amp;, </span></span></span><br><span class="line"><span class="function"><span class="params">                            <span class="keyword">const</span> <span class="built_in">std</span>::locale &amp; = <span class="built_in">std</span>::locale(), <span class="keyword">bool</span> = <span class="literal">true</span>)</span></span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它支持读写JSON，对于读取操作，它支持直接根据文件名称来加载JSON或者通过输入流来加载。输出也是相同。所以我们上面的Demo中，需要将字符串<code>s</code>转换成字符串流对象<code>ss</code>，之后才能进行加载。写文件支持写入到文件或者输出流中，最后一个bool值表示是否格式化输出json。</p>
+<h2 id="四json对象的读取">四、JSON对象的读取</h2>
+<p>我们知道JSON对象主要有两种格式：键值对和数组。JSON灵活就在于键值对的值还可以键值对或者数组，数组的每个元素也是。那么我们分别介绍键值对和数组的数据获取方式。</p>
+<h3 id="键值对的解析">1）键值对的解析</h3>
+<p>ptree支持一个操作叫做<code>get_child</code>，可以根据键的名字，来获取子节点。而且这个名字还可以是累加的。什么叫可以累加呢？我们看一下下面的代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/ptree.hpp&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/json_parser.hpp&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> s = <span class="string">"&#123; \"a\": &#123; \"b\":1, \"c\":2 &#125;, \"d\":3 &#125;"</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function"><span class="built_in">stringstream</span> <span class="title">ss</span><span class="params">(s)</span></span>;</span><br><span class="line">    boost::property_tree::ptree ptree;</span><br><span class="line">    boost::property_tree::read_json(ss, ptree);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"input text:"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    boost::property_tree::write_json(<span class="built_in">std</span>::<span class="built_in">cout</span>, ptree);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"-------------------------"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"parse result: "</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"a-&gt;b: "</span> &lt;&lt; ptree.get_child(<span class="string">"a"</span>).get_child(<span class="string">"b"</span>).get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"a-&gt;b: "</span> &lt;&lt; ptree.get_child(<span class="string">"a.b"</span>).get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"a-&gt;c: "</span> &lt;&lt; ptree.get_child(<span class="string">"a.c"</span>).get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"d: "</span> &lt;&lt; ptree.get_child(<span class="string">"d"</span>).get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出的结果为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">input text:</span><br><span class="line">&#123;</span><br><span class="line">    &quot;a&quot;: &#123;</span><br><span class="line">        &quot;b&quot;: &quot;1&quot;,</span><br><span class="line">        &quot;c&quot;: &quot;2&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;d&quot;: &quot;3&quot;</span><br><span class="line">&#125;</span><br><span class="line">-------------------------</span><br><span class="line">parse result:</span><br><span class="line">a-&gt;b: 1</span><br><span class="line">a-&gt;b: 1</span><br><span class="line">a-&gt;c: 2</span><br><span class="line">d: 3</span><br></pre></td></tr></table></figure>
+<p><code>get_child</code>这个函数，可以根据节点的名字，获取到子节点的ptree对象。这个节点的名字可以使用<code>.</code>连接各个层级的名称。<code>get_value&lt;Type&gt;</code>方法，可以获取节点的值，并且转换成期望的数据类型。如果我们就是想获取节点的值。不期望有任何转换，可以使用<code>data</code>这个函数。 <code>get_child</code>要求输入的名称路径必须是存在的，否则会抛异常。如果我们不知道某个名称路径是否存在的话，可以使用<code>get_child_optional</code>这个函数，如果路径不存在，该函数会返回<code>boost::null</code>。<code>get_child_optional</code>返回的类似于指针的结构，如果需要获取值，可以用这样的写法：<code>pt.get_child_optional("some_key")-&gt;get_value&lt;int&gt;()</code>。 我们可以向现在这样通过各种树的操作，选择到我们的需要的节点，再通过<code>get_value&lt;Type&gt;</code>函数获取到数据值。但这样的操作有时候会有点繁琐。boost支持更简化的一些操作。下面是同样功能的一个例子：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/ptree.hpp&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/json_parser.hpp&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> s = <span class="string">"&#123; \"a\": &#123; \"b\":1, \"c\":2 &#125;, \"d\":3 &#125;"</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function"><span class="built_in">stringstream</span> <span class="title">ss</span><span class="params">(s)</span></span>;</span><br><span class="line">    boost::property_tree::ptree ptree;</span><br><span class="line">    boost::property_tree::read_json(ss, ptree);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"input text:"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    boost::property_tree::write_json(<span class="built_in">std</span>::<span class="built_in">cout</span>, ptree);</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"-------------------------"</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"parse result: "</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"a-&gt;b: "</span> &lt;&lt; ptree.get&lt;<span class="keyword">int</span>&gt;(<span class="string">"a.b"</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"a-&gt;c: "</span> &lt;&lt; ptree.get&lt;<span class="keyword">int</span>&gt;(<span class="string">"a.c"</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">"d: "</span> &lt;&lt; ptree.get&lt;<span class="keyword">int</span>&gt;(<span class="string">"d"</span>) &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>get</code>这个函数相当于先<code>get_child</code>得到要找的节点，之后再调用<code>get_value&lt;Type&gt;</code>这个函数。<code>get_value&lt;Type&gt;</code>这个函数可以获取节点的值，同时把它转换成<code>Type</code>格式。即<code>ptree.get&lt;int&gt;("a.b")</code>等价于<code>ptree.get_child("a.b").get_value&lt;int&gt;()</code>。 通过<code>get</code>函数，我们可以很方便的获取某个节点的数据，而且还能顺便完成类型的转换，真的不能更方便了！</p>
+<h3 id="数组的解析">2）数组的解析</h3>
+<p>为什么数组的解析要单独来说呢？因为，数组格式中，没有键，所以我们不能根据名字来获取节点了，所以读取的方式有了些许的不同。 Boost针对数组，给我们提供了遍历子节点的迭代器接口。可以十分方便的遍历某节点的所有的子节点（当然在键值对的解析中也可以使用）。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/ptree.hpp&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/json_parser.hpp&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> s = <span class="string">"[1, 2, 3, 4]"</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function"><span class="built_in">stringstream</span> <span class="title">ss</span><span class="params">(s)</span></span>;</span><br><span class="line">    boost::property_tree::ptree ptree;</span><br><span class="line">    boost::property_tree::read_json(ss, ptree);</span><br><span class="line">    boost::property_tree::write_json(<span class="built_in">std</span>::<span class="built_in">cout</span>, ptree);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// visit array data</span></span><br><span class="line">    <span class="keyword">for</span> (boost::property_tree::ptree::iterator it = ptree.begin(); it != ptree.end(); ++ it) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; it-&gt;second.get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="string">" "</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// simpler in c++11</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> it: ptree) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; it.second.get_value&lt;<span class="keyword">int</span>&gt;() &lt;&lt; <span class="string">" "</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>打印的结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;&quot;: &quot;1&quot;,</span><br><span class="line">    &quot;&quot;: &quot;2&quot;,</span><br><span class="line">    &quot;&quot;: &quot;3&quot;,</span><br><span class="line">    &quot;&quot;: &quot;4&quot;</span><br><span class="line">&#125;</span><br><span class="line">1 2 3 4</span><br><span class="line">1 2 3 4</span><br></pre></td></tr></table></figure>
+<p>可以看出，Boost中将JSON数组也是按照键值对的方式去存储，只是键的内容是一个空的字符串。迭代器的<code>first</code>是键的结果，数组中就是空字符串。<code>second</code>就是我们的值。</p>
+<h3 id="其他的实用接口">3）其他的实用接口</h3>
+<ul>
+<li><code>bool empty()</code>: 返回该节点是否含有子节点。比如当一个节点已经是叶子节点的时候，可以用这个函数来判断。</li>
+<li><code>assoc_iterator find(const key_type &amp;key)</code>: 给定一个名字路径，返回指向该节点的迭代器或者<code>boost::property_tree::ptree::not_found</code>。</li>
+<li><code>size_type count(const key_type &amp;key)</code>: 返回指定名称路径的节点的子节点的数目。</li>
+</ul>
+<h2 id="五json对象的编辑">五、JSON对象的编辑</h2>
+<p>Boost支持很多的对JSON对象的写的操作，但是我在项目中没有用到，所以在这里暂时就没有动力整理下去了~~ 这里附上Boost ptree的文档，方便大家查阅：<span class="exturl" data-url="aHR0cHM6Ly93d3cuYm9vc3Qub3JnL2RvYy9saWJzLzFfNjVfMS9ib29zdC9wcm9wZXJ0eV90cmVlL3B0cmVlLmhwcA==" title="https://www.boost.org/doc/libs/1_65_1/boost/property_tree/ptree.hpp">https://www.boost.org/doc/libs/1_65_1/boost/property_tree/ptree.hpp<i class="fa fa-external-link"></i></span></p>
+<h2 id="六疑难杂症">六、疑难杂症</h2>
+<h3 id="怎么判断某个键是否存在">1.怎么判断某个键是否存在？</h3>
+<p>使用<code>get_child_optional</code>，再判断返回是否为<code>boost::null</code>，这个对象直接相当于<code>false</code>。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">auto</span> node = ptree.get_child_optional(<span class="string">"somekey"</span>);</span><br><span class="line"><span class="keyword">if</span> (!node) &#123;</span><br><span class="line">    <span class="comment">// node not exists</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="怎么方便的遍历数组">2.怎么方便的遍历数组？</h3>
+<p>这个功能，我还专门查过。其实懂了之前的迭代器的使用，就能方便的遍历了。下面是我用的一个代码。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="built_in">std</span>::<span class="built_in">vector</span>&lt;T&gt; as_vector(boost::property_tree::ptree <span class="keyword">const</span> &amp;pt, boost::property_tree::ptree::key_type <span class="keyword">const</span>&amp; key) &#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;T&gt; r;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;item: pt.get_child(key)) &#123;</span><br><span class="line">        r.push_back(item.second.get_value&lt;T&gt;());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> r;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用的话就这样：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/ptree.hpp&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;boost/property_tree/json_parser.hpp&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sstream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;vector&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</span><br><span class="line"><span class="built_in">std</span>::<span class="built_in">vector</span>&lt;T&gt; as_vector(boost::property_tree::ptree <span class="keyword">const</span> &amp;pt, boost::property_tree::ptree::key_type <span class="keyword">const</span>&amp; key) &#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;T&gt; r;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;item: pt.get_child(key)) &#123;</span><br><span class="line">        r.push_back(item.second.get_value&lt;T&gt;());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> r;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">string</span> s = <span class="string">"&#123;\"arr\": [1, 2, 3, 4]&#125;"</span>;</span><br><span class="line">    <span class="built_in">std</span>::<span class="function"><span class="built_in">stringstream</span> <span class="title">ss</span><span class="params">(s)</span></span>;</span><br><span class="line">    boost::property_tree::ptree ptree;</span><br><span class="line">    boost::property_tree::read_json(ss, ptree);</span><br><span class="line">    boost::property_tree::write_json(<span class="built_in">std</span>::<span class="built_in">cout</span>, ptree);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> result = as_vector&lt;<span class="keyword">int</span>&gt;(ptree, <span class="string">"arr"</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;&amp;d: result) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; d &lt;&lt; <span class="string">" "</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>不过这个解决方案有个问题，就是如果根节点就是数组的话，似乎就不能很好的work了。</p>
+<h3 id="怎么解析中文">3.怎么解析中文</h3>
+<p>/(ㄒoㄒ)/~~</p>
+<p><strong>转载请注明出处，谢谢！</strong></p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/04/30/cpp-concurrent/" rel="prev" title="C++ 并发队列的原理简介与开源库concurrentqueue安利">
+      <i class="fa fa-chevron-left"></i> C++ 并发队列的原理简介与开源库concurrentqueue安利
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/08/02/fix-rebuild-tensor-v2-error-in-pytorch/" rel="next" title="_rebuild_tensor_v2？pytorch版本间模型兼容性脱坑实践">
+      _rebuild_tensor_v2？pytorch版本间模型兼容性脱坑实践 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一boost-json解析库的几个注意事项"><span class="nav-text">一、Boost JSON解析库的几个注意事项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二boostproperty_treeptree-类型"><span class="nav-text">二、boost::property_tree::ptree 类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三json文件的解析"><span class="nav-text">三、JSON文件的解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四json对象的读取"><span class="nav-text">四、JSON对象的读取</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#键值对的解析"><span class="nav-text">1）键值对的解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数组的解析"><span class="nav-text">2）数组的解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他的实用接口"><span class="nav-text">3）其他的实用接口</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五json对象的编辑"><span class="nav-text">五、JSON对象的编辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#六疑难杂症"><span class="nav-text">六、疑难杂症</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么判断某个键是否存在"><span class="nav-text">1.怎么判断某个键是否存在？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么方便的遍历数组"><span class="nav-text">2.怎么方便的遍历数组？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么解析中文"><span class="nav-text">3.怎么解析中文</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2018/06/22/the-usage-of-cpp-boost-json/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

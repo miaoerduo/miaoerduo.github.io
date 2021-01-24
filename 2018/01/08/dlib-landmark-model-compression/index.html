@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="人脸关键点检测的技术在很多领域上都有应用，首先是人脸识别，常见的人脸算法其实都会有一步，就是把人脸的图像进行对齐，而这个对齐就是通过关键点实现的，因此关于人脸关键点检测的论文也常叫face alignment，也就是人脸对齐。另一方面，对于美颜，2D&#x2F;3D建模等等也需要一来人脸的关键点技术，而且通常也要求有尽可能多的人脸关键点。  Dlib is a modern C++ toolkit cont">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dlib人脸关键点检测的模型分析与压缩">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2018&#x2F;01&#x2F;08&#x2F;dlib-landmark-model-compression&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="人脸关键点检测的技术在很多领域上都有应用，首先是人脸识别，常见的人脸算法其实都会有一步，就是把人脸的图像进行对齐，而这个对齐就是通过关键点实现的，因此关于人脸关键点检测的论文也常叫face alignment，也就是人脸对齐。另一方面，对于美颜，2D&#x2F;3D建模等等也需要一来人脸的关键点技术，而且通常也要求有尽可能多的人脸关键点。  Dlib is a modern C++ toolkit cont">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-01-08T20:50:40.000Z">
+<meta property="article:modified_time" content="2018-01-08T20:50:40.000Z">
+<meta property="article:author" content="MIAO">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2018/01/08/dlib-landmark-model-compression/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>dlib人脸关键点检测的模型分析与压缩 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2018/01/08/dlib-landmark-model-compression/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          dlib人脸关键点检测的模型分析与压缩
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-01-08 20:50:40" itemprop="dateCreated datePublished" datetime="2018-01-08T20:50:40+00:00">2018-01-08</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2018/01/08/dlib-landmark-model-compression/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/01/08/dlib-landmark-model-compression/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>6k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>10 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>人脸关键点检测的技术在很多领域上都有应用，首先是人脸识别，常见的人脸算法其实都会有一步，就是把人脸的图像进行对齐，而这个对齐就是通过关键点实现的，因此关于人脸关键点检测的论文也常叫face alignment，也就是人脸对齐。另一方面，对于美颜，2D/3D建模等等也需要一来人脸的关键点技术，而且通常也要求有尽可能多的人脸关键点。</p>
+<blockquote>
+<p>Dlib is a modern C++ toolkit containing machine learning algorithms and tools for creating complex software in C++ to solve real world problems. It is used in both industry and academia in a wide range of domains including robotics, embedded devices, mobile phones, and large high performance computing environments. Dlib's <span class="exturl" data-url="aHR0cDovL2RsaWIubmV0L2xpY2Vuc2UuaHRtbA==" title="http://dlib.net/license.html">open source licensing<i class="fa fa-external-link"></i></span> allows you to use it in any application, free of charge.</p>
+</blockquote>
+<p>Dlib是一个包含了大量的机器学习和复杂软件开发工具的现代C++工具箱，被广泛的用于软件开发等领域。</p>
+<p>本篇博客主要研究的就是Dlib中的人脸关键点检测的工具。该工具的方法依据是 One Millisecond Face Alignment with an Ensemble of Regression Trees by Vahid Kazemi and Josephine Sullivan, CVPR 2014 这篇论文，在速度和精度上均达到了极好的效果。 本文的侧重点在于人脸关键点模型的存储结构的分析和模型的压缩策略分析，最终在性能几乎不变的情况下，得到模型的至少10倍的压缩比。项目最终的github地址为：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9kbGliLWZhY2UtbGFuZG1hcmstY29tcHJlc3Npb24=" title="https://github.com/miaoerduo/dlib-face-landmark-compression">https://github.com/miaoerduo/dlib-face-landmark-compression<i class="fa fa-external-link"></i></span> 欢迎fork、star和pr。</p>
+<a id="more"></a>
+<p>注意：</p>
+<ol type="1">
+<li>本文假定了读者对该论文有一定的了解，可以使用Dlib完成人脸关键点的训练和部署，因此不做论文的相关方法的解释。</li>
+<li>本文中分析的数据都是Dlib的shape_predictor类的私有成员，这里不得不把他们的修饰符从private改成了public，但文中并没有专门指出。</li>
+<li>本文中所有的代码均在本地的64位操作系统上运行，在变量数据存储的大小描述的时候也均以64位来说明，即使是不同的编译器也会对数据大小造成影响，但这不是本文的重点。</li>
+<li>本文中的数据类型如果不在C++中见到的数据类型，则为下面的typedef的数据类型：</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">char</span>        int8;</span><br><span class="line"><span class="keyword">typedef</span> short       int16;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">int</span>         int32;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">long</span> <span class="keyword">long</span>   int64;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">float</span>       float32;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">double</span>      float64;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">unsigned</span> <span class="keyword">char</span>       uint8;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">unsigned</span> short      uint16;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">unsigned</span> <span class="keyword">int</span>        uint32;</span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="keyword">long</span>  uint64;</span><br></pre></td></tr></table></figure>
+<p>Dlib中人脸关键点实现的类是<code>dlib::shape_predictor</code>，源码为：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2Rhdmlza2luZy9kbGliL2Jsb2IvbWFzdGVyL2RsaWIvaW1hZ2VfcHJvY2Vzc2luZy9zaGFwZV9wcmVkaWN0b3IuaA==" title="https://github.com/davisking/dlib/blob/master/dlib/image_processing/shape_predictor.h">https://github.com/davisking/dlib/blob/master/dlib/image_processing/shape_predictor.h<i class="fa fa-external-link"></i></span></p>
+<p>这里简单的抽取了数据相关的接口定义：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> dlib</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">namespace</span> impl</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">split_feature</span></span></span><br><span class="line"><span class="class">        &#123;</span></span><br><span class="line">            <span class="keyword">unsigned</span> <span class="keyword">long</span> idx1;</span><br><span class="line">            <span class="keyword">unsigned</span> <span class="keyword">long</span> idx2;</span><br><span class="line">            <span class="keyword">float</span> thresh;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">regression_tree</span></span></span><br><span class="line"><span class="class">        &#123;</span></span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;split_feature&gt; splits;</span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;matrix&lt;<span class="keyword">float</span>,0,1&gt; &gt; leaf_values;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">shape_predictor</span></span></span><br><span class="line"><span class="class">    &#123;</span></span><br><span class="line">    <span class="keyword">private</span>:</span><br><span class="line">        matrix&lt;<span class="keyword">float</span>,<span class="number">0</span>,<span class="number">1</span>&gt; initial_shape;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">vector</span>&lt;impl::regression_tree&gt; &gt; forests;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">unsigned</span> <span class="keyword">long</span>&gt; &gt; anchor_idx;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">vector</span>&lt;dlib::<span class="built_in">vector</span>&lt;<span class="keyword">float</span>,2&gt; &gt; &gt; deltas;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面，我们逐一对每个部分的参数进行分析。<code>Dlib</code>内置了很多的数据类型，像<code>vector</code>、<code>metrix</code>等等，每种数据类型又可以单独序列化成二进制的数据。对于<code>shape_predictor</code>的序列化，本质上就是不断的调用成员变量数据的序列化方法，由此极大地简化代码，提高了代码的复用率。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">serialize</span> <span class="params">(<span class="keyword">const</span> shape_predictor&amp; item, <span class="built_in">std</span>::ostream&amp; out)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> version = <span class="number">1</span>;</span><br><span class="line">    dlib::serialize(version, out);</span><br><span class="line">    dlib::serialize(item.initial_shape, out);</span><br><span class="line">    dlib::serialize(item.forests, out);</span><br><span class="line">    dlib::serialize(item.anchor_idx, out);</span><br><span class="line">    dlib::serialize(item.deltas, out);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>但，对于移动端等应用场景，需要模型占用尽可能少的存储空间，这样一来，这些标准的存储方式就会造成数据的很大程度的冗余。我们的任务就是一点点的减少这些冗余，只存有用的数据。</p>
+<h2 id="一常量部分">一、常量部分</h2>
+<p>首先，我们需要知道一些常量的数据。这些数据完成了对模型的描述。 [table id=6 /]</p>
+<table>
+<thead>
+<tr class="header">
+<th>变量名</th>
+<th>数据类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>version</td>
+<td>uint64</td>
+<td>记录模型版本号</td>
+</tr>
+<tr class="even">
+<td>cascade_depth</td>
+<td>uint64</td>
+<td>回归树的级数</td>
+</tr>
+<tr class="odd">
+<td>num_trees_per_cascade_level</td>
+<td>uint64</td>
+<td>每一级中的树的个数</td>
+</tr>
+<tr class="even">
+<td>tree_depth</td>
+<td>uint64</td>
+<td>树的深度</td>
+</tr>
+<tr class="odd">
+<td>feature_pool_size</td>
+<td>uint64</td>
+<td>特征池的大小</td>
+</tr>
+<tr class="even">
+<td>landmark_num</td>
+<td>uint64</td>
+<td>特征点的数目</td>
+</tr>
+<tr class="odd">
+<td>quantization_num</td>
+<td>uint64</td>
+<td>量化的级数</td>
+</tr>
+<tr class="even">
+<td>prune_thresh</td>
+<td>float32</td>
+<td>剪枝的阈值</td>
+</tr>
+</tbody>
+</table>
+<h2 id="二初始形状-initial_shape">二、初始形状 initial_shape</h2>
+<p><code>matrix&lt;float,0,1&gt; initial_shape;</code> 表示的是初始化人脸关键点的坐标，存储类型是<code>float</code>型，个数为<code>landmark_num * 2</code>（不要忘了一个点是两个数组成 :P）。</p>
+<h2 id="三锚点-anchor_idx">三、锚点 anchor_idx</h2>
+<p><code>std::vector&lt;std::vector&lt;unsigned long&gt; &gt; anchor_idx;</code> 是一个二维的数组，存放的是landmark点的下标。在常见的68点和192点的任务中，使用一个<code>uint8</code>就可以存放下标，而这里使用的是<code>unsigned long</code>，显然过于<strong>冗余</strong>，这里可以简化成uint8存储。这个二维数组的大小为 <code>cascade_depth * feature_pool_size</code>。每一级回归树使用一套锚点。</p>
+<h2 id="四deltas">四、deltas</h2>
+<p><code>std::vector&lt;std::vector&lt;dlib::vector&lt;float,2&gt; &gt; &gt; deltas;</code>和anchor_idx类似，是一个二维数组，不同的是，数组的每个值都是<code>dlib::vector&lt;float,2&gt;</code>的结构。这个数组的大小为<code>cascade_depth * feature_pool_size * 2</code>，存放的内容是<code>float</code>数值。考虑到这里的参数量很少，没有压缩的必要，这里我们直接存储原数据。</p>
+<h2 id="五森林-forests">五、森林 forests</h2>
+<p>这部分是模型参数量最大的部分，一个模型大概2/3的存储都耗在了这个地方。这里才是我们压缩的重点！ <code>std::vector&lt;std::vector&lt;impl::regression_tree&gt; &gt; forests;</code>一个<code>shape_predictor</code>中，有<code>cascade_depth</code>级，每一级有<code>num_trees_per_cascade_level</code>棵树。对于每棵树，它主要存放了两个部分的数据：分割的阈值<code>splits</code>和叶子的值<code>leaf_values</code>。为了便于阅读，再把数据结构的定义附上。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">namespace</span> dlib</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">namespace</span> impl</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">split_feature</span></span></span><br><span class="line"><span class="class">        &#123;</span></span><br><span class="line">            <span class="keyword">unsigned</span> <span class="keyword">long</span> idx1;</span><br><span class="line">            <span class="keyword">unsigned</span> <span class="keyword">long</span> idx2;</span><br><span class="line">            <span class="keyword">float</span> thresh;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">regression_tree</span></span></span><br><span class="line"><span class="class">        &#123;</span></span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;split_feature&gt; splits;</span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;matrix&lt;<span class="keyword">float</span>,0,1&gt; &gt; leaf_values;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125; <span class="comment">// end namespace impl</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="splits">5.1 splits</h3>
+<p>splits存放的数据是阈值和特征像素值的下标，这个下标的范围是<code>[0, feature_pool_size)</code>，在通常情况下，<code>feature_pool_size</code>不会太大，论文中最大也就设到了2000。这里我们可以使用一个<code>uint16</code>来存储。<code>thresh</code>就直接存储。对于一棵树，树的深度为<code>tree_depth</code>，则有 <code>2^tree_depth - 1</code>个split_node。（这里认为只有根节点的树深度为0）。</p>
+<h3 id="leaf_values">5.2 leaf_values</h3>
+<p><code>std::vector&lt;matrix&lt;float,0,1&gt; &gt; leaf_values;</code>对于深度为<code>tree_depth</code>的树，有<code>2^tree_depth</code>个叶子节点。对于每个叶子节点，需要存储整个关键点的偏移量，也就是说每个节点存放了<code>landmark_num * 2</code>个<code>float</code>的数值。那么这部分的参数量到底有多大呢？</p>
+<p>举个例子，在<code>cascade_num</code>为10，<code>num_trees_per_cascade_level</code>为500，<code>tree_depth</code>为5，<code>landmark_num</code>为68的时候。<code>leaf_values</code>的值有<code>cascade_num * num_trees_per_cascade_level * (2 ^ tree_depth) * landmark_num * 2 = 21760000 = 20.8M</code>的参数量，由于使用<code>float</code>存储，通常一个<code>float</code>是4个字节，因此总的存储量达到了逆天的<strong>80MB</strong>！远大于其他的参数的总和。 那么如何才能有效的降低这部分的存储量呢？ 这就要要用到传说中的模型压缩三件套：<strong>剪枝，量化</strong>和<strong>编码</strong>。</p>
+<h4 id="参数分布分析">5.2.1 参数分布分析</h4>
+<p>首先笔者统计了参数的分布，大致的情况是这样的，（具体的结果找不到了）。 叶子节点里的参数的范围在<code>[-0.11, 0.11]</code>之间，其中<code>[-0.0001, 0.0001]</code>的参数占了50%以上。说明模型中有大量的十分接近0的数字。</p>
+<h4 id="剪枝">5.2.2 剪枝</h4>
+<p>剪枝的策略十分粗暴，选择一个剪枝的阈值prune_thresh，将模小于阈值的数全部置0。</p>
+<h4 id="量化">5.2.3 量化</h4>
+<p>量化的过程，首先获取数据中的最小值和最大值，记为：<code>leaf_min_value</code>和<code>leaf_max_value</code>。之后根据量化的级数<code>quantization_num</code>，计算出每一级的步长：<code>quantization_precision = (leaf_max_value - leaf_min_value) / quantization_num</code>。之后对于任意数值<code>x</code>，那么它最终为<code>x / quantization_precision</code>进行四舍五入的结果。这样就可以把<code>float</code>的数字转换成整形来表示。量化级数越高，则量化之后的值损失就越小。</p>
+<h4 id="编码">5.3.3 编码</h4>
+<p>如果我们不做任何的编码操作，直接存储量化之后的结果，也是可以一定程度上进行模型的压缩的。比如使用256级量化，则量化的结果使用一个<code>uint8</code>就可以存储，从而把存储量降为原来的1/4。但是这样有两个问题：1，依赖量化的级数；2，存储量减少不大。 在信息论中有个信息熵的概念。为了验证存储上的可以再优化，这里选择了一个68点的模型，经过256级量化之后，计算出信息熵（信息熵的计算请查阅其他的资料），其数值为1.53313，也就是说，理想情况下，一个数值只需要不到<code>2 bits</code>就可以存储了。如果不编码则需要<code>8 bits</code>。压缩比为<code>1.53313 / 8 = 19.2%</code>，前者仅为后者的1/5不到！</p>
+<p>这里，我采用的是经典的huffman编码，使用了github上的<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL25pbmdrZS9odWZmbWFuLWNvZGVz" title="https://github.com/ningke/huffman-codes">https://github.com/ningke/huffman-codes<i class="fa fa-external-link"></i></span>项目中的代码，感谢作者的贡献！原项目中只能对char类型的数据进行编码，因此这里也做了相应的修改，以适应于int类型的编码，同时删除了一些用不到的函数。使用huffman对上述的256级的数值进行编码，最终的每个数字的平均长度为1.75313，已经很接近理想情况。使用huffman编码时，同时需要将码表进行储存，这部分细节较为繁琐，读者可以自行阅读源码。</p>
+<p>至此，Dlib的模型的分析和压缩就全部介绍完了。对代码感兴趣的同学可以在：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9kbGliLWZhY2UtbGFuZG1hcmstY29tcHJlc3Npb24=" title="https://github.com/miaoerduo/dlib-face-landmark-compression">https://github.com/miaoerduo/dlib-face-landmark-compression<i class="fa fa-external-link"></i></span> ，也就是我的github上clone到最新的代码，代码我目前也在不断的测试，如果有问题，也会及时更新的。</p>
+<p>在本地的实验中，原模型的大小为127M，压缩之后只有5.9M，且性能几乎不变（这里<code>prune_thresh</code>设为0.0001，<code>quantization_num</code>设为256，<code>quantization_num</code>设置越大，则精度越接近原模型，同时<code>prune_thresh</code>的大小很多时候是没有用的）。</p>
+<p>马上就要毕业了，希望写博客的习惯能够一直保持下去。</p>
+<p>最后，再一次，希望小喵能和大家一起学习和进步~~</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/07/02/shared-online-editor/" rel="prev" title="小喵的在线共享编辑器">
+      <i class="fa fa-chevron-left"></i> 小喵的在线共享编辑器
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/01/25/python-trick/" rel="next" title="Python Trick">
+      Python Trick <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一常量部分"><span class="nav-text">一、常量部分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二初始形状-initial_shape"><span class="nav-text">二、初始形状 initial_shape</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三锚点-anchor_idx"><span class="nav-text">三、锚点 anchor_idx</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四deltas"><span class="nav-text">四、deltas</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五森林-forests"><span class="nav-text">五、森林 forests</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#splits"><span class="nav-text">5.1 splits</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#leaf_values"><span class="nav-text">5.2 leaf_values</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#参数分布分析"><span class="nav-text">5.2.1 参数分布分析</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#剪枝"><span class="nav-text">5.2.2 剪枝</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#量化"><span class="nav-text">5.2.3 量化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编码"><span class="nav-text">5.3.3 编码</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2018/01/08/dlib-landmark-model-compression/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/med_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/med_favicon.ico">
+  <link rel="mask-icon" href="/images/med_favicon.ico" color="#222">
+  <meta name="google-site-verification" content="GdIcyumKuX63aSE7iH7Fwgiue8XRWADGKSjzPTCt0Q0">
+<script data-ad-client="ca-pub-7290509974332172" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <meta name="msvalidate.01" content="49BD313F844F9DF4F7B307BC35AEDABB">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.miaoerduo.com","root":"/","scheme":"Gemini","version":"7.7.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="小喵的唠叨话：寒假的时候写了一个漫画爬虫，爬取了好几个漫画，不过一直没有找到合适的漫画阅读的工具。因此最近就试着自己写一个漫画的网站，放在公网上或者局域网里，这样就能随时随地用手机、Pad看漫画了。  先放上项目的地址：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;cartoon-cat-server，欢迎大家随时star、fork和指教。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="简易漫画网站搭建-漫画喵Server版">
+<meta property="og:url" content="https:&#x2F;&#x2F;www.miaoerduo.com&#x2F;2017&#x2F;03&#x2F;14&#x2F;cartoon-cat-server&#x2F;index.html">
+<meta property="og:site_name" content="喵耳朵">
+<meta property="og:description" content="小喵的唠叨话：寒假的时候写了一个漫画爬虫，爬取了好几个漫画，不过一直没有找到合适的漫画阅读的工具。因此最近就试着自己写一个漫画的网站，放在公网上或者局域网里，这样就能随时随地用手机、Pad看漫画了。  先放上项目的地址：https:&#x2F;&#x2F;github.com&#x2F;miaoerduo&#x2F;cartoon-cat-server，欢迎大家随时star、fork和指教。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cartooncat-server.png">
+<meta property="article:published_time" content="2017-03-14T12:44:08.000Z">
+<meta property="article:modified_time" content="2017-03-14T12:44:08.000Z">
+<meta property="article:author" content="MIAO">
+<meta property="article:tag" content="Interest">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http:&#x2F;&#x2F;cdn.miaoerduo.com&#x2F;images&#x2F;cartooncat-server.png">
+
+<link rel="canonical" href="https://www.miaoerduo.com/2017/03/14/cartoon-cat-server/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>简易漫画网站搭建-漫画喵Server版 | 喵耳朵</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">喵耳朵</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <h1 class="site-subtitle" itemprop="description">与你共享小喵的心得与感悟</h1>
+      
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="It&#39;s my GitHub" aria-label="It&#39;s my GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.miaoerduo.com/2017/03/14/cartoon-cat-server/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="MIAO">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="喵耳朵">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          简易漫画网站搭建-漫画喵Server版
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-03-14 12:44:08" itemprop="dateCreated datePublished" datetime="2017-03-14T12:44:08+00:00">2017-03-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Miscellanea/" itemprop="url" rel="index"><span itemprop="name">Miscellanea</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Nodejs/" itemprop="url" rel="index"><span itemprop="name">Nodejs</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/03/14/cartoon-cat-server/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/03/14/cartoon-cat-server/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>8k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>13 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>小喵的唠叨话：寒假的时候写了一个漫画爬虫，爬取了好几个漫画，不过一直没有找到合适的漫画阅读的工具。因此最近就试着自己写一个漫画的网站，放在公网上或者局域网里，这样就能随时随地用手机、Pad看漫画了。</p>
+</blockquote>
+<p>先放上项目的地址：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9jYXJ0b29uLWNhdC1zZXJ2ZXI=" title="https://github.com/miaoerduo/cartoon-cat-server">https://github.com/miaoerduo/cartoon-cat-server<i class="fa fa-external-link"></i></span>，欢迎大家随时star、fork和指教。</p>
+<a id="more"></a>
+<p>关于漫画爬虫的内容，请参看之前的博客。</p>
+<h2 id="写在前面">写在前面</h2>
+<p>这里，我们先试着思考几个问题：</p>
+<h3 id="为什么要做一个漫画网站而不是app呢">1、为什么要做一个漫画网站，而不是APP呢</h3>
+<p>小喵最开始其实是打算做一个QT的漫画阅读软件，这样能够在各种操作系统上用。开发了一小段时间之后，觉得用手机或者Pad看漫画的情况会更多。难道要给手机、平板甚至是PC都编写一套软件吗？这个小喵确实能力上达不到。其次是，如果是本地的APP的话，图片可能还是需要存到设备上，这样同样很麻烦。于是，漫画网站就成为最适合的选择，只要在联网的情况下（或者在同一个局域网中），只要有浏览器，就能够看漫画。这才是真正的跨平台，也是小喵要编写这个工具的原因。</p>
+<h3 id="那么一个简单的漫画网站可以怎么去实现">2、那么，一个简单的漫画网站可以怎么去实现</h3>
+<p>讲道理的话，其实单纯的静态的网页可能就足够了，给每个漫画图片编写一个页面，包含图片、下一页、上一页等部分就可以。页面的生成可以是一个脚本程序。不过这样的话，也有点麻烦，而且最终的页面的数目可能会很多。小喵不喜欢这种方式。这里，小喵采用的方式是前、后端分离的方式。</p>
+<p>整个网站由三个部分组成：</p>
+<ul>
+<li><strong>数据</strong>：也就是漫画本身。</li>
+<li><strong>后台</strong>：后台程序的功能是根据请求返回用户漫画的列表、章节和图片URL等信息。</li>
+<li><strong>前端</strong>：调用后台的程序，得到漫画的信息并友好的进行显示。</li>
+</ul>
+<h3 id="最后我们使用什么技术来实现呢">3、最后，我们使用什么技术来实现呢</h3>
+<p>前端的话，使用标准的 <code>Html</code>，<code>Css</code> 和 <code>Js</code> 就可以。后台是个 <code>API Server</code>，<code>Python + Flask</code> 或者 <code>Nodejs + Express</code> 都是不错的选择（使用起来很简单。。。），小喵这里就选用 <code>Nodejs + Express</code> 的方式编写后台（一直写Js就可以了 :P ）。另外，大型的漫画网站，漫画的信息应该会存到数据库中，这样会方便查找和管理。这里考虑到漫画数目比较少，就去掉了数据库这一步骤，直接通过文件操作来得到漫画信息，工作量也大大减少了。</p>
+<p>先看一下最终的效果图（虽然界面很简单）：</p>
+<p><img data-src="http://cdn.miaoerduo.com/images/cartooncat-server.png" alt="cartooncat-server" /></p>
+<center>
+图1 网站的最终效果图
+</center>
+<p>现在，喵粉们是不是已经迫不及待的想要动手写代码了呢？</p>
+<h2 id="一目录结构">一、目录结构</h2>
+<p>下面是小喵的目录结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$ tree blog -N -L 2</span><br><span class="line">blog</span><br><span class="line">├── README.md</span><br><span class="line">├── main.js</span><br><span class="line">├── package.json</span><br><span class="line">└── public</span><br><span class="line">    ├── api.html</span><br><span class="line">    ├── cartoon.html</span><br><span class="line">    ├── chapter.html</span><br><span class="line">    ├── css</span><br><span class="line">    ├── img</span><br><span class="line">    ├── index.html</span><br><span class="line">    ├── js</span><br><span class="line">    └── store</span><br></pre></td></tr></table></figure>
+<p><code>main.js</code> 这里就是后台API的程序。因为功能很简单，所以就放在一个文件中。<code>package.json</code> 是nodejs的包管理器，在这里可以定义依赖。我们这里只依赖Express。<code>public</code> 这个文件夹用来存放静态的资源，包括Html、Css、js、image以及漫画资源(store)。</p>
+<h2 id="二后台程序">二、后台程序</h2>
+<h3 id="依赖安装">1. 依赖安装</h3>
+<p>原生的 <code>Nodejs</code> 就已经十分适合写API程序了，<code>Express</code> 只是让它更加的方便了而已（至少对于这个项目来说）。</p>
+<p><code>Nodejs</code> 的安装十分简单，在官网上 <span class="exturl" data-url="aHR0cHM6Ly9ub2RlanMub3Jn" title="https://nodejs.org">https://nodejs.org<i class="fa fa-external-link"></i></span> 有下载链接，服务器上使用 <code>apt-get</code> 等工具也很容易安装。</p>
+<p><code>Express</code> 的话，可以使用 <code>npm install express —save</code> 来安装。这里小喵使用的 <code>package</code> 的方式来安装。在项目根目录新建 <code>package.json</code> 文件，写入配置信息：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"name"</span>: <span class="string">"cartoon-cat-server"</span>,</span><br><span class="line">  <span class="attr">"version"</span>: <span class="string">"0.0.1"</span>,</span><br><span class="line">  <span class="attr">"dependencies"</span>: &#123;</span><br><span class="line">    <span class="attr">"express"</span>: <span class="string">"visionmedia/express"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>之后使用 <code>npm install</code> 命令就可以完成安装。安装完成之后会发现根目录多了一个 <code>node_modules</code> 文件夹，里面就是我们的依赖库了。喵粉们如果下载了我的这个项目的话，第一步也是要进入项目目录然后输入 <code>npm install</code> 。</p>
+<h3 id="漫画的文件结构">2. 漫画的文件结构</h3>
+<p>我们的漫画资源都是通过 <code>漫画喵</code> 这个爬虫工具下载下来的，因此漫画都是每个章节都是一个文件夹，每个章节的漫画图片都放在对应的文件夹中，而且按照页码来命名。</p>
+<p>这样通过遍历文件夹似乎就能获取漫画的信息了！</p>
+<p>漫画列表和章节中的图片列表都可以通过上述的方式来解决，但是章节的列表却不行。因为漫画的章节有时候并没有明确的顺序（比如突然出现一个番外篇啥的），这样遍历文件夹默认的顺序（按名称）就可能是错误的。 我们有两个解决办法：</p>
+<ol type="1">
+<li>按照文件夹的创建时间来显示文件名。这样有点不灵活。</li>
+<li>在每个漫画的根目录建一个文本文件，用来存放章节的信息。</li>
+</ol>
+<p>小喵选择第二种策略，创建这个list的方法十分简单粗暴，在漫画目录下面使用:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls -t -r &gt; index</span><br></pre></td></tr></table></figure>
+<p><code>ls</code> 是linux上面的显示目录的工具，<code>-t</code> 表示按时间排序（最上面是最新的），<code>-r</code> 表示倒序，<code>&gt;</code> 是重定向，最终输出到 <code>index</code> 这个文件。然后编辑这个文件，删掉 <code>index</code> 这一行(系统貌似是先生成 <code>index</code> 这个文件，然后再执行 <code>ls</code>，最后把结果输入到文件中，因此文件里面多了一个 <code>index</code> 的文件名)，再做一些必要的调整。</p>
+<p>Windows上可以使用:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dir /OD /B &gt; index</span><br></pre></td></tr></table></figure>
+<p><code>dir</code> 是windows的查看目录的命令，<code>/OD</code> 表示按照时间排序，<code>/B</code> 表示只显示文件名，<code>&gt;</code> 重定向到 <code>index</code>。<code>windows</code> 上的这个列表文件中也会出现 <code>index</code> 这个文件名(看来各种操作系统都一样)。另外需要注意的是 <code>windows</code> 的换行和 <code>linux</code> 或 <code>mac</code> 不一样。</p>
+<p>这样，我们就可以通过读这个 <code>index</code> 文件来获取章节的信息了。</p>
+<p>最终的漫画的结构（为了显示的方便，删除了很多图片和章节）如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">$ tree store -N -L 3</span><br><span class="line">store</span><br><span class="line">├── 犬夜叉</span><br><span class="line">│   ├── index</span><br><span class="line">│   ├── 第1章</span><br><span class="line">│   │   ├── 00001.jpg</span><br><span class="line">│   │   └── 00002.jpg</span><br><span class="line">│   └── 第2章</span><br><span class="line">│       ├── 00001.jpg</span><br><span class="line">│       └── 00002.jpg</span><br><span class="line">└── 极黑的布伦希尔特</span><br><span class="line">    ├── index</span><br><span class="line">    ├── 第1章</span><br><span class="line">    │   ├── 00001.jpg</span><br><span class="line">    │   └── 00002.jpg</span><br><span class="line">    └── 第2章</span><br><span class="line">        ├── 00001.jpg</span><br><span class="line">        └── 00002.jpg</span><br></pre></td></tr></table></figure>
+<h3 id="api-编写">3. API 编写</h3>
+<p><code>Express</code> 十分的容易使用。这里小喵给一个官网的Hello World的教程让大家看一下：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>)</span><br><span class="line"><span class="keyword">var</span> app = express()</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">  res.send(<span class="string">'Hello World!'</span>)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">app.listen(<span class="number">3000</span>, <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">'Example app listening on port 3000!'</span>)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>将上述代码保存成 <code>main.js</code>，使用 <code>node main.js</code> 就可以启动这个程序，然后用浏览器访问 <code>http://localhost:3000</code> ，就能看到一个显示着 <code>hello world</code> 的页面。</p>
+<p><code>require</code> 语句用来引入依赖，<code>app</code> 是express的封装的对象。</p>
+<p>通过 <code>app.get</code> 方法就可以给指定的url（官方说法叫route）绑定相应的处理方法（GET方法的请求）。处理函数有2个参数 <code>req</code> 表示request，也就是用户的请求，通过这个对象我们可以获取用户的输入的参数，<code>res</code> 表示response，是一个向用户返回数据的对象。</p>
+<p><code>listen</code> 用来监听一个端口启动服务。</p>
+<p>这里小喵先给出自己定义的一些辅助的函数，定义错误信息和参数校验，后面会使用到：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 引入依赖</span></span><br><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> fs = <span class="built_in">require</span>(<span class="string">"fs"</span>); <span class="comment">// 即file system，用来进行文件操作</span></span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 错误提示</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">var</span> ErrorHelper = &#123;</span><br><span class="line">    <span class="string">'internal_error'</span>: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">'msg'</span>: <span class="string">'something wrong with server'</span>,</span><br><span class="line">            <span class="string">'code'</span>: <span class="number">1</span></span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">'missing_param'</span>: <span class="function"><span class="keyword">function</span> (<span class="params">param</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">'msg'</span>: <span class="string">'missing param: '</span> + param,</span><br><span class="line">            <span class="string">'code'</span>: <span class="number">2</span></span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">'error_param'</span>: <span class="function"><span class="keyword">function</span> (<span class="params">param, data</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">'msg'</span>: <span class="string">'the param '</span> + param + <span class="string">'('</span> + data + <span class="string">') is illegal'</span>,</span><br><span class="line">            <span class="string">'code'</span>: <span class="number">3</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">'not_found'</span>: <span class="function"><span class="keyword">function</span> (<span class="params">param</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">'msg'</span>: <span class="string">'cannot find '</span> + param,</span><br><span class="line">            <span class="string">'code'</span>: <span class="number">4</span></span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 检查参数格式，只能输入字母，数字和汉字</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">checkParam</span>(<span class="params">param</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="regexp">/^[\u4e00-\u9fa5_a-zA-Z0-9]+$/</span>.test(param);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="get_cartoon_list">1) get_cartoon_list</h4>
+<p>这个接口用来获取所有的漫画列表。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取漫画列表</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">app.get(<span class="string">'/get_cartoon_list'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">    fs.readdir(__dirname + <span class="string">'/public/store'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">err , files</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (err) &#123;</span><br><span class="line">            res.jsonp(ErrorHelper.internal_error());</span><br><span class="line">        &#125;</span><br><span class="line">        res.jsonp(&#123;<span class="string">'cartoon'</span>: files, <span class="string">'code'</span>: <span class="number">0</span>&#125;);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>这个函数十分的简单，通过 <code>fs</code> 读取store中的文件名，然后用json的格式返回回去。这里小喵用的jsonp，为了解决跨域请求的问题，不过我们的页面和服务是一台机器的，所以这部分并不需要。</p>
+<h4 id="get_chapter_list">2) get_chapter_list</h4>
+<p>这个接口用来获取漫画的章节的信息，所以需要输入参数，这里定为cartoon。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取章节信息</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">app.get(<span class="string">'/get_chapter_list'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> cartoon = req.query.cartoon;</span><br><span class="line">    <span class="keyword">if</span> (!cartoon) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.missing_param(<span class="string">'cartoon'</span>));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!checkParam(cartoon)) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.error_param(<span class="string">'cartoon'</span>, cartoon));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> cartoon_dir = __dirname + <span class="string">'/public/store/'</span> + cartoon;</span><br><span class="line">    fs.exists(cartoon_dir + <span class="string">'/index'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">exists</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!exists) &#123;</span><br><span class="line">            res.jsonp(ErrorHelper.not_found(cartoon));</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        fs.readFile(cartoon_dir + <span class="string">'/index'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">err, data</span>) </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (err) &#123;</span><br><span class="line">                res.jsonp(ErrorHelper.internal_error());</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">var</span> chapter_list = data.toString().split(<span class="string">'\n'</span>).filter(<span class="function"><span class="keyword">function</span> (<span class="params">d</span>) </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> d.length &gt; <span class="number">0</span>;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            res.jsonp(&#123;<span class="string">'chapter'</span>: chapter_list, <span class="string">'code'</span>: <span class="number">0</span>&#125;);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>首先判断输入的参数，之后判断对应漫画的文件夹中是否有index这个文件，如果有的话就读取然后返回给用户。</p>
+<h4 id="get_img_list">3) get_img_list</h4>
+<p>这个接口用来返回漫画的具体章节的图片的URL，用户需要输入漫画名(cartoon)和章节名(chapter)。注意要修改自己的HOST的地址。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> HOST = <span class="string">"localhost"</span>; <span class="comment">// 如果不是在本机上使用，请改成实际的ip地址</span></span><br><span class="line">                        <span class="comment">// 后面的图片的URL会使用这个变量来构造</span></span><br><span class="line"><span class="keyword">var</span> PORT = <span class="number">3000</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/get_img_list'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> cartoon = req.query.cartoon;</span><br><span class="line">    <span class="keyword">if</span> (!cartoon) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.missing_param(<span class="string">'cartoon'</span>));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!checkParam(cartoon)) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.error_param(<span class="string">'cartoon'</span>, cartoon));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> chapter = req.query.chapter;</span><br><span class="line">    <span class="keyword">if</span> (!chapter) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.missing_param(<span class="string">'chapter'</span>));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!checkParam(chapter)) &#123;</span><br><span class="line">        res.jsonp(ErrorHelper.error_param(<span class="string">'chapter'</span>, chapter));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> cartoon_dir = __dirname + <span class="string">'/public/store/'</span> + cartoon;</span><br><span class="line">    fs.exists(cartoon_dir + <span class="string">'/index'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">exists</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!exists) &#123;</span><br><span class="line">            res.jsonp(ErrorHelper.not_found(cartoon));</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        fs.readdir(cartoon_dir + <span class="string">'/'</span> + chapter, <span class="function"><span class="keyword">function</span> (<span class="params">err, images</span>) </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (err) &#123;</span><br><span class="line">                res.jsonp(ErrorHelper.error_param(<span class="string">'chapter'</span>, chapter));</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 按名字排序</span></span><br><span class="line">            images.sort(<span class="function"><span class="keyword">function</span> (<span class="params">lhs, rhs</span>) </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="built_in">parseInt</span>(lhs.split(<span class="string">'.'</span>)[<span class="number">0</span>]) - <span class="built_in">parseInt</span>(rhs.split(<span class="string">'.'</span>)[<span class="number">0</span>]);</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">var</span> urls = images.map(<span class="function"><span class="keyword">function</span> (<span class="params">image</span>) </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="string">'http://'</span> + HOST + <span class="string">':'</span> + PORT + <span class="string">'/store/'</span> + cartoon + <span class="string">'/'</span> + chapter + <span class="string">'/'</span> + image;</span><br><span class="line">            &#125;);</span><br><span class="line">            res.jsonp(&#123;<span class="string">'img'</span>: urls, <span class="string">'code'</span>: <span class="number">0</span>&#125;);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>这是目前最复杂的函数了，先检查参数，然后判断漫画是否存在，再判断章节是否存在，列出章节文件夹里面的图片名，并按数字的顺序排序。最终构造成URL，返回给用户。</p>
+<h4 id="静态资源">4) 静态资源</h4>
+<p>public文件夹中的资源都是静态资源，用户可以通过URL访问。在这里Nodejs也是支持的：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">app.use(<span class="string">'/'</span>, express.static(<span class="string">'public'</span>));</span><br></pre></td></tr></table></figure>
+<p>不过Nodejs本身并不适这种静态资源的工作，所以如果是生产环境中，建议大家还是使用Nginx等工具，让Nodejs安心的处理业务逻辑吧。</p>
+<h4 id="启动服务">5) 启动服务</h4>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> server = app.listen(PORT, <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="string">"应用实例，访问地址为 http://%s:%s"</span>, HOST, PORT);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<h2 id="三前端">三、前端</h2>
+<h3 id="ajax">1. Ajax</h3>
+<p>前端使用Ajax就可以很容易完成，相信即使是前端小白也能实现，而且还比小喵做的好看（无奈脸）。小喵使用了<span class="exturl" data-url="aHR0cDovL2pxdWVyeS5jb20=" title="http://jquery.com">JQuery<i class="fa fa-external-link"></i></span> 来处理Ajax的内容，界面库使用了 <span class="exturl" data-url="aHR0cHM6Ly9tZXRyb3VpLm9yZy51YQ==" title="https://metroui.org.ua">Metro<i class="fa fa-external-link"></i></span>，然而即使这样也没有提高网站的颜值。</p>
+<p>源码可以从github上下载到，所以小喵就不重点介绍前端了。</p>
+<h3 id="懒加载">2. 懒加载</h3>
+<p>有一点需要注意，在漫画图片的页面中，通常会出现大量的图片，如果只是简单的使用 <code>img</code> 标签的话，可能会导致浏览器同时加载所有的图片，如果网速不好的话，我们的体验也会相当的差（局域网请无视）。所以我们使用一种 <strong>懒加载</strong> 的策略，只有可见的图片才会加载。然后小喵就从github上找相关的插件，然后发现了一个使用比较方便的代码，还有详细的原理介绍，感兴趣的话大家可以看一下。</p>
+<p>图片懒加载插件实战：<span class="exturl" data-url="aHR0cDovL3d3dy5jbmJsb2dzLmNvbS9iZWlkYW4vcC81NjQ4MjQwLmh0bWw=" title="http://www.cnblogs.com/beidan/p/5648240.html">http://www.cnblogs.com/beidan/p/5648240.html<i class="fa fa-external-link"></i></span></p>
+<p>插件的github：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2JlaWRhbi9sYXplTG9hZEltZw==" title="https://github.com/beidan/lazeLoadImg">https://github.com/beidan/lazeLoadImg<i class="fa fa-external-link"></i></span></p>
+<h2 id="四写在后面">四、写在后面</h2>
+<p>至此，我们就搭建好了一个可以随时玩耍的个人漫画网站了。喵粉们感兴趣可以star、fork这个项目，如果喜欢开发的话，能帮忙一起提高网站的颜值就更好了 O(∩_∩)O哈！</p>
+<p>项目地址：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9jYXJ0b29uLWNhdC1zZXJ2ZXI=" title="https://github.com/miaoerduo/cartoon-cat-server">https://github.com/miaoerduo/cartoon-cat-server<i class="fa fa-external-link"></i></span> ，欢迎大家随时star、fork和指教。</p>
+<p>PS. 请搭配漫画喵爬虫版一起食用：<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1by9jYXJ0b29uLWNhdA==" title="https://github.com/miaoerduo/cartoon-cat">https://github.com/miaoerduo/cartoon-cat<i class="fa fa-external-link"></i></span></p>
+<p>使用的话，按如下的流程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> git@github.com:miaoerduo/cartoon-cat-server.git</span><br><span class="line"><span class="built_in">cd</span> cartoon-cat-server</span><br><span class="line">npm install</span><br><span class="line">node main.js</span><br></pre></td></tr></table></figure>
+<p>另外，为了避免程序突然崩掉，建议大家使用 <code>forever</code> 这个工具。上面的流程的最后一句 <code>node main.js</code> 就可以改成下面的。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm install forever -g</span><br><span class="line">forever start main.js</span><br></pre></td></tr></table></figure>
+<p>这样，我们的程序就更健壮了。 最后，小喵再说一句，这个项目有很多的缺陷，比如直接访问文件，Nodejs直接管理静态文件，需要提供奇怪的参数，没有验证用户等等。因此不适合真的生成中的使用。不过，自娱自乐应该是足够了。小喵自己是放在宿舍的树莓派里，睡前躺床上看会儿漫画。</p>
+<p>希望小喵能和大家一起学习和进步~~</p>
+<p><strong>转载请注明出处~</strong></p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>一杯奶茶也是心意~</div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/WechatPay.jpeg" alt="MIAO 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/Alipay.png" alt="MIAO 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Interest/" rel="tag"># Interest</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/02/19/cartoon-cat-client/" rel="prev" title="爬虫-漫画喵的100行逆袭">
+      <i class="fa fa-chevron-left"></i> 爬虫-漫画喵的100行逆袭
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/07/02/shared-online-editor/" rel="next" title="小喵的在线共享编辑器">
+      小喵的在线共享编辑器 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#写在前面"><span class="nav-text">写在前面</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么要做一个漫画网站而不是app呢"><span class="nav-text">1、为什么要做一个漫画网站，而不是APP呢</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#那么一个简单的漫画网站可以怎么去实现"><span class="nav-text">2、那么，一个简单的漫画网站可以怎么去实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最后我们使用什么技术来实现呢"><span class="nav-text">3、最后，我们使用什么技术来实现呢</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一目录结构"><span class="nav-text">一、目录结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二后台程序"><span class="nav-text">二、后台程序</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#依赖安装"><span class="nav-text">1. 依赖安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#漫画的文件结构"><span class="nav-text">2. 漫画的文件结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#api-编写"><span class="nav-text">3. API 编写</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#get_cartoon_list"><span class="nav-text">1) get_cartoon_list</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#get_chapter_list"><span class="nav-text">2) get_chapter_list</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#get_img_list"><span class="nav-text">3) get_img_list</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#静态资源"><span class="nav-text">4) 静态资源</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#启动服务"><span class="nav-text">5) 启动服务</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#三前端"><span class="nav-text">三、前端</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ajax"><span class="nav-text">1. Ajax</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#懒加载"><span class="nav-text">2. 懒加载</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#四写在后面"><span class="nav-text">四、写在后面</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">MIAO</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21pYW9lcmR1bw==" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;miaoerduo"><i class="fa fa-fw fa-github"></i>GitHub</span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOnpoYW95dTMyMTBAZm94bWFpbC5jb20=" title="E-Mail → mailto:zhaoyu3210@foxmail.com"><i class="fa fa-fw fa-envelope"></i>E-Mail</span>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">京ICP备16004318号-1</a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">MIAO</span>
+</div>
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout: 3000,
+        priority: true,
+        ignores: [uri => uri.includes('#'),uri => uri == 'https://www.miaoerduo.com/2017/03/14/cartoon-cat-server/',]
+      });
+      });
+  </script>
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+      appKey     : 'EObjAwnwQdyltsmlS48XLJ19',
+      placeholder: "Just go go",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : 'zh-cn' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    dlib人脸关键点检测的模型分析与压缩 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-dlib-landmark-model-compression" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  dlib人脸关键点检测的模型分析与压缩
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/01/08/dlib-landmark-model-compression/" class="article-date">
+  <time datetime="2018-01-08T20:50:40.000Z" itemprop="datePublished">2018-01-08</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>人脸关键点检测的技术在很多领域上都有应用，首先是人脸识别，常见的人脸算法其实都会有一步，就是把人脸的图像进行对齐，而这个对齐就是通过关键点实现的，因此关于人脸关键点检测的论文也常叫face alignment，也就是人脸对齐。另一方面，对于美颜，2D/3D建模等等也需要一来人脸的关键点技术，而且通常也要求有尽可能多的人脸关键点。</p>
+<blockquote>
+<p>Dlib is a modern C++ toolkit containing machine learning algorithms and tools for creating complex software in C++ to solve real world problems. It is used in both industry and academia in a wide range of domains including robotics, embedded devices, mobile phones, and large high performance computing environments. Dlib's <a target="_blank" rel="noopener" href="http://dlib.net/license.html">open source licensing</a> allows you to use it in any application, free of charge.</p>
+</blockquote>
+<p>Dlib是一个包含了大量的机器学习和复杂软件开发工具的现代C++工具箱，被广泛的用于软件开发等领域。</p>
+<p>本篇博客主要研究的就是Dlib中的人脸关键点检测的工具。该工具的方法依据是 One Millisecond Face Alignment with an Ensemble of Regression Trees by Vahid Kazemi and Josephine Sullivan, CVPR 2014 这篇论文，在速度和精度上均达到了极好的效果。 本文的侧重点在于人脸关键点模型的存储结构的分析和模型的压缩策略分析，最终在性能几乎不变的情况下，得到模型的至少10倍的压缩比。项目最终的github地址为：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/dlib-face-landmark-compression">https://github.com/miaoerduo/dlib-face-landmark-compression</a> 欢迎fork、star和pr。</p>
+<span id="more"></span>
+<p>注意：</p>
+<ol type="1">
+<li>本文假定了读者对该论文有一定的了解，可以使用Dlib完成人脸关键点的训练和部署，因此不做论文的相关方法的解释。</li>
+<li>本文中分析的数据都是Dlib的shape_predictor类的私有成员，这里不得不把他们的修饰符从private改成了public，但文中并没有专门指出。</li>
+<li>本文中所有的代码均在本地的64位操作系统上运行，在变量数据存储的大小描述的时候也均以64位来说明，即使是不同的编译器也会对数据大小造成影响，但这不是本文的重点。</li>
+<li>本文中的数据类型如果不在C++中见到的数据类型，则为下面的typedef的数据类型：</li>
+</ol>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">typedef</span> <span class="token keyword">char</span>        int8<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">short</span>       int16<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">int</span>         int32<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">long</span> <span class="token keyword">long</span>   int64<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">float</span>       float32<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">double</span>      float64<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">unsigned</span> <span class="token keyword">char</span>       uint8<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">unsigned</span> <span class="token keyword">short</span>      uint16<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span>        uint32<span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> <span class="token keyword">unsigned</span> <span class="token keyword">long</span> <span class="token keyword">long</span>  uint64<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>Dlib中人脸关键点实现的类是<code>dlib::shape_predictor</code>，源码为：<a target="_blank" rel="noopener" href="https://github.com/davisking/dlib/blob/master/dlib/image_processing/shape_predictor.h">https://github.com/davisking/dlib/blob/master/dlib/image_processing/shape_predictor.h</a></p>
+<p>这里简单的抽取了数据相关的接口定义：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">namespace</span> dlib
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">namespace</span> impl
+    <span class="token punctuation">&#123;</span>
+        <span class="token keyword">struct</span> <span class="token class-name">split_feature</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token keyword">unsigned</span> <span class="token keyword">long</span> idx1<span class="token punctuation">;</span>
+            <span class="token keyword">unsigned</span> <span class="token keyword">long</span> idx2<span class="token punctuation">;</span>
+            <span class="token keyword">float</span> thresh<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">struct</span> <span class="token class-name">regression_tree</span>
+        <span class="token punctuation">&#123;</span>
+            std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>split_feature<span class="token operator">></span> splits<span class="token punctuation">;</span>
+            std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>matrix<span class="token operator">&lt;</span><span class="token keyword">float</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token operator">></span> <span class="token operator">></span> leaf_values<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">class</span> <span class="token class-name">shape_predictor</span>
+    <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span><span class="token operator">:</span>
+        matrix<span class="token operator">&lt;</span><span class="token keyword">float</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token operator">></span> initial_shape<span class="token punctuation">;</span>
+        std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>impl<span class="token double-colon punctuation">::</span>regression_tree<span class="token operator">></span> <span class="token operator">></span> forests<span class="token punctuation">;</span>
+        std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token operator">></span> <span class="token operator">></span> anchor_idx<span class="token punctuation">;</span>
+        std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>dlib<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span><span class="token keyword">float</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token operator">></span> <span class="token operator">></span> <span class="token operator">></span> deltas<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>下面，我们逐一对每个部分的参数进行分析。<code>Dlib</code>内置了很多的数据类型，像<code>vector</code>、<code>metrix</code>等等，每种数据类型又可以单独序列化成二进制的数据。对于<code>shape_predictor</code>的序列化，本质上就是不断的调用成员变量数据的序列化方法，由此极大地简化代码，提高了代码的复用率。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">inline</span> <span class="token keyword">void</span> <span class="token function">serialize</span> <span class="token punctuation">(</span><span class="token keyword">const</span> shape_predictor<span class="token operator">&amp;</span> item<span class="token punctuation">,</span> std<span class="token double-colon punctuation">::</span>ostream<span class="token operator">&amp;</span> out<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> version <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    dlib<span class="token double-colon punctuation">::</span><span class="token function">serialize</span><span class="token punctuation">(</span>version<span class="token punctuation">,</span> out<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    dlib<span class="token double-colon punctuation">::</span><span class="token function">serialize</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>initial_shape<span class="token punctuation">,</span> out<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    dlib<span class="token double-colon punctuation">::</span><span class="token function">serialize</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>forests<span class="token punctuation">,</span> out<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    dlib<span class="token double-colon punctuation">::</span><span class="token function">serialize</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>anchor_idx<span class="token punctuation">,</span> out<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    dlib<span class="token double-colon punctuation">::</span><span class="token function">serialize</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>deltas<span class="token punctuation">,</span> out<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>但，对于移动端等应用场景，需要模型占用尽可能少的存储空间，这样一来，这些标准的存储方式就会造成数据的很大程度的冗余。我们的任务就是一点点的减少这些冗余，只存有用的数据。</p>
+<h2 id="一常量部分">一、常量部分</h2>
+<p>首先，我们需要知道一些常量的数据。这些数据完成了对模型的描述。 [table id=6 /]</p>
+<table>
+<thead>
+<tr class="header">
+<th>变量名</th>
+<th>数据类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>version</td>
+<td>uint64</td>
+<td>记录模型版本号</td>
+</tr>
+<tr class="even">
+<td>cascade_depth</td>
+<td>uint64</td>
+<td>回归树的级数</td>
+</tr>
+<tr class="odd">
+<td>num_trees_per_cascade_level</td>
+<td>uint64</td>
+<td>每一级中的树的个数</td>
+</tr>
+<tr class="even">
+<td>tree_depth</td>
+<td>uint64</td>
+<td>树的深度</td>
+</tr>
+<tr class="odd">
+<td>feature_pool_size</td>
+<td>uint64</td>
+<td>特征池的大小</td>
+</tr>
+<tr class="even">
+<td>landmark_num</td>
+<td>uint64</td>
+<td>特征点的数目</td>
+</tr>
+<tr class="odd">
+<td>quantization_num</td>
+<td>uint64</td>
+<td>量化的级数</td>
+</tr>
+<tr class="even">
+<td>prune_thresh</td>
+<td>float32</td>
+<td>剪枝的阈值</td>
+</tr>
+</tbody>
+</table>
+<h2 id="二初始形状-initial_shape">二、初始形状 initial_shape</h2>
+<p><code>matrix&lt;float,0,1&gt; initial_shape;</code> 表示的是初始化人脸关键点的坐标，存储类型是<code>float</code>型，个数为<code>landmark_num * 2</code>（不要忘了一个点是两个数组成 :P）。</p>
+<h2 id="三锚点-anchor_idx">三、锚点 anchor_idx</h2>
+<p><code>std::vector&lt;std::vector&lt;unsigned long&gt; &gt; anchor_idx;</code> 是一个二维的数组，存放的是landmark点的下标。在常见的68点和192点的任务中，使用一个<code>uint8</code>就可以存放下标，而这里使用的是<code>unsigned long</code>，显然过于<strong>冗余</strong>，这里可以简化成uint8存储。这个二维数组的大小为 <code>cascade_depth * feature_pool_size</code>。每一级回归树使用一套锚点。</p>
+<h2 id="四deltas">四、deltas</h2>
+<p><code>std::vector&lt;std::vector&lt;dlib::vector&lt;float,2&gt; &gt; &gt; deltas;</code>和anchor_idx类似，是一个二维数组，不同的是，数组的每个值都是<code>dlib::vector&lt;float,2&gt;</code>的结构。这个数组的大小为<code>cascade_depth * feature_pool_size * 2</code>，存放的内容是<code>float</code>数值。考虑到这里的参数量很少，没有压缩的必要，这里我们直接存储原数据。</p>
+<h2 id="五森林-forests">五、森林 forests</h2>
+<p>这部分是模型参数量最大的部分，一个模型大概2/3的存储都耗在了这个地方。这里才是我们压缩的重点！ <code>std::vector&lt;std::vector&lt;impl::regression_tree&gt; &gt; forests;</code>一个<code>shape_predictor</code>中，有<code>cascade_depth</code>级，每一级有<code>num_trees_per_cascade_level</code>棵树。对于每棵树，它主要存放了两个部分的数据：分割的阈值<code>splits</code>和叶子的值<code>leaf_values</code>。为了便于阅读，再把数据结构的定义附上。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">namespace</span> dlib
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">namespace</span> impl
+    <span class="token punctuation">&#123;</span>
+        <span class="token keyword">struct</span> <span class="token class-name">split_feature</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token keyword">unsigned</span> <span class="token keyword">long</span> idx1<span class="token punctuation">;</span>
+            <span class="token keyword">unsigned</span> <span class="token keyword">long</span> idx2<span class="token punctuation">;</span>
+            <span class="token keyword">float</span> thresh<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">struct</span> <span class="token class-name">regression_tree</span>
+        <span class="token punctuation">&#123;</span>
+            std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>split_feature<span class="token operator">></span> splits<span class="token punctuation">;</span>
+            std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>matrix<span class="token operator">&lt;</span><span class="token keyword">float</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token operator">></span> <span class="token operator">></span> leaf_values<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token comment">// end namespace impl</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="splits">5.1 splits</h3>
+<p>splits存放的数据是阈值和特征像素值的下标，这个下标的范围是<code>[0, feature_pool_size)</code>，在通常情况下，<code>feature_pool_size</code>不会太大，论文中最大也就设到了2000。这里我们可以使用一个<code>uint16</code>来存储。<code>thresh</code>就直接存储。对于一棵树，树的深度为<code>tree_depth</code>，则有 <code>2^tree_depth - 1</code>个split_node。（这里认为只有根节点的树深度为0）。</p>
+<h3 id="leaf_values">5.2 leaf_values</h3>
+<p><code>std::vector&lt;matrix&lt;float,0,1&gt; &gt; leaf_values;</code>对于深度为<code>tree_depth</code>的树，有<code>2^tree_depth</code>个叶子节点。对于每个叶子节点，需要存储整个关键点的偏移量，也就是说每个节点存放了<code>landmark_num * 2</code>个<code>float</code>的数值。那么这部分的参数量到底有多大呢？</p>
+<p>举个例子，在<code>cascade_num</code>为10，<code>num_trees_per_cascade_level</code>为500，<code>tree_depth</code>为5，<code>landmark_num</code>为68的时候。<code>leaf_values</code>的值有<code>cascade_num * num_trees_per_cascade_level * (2 ^ tree_depth) * landmark_num * 2 = 21760000 = 20.8M</code>的参数量，由于使用<code>float</code>存储，通常一个<code>float</code>是4个字节，因此总的存储量达到了逆天的<strong>80MB</strong>！远大于其他的参数的总和。 那么如何才能有效的降低这部分的存储量呢？ 这就要要用到传说中的模型压缩三件套：<strong>剪枝，量化</strong>和<strong>编码</strong>。</p>
+<h4 id="参数分布分析">5.2.1 参数分布分析</h4>
+<p>首先笔者统计了参数的分布，大致的情况是这样的，（具体的结果找不到了）。 叶子节点里的参数的范围在<code>[-0.11, 0.11]</code>之间，其中<code>[-0.0001, 0.0001]</code>的参数占了50%以上。说明模型中有大量的十分接近0的数字。</p>
+<h4 id="剪枝">5.2.2 剪枝</h4>
+<p>剪枝的策略十分粗暴，选择一个剪枝的阈值prune_thresh，将模小于阈值的数全部置0。</p>
+<h4 id="量化">5.2.3 量化</h4>
+<p>量化的过程，首先获取数据中的最小值和最大值，记为：<code>leaf_min_value</code>和<code>leaf_max_value</code>。之后根据量化的级数<code>quantization_num</code>，计算出每一级的步长：<code>quantization_precision = (leaf_max_value - leaf_min_value) / quantization_num</code>。之后对于任意数值<code>x</code>，那么它最终为<code>x / quantization_precision</code>进行四舍五入的结果。这样就可以把<code>float</code>的数字转换成整形来表示。量化级数越高，则量化之后的值损失就越小。</p>
+<h4 id="编码">5.3.3 编码</h4>
+<p>如果我们不做任何的编码操作，直接存储量化之后的结果，也是可以一定程度上进行模型的压缩的。比如使用256级量化，则量化的结果使用一个<code>uint8</code>就可以存储，从而把存储量降为原来的1/4。但是这样有两个问题：1，依赖量化的级数；2，存储量减少不大。 在信息论中有个信息熵的概念。为了验证存储上的可以再优化，这里选择了一个68点的模型，经过256级量化之后，计算出信息熵（信息熵的计算请查阅其他的资料），其数值为1.53313，也就是说，理想情况下，一个数值只需要不到<code>2 bits</code>就可以存储了。如果不编码则需要<code>8 bits</code>。压缩比为<code>1.53313 / 8 = 19.2%</code>，前者仅为后者的1/5不到！</p>
+<p>这里，我采用的是经典的huffman编码，使用了github上的<a target="_blank" rel="noopener" href="https://github.com/ningke/huffman-codes">https://github.com/ningke/huffman-codes</a>项目中的代码，感谢作者的贡献！原项目中只能对char类型的数据进行编码，因此这里也做了相应的修改，以适应于int类型的编码，同时删除了一些用不到的函数。使用huffman对上述的256级的数值进行编码，最终的每个数字的平均长度为1.75313，已经很接近理想情况。使用huffman编码时，同时需要将码表进行储存，这部分细节较为繁琐，读者可以自行阅读源码。</p>
+<p>至此，Dlib的模型的分析和压缩就全部介绍完了。对代码感兴趣的同学可以在：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/dlib-face-landmark-compression">https://github.com/miaoerduo/dlib-face-landmark-compression</a> ，也就是我的github上clone到最新的代码，代码我目前也在不断的测试，如果有问题，也会及时更新的。</p>
+<p>在本地的实验中，原模型的大小为127M，压缩之后只有5.9M，且性能几乎不变（这里<code>prune_thresh</code>设为0.0001，<code>quantization_num</code>设为256，<code>quantization_num</code>设置越大，则精度越接近原模型，同时<code>prune_thresh</code>的大小很多时候是没有用的）。</p>
+<p>马上就要毕业了，希望写博客的习惯能够一直保持下去。</p>
+<p>最后，再一次，希望小喵能和大家一起学习和进步~~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/01/08/dlib-landmark-model-compression/" target="_blank" title="dlib人脸关键点检测的模型分析与压缩">
+        https://www.miaoerduo.com/2018/01/08/dlib-landmark-model-compression/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/01/25/python-trick/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      Python Trick
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2017/07/02/shared-online-editor/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">小喵的在线共享编辑器</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

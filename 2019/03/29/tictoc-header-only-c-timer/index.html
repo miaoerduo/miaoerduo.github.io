@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    TICTOC: Header Only C++ Timer |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-tictoc-header-only-c-timer" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  TICTOC: Header Only C++ Timer
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2019/03/29/tictoc-header-only-c-timer/" class="article-date">
+  <time datetime="2019-03-29T01:24:00.000Z" itemprop="datePublished">2019-03-29</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.8k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>感觉最近的更新频率略高啊～哈哈～</p>
+<p>这次的带来的是一个十分简单便利的C++计时库。</p>
+<p>项目地址：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/tictoc">https://github.com/miaoerduo/tictoc</a></p>
+<p>欢迎<strong>Start</strong>和提<strong>MR</strong>。</p>
+<span id="more"></span>
+<p>项目中有详细的说明和Demo，可以很直观的体验到这个库的易用性。</p>
+<p>先看一下效果，如果我们正确使用的话，大致会出现类似下面的信息：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">demo.cpp @ main [    8,   13]   elapsed:      0.025 s      24.786 ms       24786 us
+demo.cpp @ main [    8,   18]   elapsed:      0.049 s      48.709 ms       48709 us
+demo.cpp @ main [    8,   23]   elapsed:      0.072 s      72.211 ms       72211 us
+demo.cpp @ main [    8,   24]   elapsed:      0.072 s      72.225 ms       72225 us
+demo.cpp @ main [   30,   36]   elapsed:      0.022 s      21.747 ms       21747 us
+demo.cpp @ main [   36,   41]   elapsed:      0.021 s      21.463 ms       21463 us<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以显示，我们的每个区域的代码（包括行号）的消耗时间。精确到微秒。</p>
+<p>起因是这样的，之前有很长时间的工作内容是优化一些特定的函数，保证新旧的SDK的速度的对齐。然后C++虽然有一些工具可以分析运行状态，但通常还是简单的打印时间来的方便 <span style="color: green">/* Print大法好 */</span>。</p>
+<p>之后，和工程的小伙伴一起Debug的时候，就发现他写了一个头文件，然后用绝对路径的方式去include，而头文件里面就是各种常用的小工具，而最常用到的就是时间的打印。</p>
+<p>之后，我专门要到了他的百宝箱，仔细分析了一下，发现计时器模块仍然存在一些问题：</p>
+<ol type="1">
+<li>在Debug的时候，如果加上工具代码，在Release的时候，还得一点点删掉，很麻烦。</li>
+<li>修改时间精度的话，需要修改源码，略麻烦。</li>
+<li>打印的时间戳的信息不完整，看不出来该段时间具体的代码的范围。</li>
+<li>计时器如果在多个文件中都用到，会有各种奇怪的错误，重复定义变量啊，或者找不到变量啥的。</li>
+<li>对更复杂的程序，比如各种库的编译，多个库的链接调用不支持。</li>
+</ol>
+<p>上面说的问题，说大不大，说小不小。如果能有个工具能解决上面5个问题，那也是一件十分惬意的事情。所以，也就有了本文和 <code>TICTOC</code> 这个库。接下来，我们会从上面的5个问题开始，一点一点介绍C++的小技巧。</p>
+<h3 id="设计思路">〇、设计思路</h3>
+<p>其实计时器的思路很简单，就是定义两个宏 <code>TIC</code> 和 <code>TOC</code>，如果插入 <code>TIC</code>，则记录为起始时间，当插入 <code>TOC</code> 的时候，则计算与上一次 <code>TIC</code> 之间的时间，并打印出来。</p>
+<p>比较麻烦的是，如果我在使用 <code>TIC</code> 的时候，生成一个变量，那连续使用两次 <code>TIC</code> 的话，就会出现变量的重复定义。另一个方案就是在全局定义一个时间的变量，但这样会带来另一个问题，就是所有函数都共享这个变量，如果函数内部再运行一次 <code>TIC</code>，会覆盖掉这个时间戳，但是其他的 <code>TOC</code> 的结果不直观。</p>
+<p>所以，这里就使用了一个字典，来存放 <code>TIC</code> 的时间戳。这个字典本身是使用单例模式去生成和维护的。每次 <code>TIC</code> 的时候都会初始化一次它，但是由于是单例，所以只有第一次会耗时。而字典的键是个字符串，由文件名+函数名联合构成。这样针对每个函数，都会有自己的一个计时器，就不用担心冲突了。之后运行 <code>TOC</code> 的时候，也会检查当前的文件名和函数名，从而与对应的 <code>TIC</code> 时间戳相减。是不是听起来很简单！</p>
+<p>当然还会碰到很多奇怪的问题，其中最无语的是，当动态库使用这个库，而主程序也使用这个库的时候，所谓的单例模式就失效了，两段程序里面都会有这个字典，然后就冲突了，出现 <code>double free</code> 的情况。查了半天，才发现是动态库只在静态表导出这个单例，动态连接器默认查询动态表，没找到，从而主程序自己又重复构建了这个实例，导致了存在两个实例。最终用 <code>-rdynamic</code> 的方式编译就可以解决。但是用这种方式的话，又会显得很麻烦。我采用的解决方法是匿名命名空间，在每个文件中生成自己的单例。细节我们在后面会谈到。</p>
+<h3 id="一debug-or-release">一、Debug or Release</h3>
+<p>因为我们不希望在Deliver的时候，再修改代码，所以有没有办法，使用不同的宏来控制我们的程序呢？当然是可以的。<code>C/C++</code> 最常用到的预处理语句：<code>#define</code>, <code>#ifdef</code>, <code>#ifndef</code>，<code>#else</code>, <code>#endif</code>。采用下面的方式来进行就可以。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifndef</span> <span class="token expression">TICTOC_HPP</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">TICTOC_HPP</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifdef</span> <span class="token expression">WITH_TICTOC</span></span>
+<span class="token comment">// 一些计时器的逻辑单元</span>
+<span class="token comment">// 函数啥的</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">else</span></span>
+<span class="token comment">// 一些假的信息</span>
+<span class="token comment">// 比如宏函数，内容空的，免得编译不过</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>首先，这个 <code>TICTOC_HPP</code> 的宏定义，是为了防止头文件的多次包含。不然在多处include这个头文件的时候，会出现函数重复定义的问题。是一个良好的编程习惯。</p>
+<p><code>WITH_TICTOC</code> 这个宏才是用来控制我们的Debug/Release的关键。在Debug的时候，编译加入一个宏定义，用g++直接编译的话，就是编译的时候加上 <code>-DWITH_TICTOC</code>。用CMakeLists的话，就是另一套了，自己查一下吧。在Release的时候，去掉这个宏定义就行，这样编译走的就是 <code>#else</code> 的分之，里面可以不写代码（我这里还是写了几行，定义了一些宏，但是宏的操作是空的）。</p>
+<p>总之，灵活的使用宏定义，就可以让我们的编译器按照我们的想法去工作！</p>
+<h3 id="二多种精度">二、多种精度</h3>
+<p>问题二就比较简单了，既然每设置一种精度，都要修改一下代码，不如一次性的将所有的精度都打印出来了！这部分似乎没有什么好说的，就简单的说一下，我这里用到的计时的函数吧。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;sys/time.h></span></span>
+<span class="token comment">/*
+struct timeval &#123;
+    time_t       tv_sec;     // seconds
+    suseconds_t  tv_usec;    // microseconds
+&#125;;
+*/</span>
+<span class="token keyword">struct</span> <span class="token class-name">timeval</span> <span class="token function">get_tick</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">timeval</span> time<span class="token punctuation">;</span>
+    <span class="token function">gettimeofday</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>time<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> time<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>timeval</code> 是一个表示时间的结构体，可以精确到微秒级别，完全够我们使用了。</p>
+<h3 id="三打印完整的信息">三、打印完整的信息</h3>
+<p>首先，对于一个计时器，为了方便调试，我们希望知道什么信息呢？这里列出来我比较关心的：</p>
+<ol type="1">
+<li>这个时间戳所在的位置，包括：文件名，函数名</li>
+<li>时间戳是哪一段代码产生的，即：起始和结束的代码行号</li>
+<li>具体的时间（按不同精度显示）</li>
+</ol>
+<p>对于3，上文已经介绍了。那么如何获取文件名、函数名以及行号呢？</p>
+<p>其实C++中（C语言中也有的）早就给我们定义好了一些宏。这里就简单的列一下常用的几个，大家感兴趣也可以自己去查询：</p>
+<ol type="1">
+<li><code>__FILE__</code> : 宏所在的文件名</li>
+<li><code>__FUNCTION__</code> : 宏所在的函数名</li>
+<li><code>__LINE__</code> : 当前行号</li>
+<li><code>__DATE__</code>, <code>__TIME__</code> : 最后一次编译的时间</li>
+<li><code>__TIMESTAMP__</code> : 文件最后的修改时间</li>
+</ol>
+<p>所以，我们这里主要用到三个：<code>__FILE__</code>, <code>__FUNCTION__</code>, <code>__LINE__</code> 。</p>
+<h3 id="四working-everywhere">四、Working Everywhere</h3>
+<p>上面的问题4和5，放在一起介绍。</p>
+<p>针对问题4，是我们在多个文件同时使用了计时器，如果通过全局变量的方式去存储时间戳，那么每个文件都会有自己的时间戳，从而导致冲突（当然，把时间戳改成 <code>static</code> 的可能可以解决）。而且，同一个文件中，如果出现函数调用，也有修改这个全局的时间戳，导致打印时间很不友好。</p>
+<p>这里使用字典来存放时间戳，给每个文件都创建自己的时间戳，从而解决了这个问题。在〇章中，也有介绍。</p>
+<p>那么问题5就很复杂了，多个动态库同时使用时，会崩溃。首先，为了让字典在程序中，只存在一份，我这里使用了单例模式。如果把所有的文件都编译在一起，是完全OK的。问题就出在，如果动态库使用了这个工具，而主程序也使用该工具，且又链接了动态库，那么程序中就会出现多个字典，在程序退出析构的时候，就会出现多次 <code>free</code> 的情况（很奇怪吧，明明是两个实例，居然两次析构函数都调用同一个实例）。之前也说了，用 <code>-rdynamic</code> 的方式编译会很麻烦，而且我们不可能给整个大项目的每个部分都加这个编译选项吧。我们的工具库要足够的独立！</p>
+<p>按照之前的分析，我们其实只需要给每个函数都分配自己的一个键就可以了，其实完全没必要只有一个Global的字典，只需要给每个文件都生成自己的字典不就OK了吗。但是，怎么去实现呢？</p>
+<p>常见的方法有两个：</p>
+<ol type="1">
+<li><code>static 变量</code>，<code>static</code> 关键字有一个功能，是保证这个变量只在该文件中使用。不会导出。</li>
+<li>匿名命名空间，也叫匿名名字空间，这里采用的就是这个方案。</li>
+</ol>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">namespace</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">void</span> <span class="token function">print</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"hello world"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面就是最简单的匿名命名空间，如果我们在代码中这么定义，其等价于：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">namespace</span> thisisaspecificnamespace <span class="token punctuation">&#123;</span>
+    <span class="token keyword">void</span> <span class="token function">print</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"hello world"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> thisisaspecificnamespace<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>里面的这个大长串是啥意思？</p>
+<p>其实thisisaspecificnamespace这个名字是我瞎写的，对于编译器，他会给这个匿名命名空间生成一个独一无二的名字，保证一定不重复，然后在改文件中，using它。所以自然就只有这个文件本身能够调用里面的函数了。</p>
+<p>我们的工具是一个纯头文件，所有的库想依赖该文件，都会直接include它，而include操作其实就是简单的copy文件的内容，所以这段代码就会进入每个文件自身中，成为其源码的一部分。如此，只要我们把单例维护的代码放在匿名命名空间中，就可以保证其在每个文件中有且只有一个。就不用担心不同的库之间的冲突了。</p>
+<h3 id="五补充">五、补充</h3>
+<p>最后，我编写的这个库，并没有花费太多的时间，不过编程的过程中，确实还是感受到一点快乐的。不知不觉，现在写代码的时候，更喜欢以一种工具或是框架的角度去审核自己的作品。相比于追求编程的速度，慢慢蜕变成追求更优雅的设计，更简洁和实用的功能以及尽可能好的兼容性。</p>
+<p>这里，小喵与你共同进步！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2019/03/29/tictoc-header-only-c-timer/" target="_blank" title="TICTOC: Header Only C++ Timer">
+        https://www.miaoerduo.com/2019/03/29/tictoc-header-only-c-timer/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2019/04/13/2019-04-13-2b/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      2B
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2019/03/23/easy-pipeline/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">Easy Pipeline，一种轻量级的Python Pipeline库</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

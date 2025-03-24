@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    免费的云服务搜集 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-free-serverless-provider" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  免费的云服务搜集
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2024/01/26/free-serverless-provider/" class="article-date">
+  <time datetime="2024-01-26T01:44:04.000Z" itemprop="datePublished">2024-01-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">726 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>注意，以下的信息仅截止于2024年11月25，后续可能会有变化。 以下顺序不代表排名。</p>
+</blockquote>
+<p>下面的内容主要是免费的一些云服务资源，具体有：</p>
+<ol type="1">
+<li>计算资源
+<ul>
+<li>Serverless函数</li>
+<li>容器</li>
+</ul></li>
+<li>数据
+<ul>
+<li>KV</li>
+<li>Redis</li>
+<li>MySQL</li>
+<li>MongoDB</li>
+<li>Kafka</li>
+</ul></li>
+</ol>
+<span id="more"></span>
+<h2 id="github.com"><a target="_blank" rel="noopener" href="https://github.com">github.com</a></h2>
+<p>这个没啥好说的，github pages能用来搭建静态博客。actions能执行编译任务。</p>
+<h2 id="cloudflare.com"><a target="_blank" rel="noopener" href="https://cloudflare.com">cloudflare.com</a></h2>
+<p>Pages和github pages类似。workers是serverless的应用，并且提供了KV的读写，但是Quota比较少。国内访问的速度有点慢。</p>
+<h2 id="vercel.com"><a target="_blank" rel="noopener" href="https://vercel.com">vercel.com</a></h2>
+<p>支持35+框架。Serverless functions和KV+Postgres数据库。KV是256M空间3w请求每月，postgres是256M空间，60hours每月，写入数据量每月256M。</p>
+<h2 id="deno.com"><a target="_blank" rel="noopener" href="https://deno.com">deno.com</a></h2>
+<p>Deno是一个javascript的runtime，和nodejs并列的存在。这个网站上可以托管deno的服务（也能部署静态网站，用个纯静态文件代理的deno程序就行）。免费版支持部署服务+KV存储。量都挺多。支持从github部署。</p>
+<h2 id="netlify.com"><a target="_blank" rel="noopener" href="https://netlify.com">netlify.com</a></h2>
+<p>一个用于构建和静态网站托管的网站。免费版每个月支持300min编译时间，100G的网站流量。用github就能登录，支持直接部署github项目，网速也不错。(PS. 本博客目前使用该平台)</p>
+<h2 id="www.4everland.org"><a target="_blank" rel="noopener" href="https://www.4everland.org">www.4everland.org</a></h2>
+<p>一个web3.0的平台，能够托管静态网站。免费版也是量大管饱，但是激活需要关联eth钱包，否则只有1个月试用。</p>
+<h2 id="leancloud.cn-leancloud.app"><a target="_blank" rel="noopener" href="https://leancloud.cn">leancloud.cn</a> / <a target="_blank" rel="noopener" href="https://leancloud.app">leancloud.app</a></h2>
+<p>提供了存储和一个很轻量的运行实例。KV存储是1G，是自己定一个类似MongoDB的数据库。实例好像只能连续运行16h。一般都是用它来做静态博客的评论区。</p>
+<p>还支持即时通讯和消息推送。</p>
+<h2 id="cloud.mongodb.com"><a target="_blank" rel="noopener" href="https://cloud.mongodb.com/">cloud.mongodb.com</a></h2>
+<p>免费版有512M的mongodb的共享实例。</p>
+<h2 id="upstash.com"><a target="_blank" rel="noopener" href="https://upstash.com/">upstash.com</a></h2>
+<p>提供redis/kafka/QStash的免费实例。</p>
+<ul>
+<li>redis是1k QPS limit + 10k command daily limit</li>
+<li><del>kafka是1k QPS limit + 10k messages daily limit 好像已经没有了，只能用redis的lpush和blpop来代替了</del></li>
+<li>Vector数据库</li>
+<li>QStash是一个消息推送的功能。100 QPS limit + 500 messages daily limit</li>
+</ul>
+<h2 id="supabase.com"><a target="_blank" rel="noopener" href="https://supabase.com/">supabase.com</a></h2>
+<p>提供数据库和存储的功能。</p>
+<ul>
+<li>PostgreSQL database，500MB空间，每个月5GB流量，不限API调用次数。并且支持realtime功能，可以让开发者监控消息变更（我用Python试了下，最终是跑通了，这个Realtime的教程感觉不够清晰，并且出现了服务端拒绝的情况，最后也没用这个特性）。</li>
+<li>1GB存储空间。</li>
+<li>Edge Functions，应该就是云函数，使用TypeScript编写，支持5M次调用。</li>
+</ul>
+<h2 id="turso.tech"><a target="_blank" rel="noopener" href="https://turso.tech/">turso.tech</a></h2>
+<p>基于LibSQL提供的兼容SQLite的服务。</p>
+<p>支持9GB空间。每个月1 Billion行读取，25 Million行写入。</p>
+<h2 id="val.town"><a target="_blank" rel="noopener" href="https://val.town">val.town</a></h2>
+<p>部署TS的服务，能写定时任务和API，还能发邮件。每个账号还有一个私有的SQLite，免费版是10M的空间。</p>
+<h2 id="azure.microsoft.com"><a target="_blank" rel="noopener" href="https://azure.microsoft.com">azure.microsoft.com</a></h2>
+<p>免费的内容很多，但是需要绑定信用卡。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2024/01/26/free-serverless-provider/" target="_blank" title="免费的云服务搜集">
+        https://www.miaoerduo.com/2024/01/26/free-serverless-provider/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2025/03/24/redis-mget-latency/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      Redis MGET延时排查
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2024/01/05/lambda-recursive-call/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">C++和Go关于闭包递归调用的趣事</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

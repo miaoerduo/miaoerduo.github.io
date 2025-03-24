@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    小喵的在线共享编辑器 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-shared-online-editor" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  小喵的在线共享编辑器
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/07/02/shared-online-editor/" class="article-date">
+  <time datetime="2017-07-02T16:49:50.000Z" itemprop="datePublished">2017-07-02</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a> / <a class="article-category-link" href="/categories/Nodejs/">Nodejs</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 5 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：写这篇博客的初衷是因为看到了室友电脑面试的时候，面试官要求在线写代码。然后就想到，如果两个人能够在同一个页面进行编辑工作，不就能更方便的调试代码了吗？（PS.懂linux的screen或tmux的可以绕道了。）代码十分简单，在一个月前就写完了，只是一直没有时间写博客说明一下。</p>
+</blockquote>
+<p>github：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/shared-editor">https://github.com/miaoerduo/shared-editor</a> 欢迎 <strong>fork</strong> 和 <strong>star</strong>。</p>
+<p>那么，实现一个这样的在线的共享编辑器需要哪些工作呢？我们下面一点一点的说明。</p>
+<span id="more"></span>
+<h2 id="一写在前面">一、写在前面</h2>
+<p>熟悉Linux的同学都知道screen和tmux这两个工具。通常我们可以使用他们来执行一些长时间的任务，也可以使用他们的共享终端的功能。在结对编程中，这是很有效的一个工具。</p>
+<p>本文要实现的，是和上述两个工具类似的共享编辑器。要说优点的话，可能就是更亲民一些，打开网页就能使用。很适合远程帮女票看个代码啥的（好像很多公司里面会截断websocket，这样就没法用了）。</p>
+<p>实现一个这样的编辑器，主要有两个部分。编辑器和同步数据的服务端。下面我们依次介绍。</p>
+<h2 id="二在线编辑器">二、在线编辑器</h2>
+<p>首先，我们需要一个好看的编辑器。调研了一下，找到了ACE这个编辑器，网址是 <a target="_blank" rel="noopener" href="https://ace.c9.io">https://ace.c9.io</a> ，简单的了解了一下这个编辑器，发现居然连Github用的都是这个编辑器！看来我们选择这个编辑器是没错的啦。</p>
+<p>使用起来也异常的简单，官方的Demo如下：</p>
+<pre class="line-numbers language-html" data-language="html"><code class="language-html"><span class="token doctype"><span class="token punctuation">&lt;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>html</span> <span class="token attr-name">lang</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>en<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>head</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>title</span><span class="token punctuation">></span></span>ACE in Action<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>title</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>style</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text/css<span class="token punctuation">"</span></span> <span class="token attr-name">media</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>screen<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token style"><span class="token language-css">
+  <span class="token selector">#editor</span> <span class="token punctuation">&#123;</span>
+    <span class="token property">position</span><span class="token punctuation">:</span> absolute<span class="token punctuation">;</span>
+    <span class="token property">top</span><span class="token punctuation">:</span> 0<span class="token punctuation">;</span>
+    <span class="token property">right</span><span class="token punctuation">:</span> 0<span class="token punctuation">;</span>
+    <span class="token property">bottom</span><span class="token punctuation">:</span> 0<span class="token punctuation">;</span>
+    <span class="token property">left</span><span class="token punctuation">:</span> 0<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  </span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>style</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>head</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>body</span><span class="token punctuation">></span></span>
+
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>editor<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>function foo(items) &#123;
+  var x = "All this is syntax highlighted";
+  return x;
+  &#125;<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">></span></span>
+
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>/ace-builds/src-noconflict/ace.js<span class="token punctuation">"</span></span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text/javascript<span class="token punctuation">"</span></span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>utf-8<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+  <span class="token keyword">var</span> editor <span class="token operator">=</span> ace<span class="token punctuation">.</span><span class="token function">edit</span><span class="token punctuation">(</span><span class="token string">"editor"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  editor<span class="token punctuation">.</span><span class="token function">setTheme</span><span class="token punctuation">(</span><span class="token string">"ace/theme/monokai"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  editor<span class="token punctuation">.</span><span class="token function">getSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setMode</span><span class="token punctuation">(</span><span class="token string">"ace/mode/javascript"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  </span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>html</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面的script中的src可能需要换成可以访问的链接。之后就能预览到编辑器的效果。大致和前面小喵的效果类似。 具体的其他的用法可以在官网中查到，这里小喵就不着重介绍了。</p>
+<h2 id="三消息同步机制">三、消息同步机制</h2>
+<p>选择好合适的编辑器之后，我们需要做的就是消息通信的功能了。</p>
+<p>这里主要有四种情况：</p>
+<h3 id="文档同步">1. 文档同步</h3>
+<p>当用户修改文档的时候，其修改的部分必须同步到所有的阅读改文档的用户。这里只同步修改的部分，因为每次都同步整个文档，那么会很消耗带宽（总不能输入一个 "hello world"都同步十几次文档吧）。</p>
+<p>下图是一个示例（强势安利一下：<a target="_blank" rel="noopener" href="https://www.processon.com">https://www.processon.com</a> 这个画图的工具）。用户1编辑了文档，文档更新的内容发送给了服务器，服务器将更新的内容组播到所有打开相同文档的用户（注意，这里不是广播，广播是向所有的用户发送），同时更新自己的远程备份。</p>
+<p><img src="shared-online-editor-update.png" /></p>
+<center>
+图1 文档更新
+</center>
+<h3 id="文档副本">2. 文档副本</h3>
+<p>当用户第一次访问已经存在的文档的时候。这个时候，该用户需要加载页面的所有的内容。因此我们的服务器端需要存放完整的文档的副本。</p>
+<p>如下图，用户3打开了这个文档，这时候会请求服务器发送完整的文档信息。</p>
+<p><img src="shared-online-editor-new-user.png" /></p>
+<center>
+图2 新增用户
+</center>
+<h3 id="文档销毁">3. 文档销毁</h3>
+<p>小喵这里的文档的内容是直接在内存中保存的。这样的好处是很方便，不需要额外的控制数据库啥的。但是弊端也很明显，虽然每个文档可能比较小，但如果文档创建的比较多，就会一直消耗内存。所以当没有用户使用文档的时候，需要删除文档，这样服务器端就需要保存一个引用计数。计数为0，就删除文档。</p>
+<h3 id="冲突解决">4. 冲突解决</h3>
+<p>考虑到网络可能会出现故障，用户在编辑文档之后，其他的用户可能并没有即使同步，这样就出现文档落后的情况。一个简单的策略就是，每次文档修改之后都返回一个时间戳，下一次修改文档的时候要将这个时间戳作为参数发送到服务器，如果时间戳不是最新的，那么就刷新整个文档。当然这个策略也有很多的不足之处，如果大家能有什么改进，烦请告诉小喵一下~</p>
+<p>上面就是设计部分，具体实现的话，需要用到WebSocket技术，这是浏览器和服务器实时通信的一个很好的工具。WebSocket有很多语言的实现，小喵这里选择的是比较容易上手的 <a target="_blank" rel="noopener" href="https://socket.io">socket.io</a>。</p>
+<p>socket.io 不仅支持用户和服务器的点对点通信，还支持组播、广播的操作。简单的学习一下，就可以完成上面的设计。</p>
+<p>这里，小喵也不在代码层面上解释实现了。感兴趣的同学可以看看小喵的github: <a target="_blank" rel="noopener" href="https://github.com/miaoerduo/shared-editor">https://github.com/miaoerduo/shared-editor</a></p>
+<p>能够给小喵提交一些PR的话就更好了。</p>
+<h2 id="四写在后面">四、写在后面</h2>
+<p>终于写完这篇博客了，拖了快两个月了。之前迟迟没有动手的一个原因是比较忙，更多的可能因为自己有点懒，一直不想画解释原理的示意图。现在终于写完了，还是挺开心的。</p>
+<p>这次的博客相比之前的，更多的是介绍设计的思路。反正代码都在github上了，大家可以随意食用~ 希望能和大家一起进步！</p>
+<p><strong>转载</strong> 请注明出处，谢谢~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2017/07/02/shared-online-editor/" target="_blank" title="小喵的在线共享编辑器">
+        https://www.miaoerduo.com/2017/07/02/shared-online-editor/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/01/08/dlib-landmark-model-compression/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      dlib人脸关键点检测的模型分析与压缩
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2017/03/14/cartoon-cat-server/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">简易漫画网站搭建-漫画喵Server版</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

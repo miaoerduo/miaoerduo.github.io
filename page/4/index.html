@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="jumbotron">
+  <div class="video">
+    
+    <div class="video-frame">
+      <img src="/images/ocean/overlay-hero.png" alt="Decorative image frame">
+    </div>
+    
+    <div class="video-media">
+      <video playsinline="" autoplay="" loop="" muted="" data-autoplay="" poster="/images/ocean/ocean.png"
+        x5-video-player-type="h5">
+        <source src="/images/ocean/ocean.mp4" type="video/mp4">
+        <source src="/images/ocean/ocean.ogv" type="video/ogg">
+        <source src="/images/ocean/ocean.webm" type="video/webm">
+        <p>Your user agent does not support the HTML5 Video element.</p>
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+    <div class="video-inner text-center text-white">
+      <h1><a href="/">喵耳朵</a></h1>
+      <p>略懂算法 | 在学架构 | 梦想成为 | Top插画师</p>
+      <div><img src="/images/MED-logo-white.png" class="brand" alt="喵耳朵"></div>
+    </div>
+    <div class="video-learn-more">
+      <a class="anchor" href="#landingpage"><i class="fe fe-mouse"></i></a>
+    </div>
+  </div>
+</section>
+<div id="landingpage">
+  <section class="outer">
+  <article class="articles">
+    
+    <h1 class="page-type-title"></h1>
+    
+    
+    <article id="post-python-trick" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/01/25/python-trick/">Python Trick</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/01/25/python-trick/" class="article-date">
+  <time datetime="2018-01-25T18:33:13.000Z" itemprop="datePublished">2018-01-25</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a> / <a class="article-category-link" href="/categories/Python/">Python</a>
+</div>
+
+      <div class="wordcount wordcount-num">592 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这里主要记录一些Python使用上的小技巧，以后使用的时候可以方便查阅。不定期更新。</p>
+      
+      <a class="article-more-link" href="/2018/01/25/python-trick/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-dlib-landmark-model-compression" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/01/08/dlib-landmark-model-compression/">dlib人脸关键点检测的模型分析与压缩</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/01/08/dlib-landmark-model-compression/" class="article-date">
+  <time datetime="2018-01-08T20:50:40.000Z" itemprop="datePublished">2018-01-08</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>人脸关键点检测的技术在很多领域上都有应用，首先是人脸识别，常见的人脸算法其实都会有一步，就是把人脸的图像进行对齐，而这个对齐就是通过关键点实现的，因此关于人脸关键点检测的论文也常叫face alignment，也就是人脸对齐。另一方面，对于美颜，2D/3D建模等等也需要一来人脸的关键点技术，而且通常也要求有尽可能多的人脸关键点。</p>
+<blockquote>
+<p>Dlib is a modern C++ toolkit containing machine learning algorithms and tools for creating complex software in C++ to solve real world problems. It is used in both industry and academia in a wide range of domains including robotics, embedded devices, mobile phones, and large high performance computing environments. Dlib's <a target="_blank" rel="noopener" href="http://dlib.net/license.html">open source licensing</a> allows you to use it in any application, free of charge.</p>
+</blockquote>
+<p>Dlib是一个包含了大量的机器学习和复杂软件开发工具的现代C++工具箱，被广泛的用于软件开发等领域。</p>
+<p>本篇博客主要研究的就是Dlib中的人脸关键点检测的工具。该工具的方法依据是 One Millisecond Face Alignment with an Ensemble of Regression Trees by Vahid Kazemi and Josephine Sullivan, CVPR 2014 这篇论文，在速度和精度上均达到了极好的效果。 本文的侧重点在于人脸关键点模型的存储结构的分析和模型的压缩策略分析，最终在性能几乎不变的情况下，得到模型的至少10倍的压缩比。项目最终的github地址为：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/dlib-face-landmark-compression">https://github.com/miaoerduo/dlib-face-landmark-compression</a> 欢迎fork、star和pr。</p>
+      
+      <a class="article-more-link" href="/2018/01/08/dlib-landmark-model-compression/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-shared-online-editor" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2017/07/02/shared-online-editor/">小喵的在线共享编辑器</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/07/02/shared-online-editor/" class="article-date">
+  <time datetime="2017-07-02T16:49:50.000Z" itemprop="datePublished">2017-07-02</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a> / <a class="article-category-link" href="/categories/Nodejs/">Nodejs</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 5 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：写这篇博客的初衷是因为看到了室友电脑面试的时候，面试官要求在线写代码。然后就想到，如果两个人能够在同一个页面进行编辑工作，不就能更方便的调试代码了吗？（PS.懂linux的screen或tmux的可以绕道了。）代码十分简单，在一个月前就写完了，只是一直没有时间写博客说明一下。</p>
+</blockquote>
+<p>github：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/shared-editor">https://github.com/miaoerduo/shared-editor</a> 欢迎 <strong>fork</strong> 和 <strong>star</strong>。</p>
+<p>那么，实现一个这样的在线的共享编辑器需要哪些工作呢？我们下面一点一点的说明。</p>
+      
+      <a class="article-more-link" href="/2017/07/02/shared-online-editor/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cartoon-cat-server" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2017/03/14/cartoon-cat-server/">简易漫画网站搭建-漫画喵Server版</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/03/14/cartoon-cat-server/" class="article-date">
+  <time datetime="2017-03-14T12:44:08.000Z" itemprop="datePublished">2017-03-14</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a> / <a class="article-category-link" href="/categories/Nodejs/">Nodejs</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 13 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：寒假的时候写了一个漫画爬虫，爬取了好几个漫画，不过一直没有找到合适的漫画阅读的工具。因此最近就试着自己写一个漫画的网站，放在公网上或者局域网里，这样就能随时随地用手机、Pad看漫画了。</p>
+</blockquote>
+<p>先放上项目的地址：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat-server">https://github.com/miaoerduo/cartoon-cat-server</a>，欢迎大家随时star、fork和指教。</p>
+      
+      <a class="article-more-link" href="/2017/03/14/cartoon-cat-server/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Interest/" rel="tag">Interest</a></li></ul>
+
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cartoon-cat-client" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2017/02/19/cartoon-cat-client/">爬虫-漫画喵的100行逆袭</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/02/19/cartoon-cat-client/" class="article-date">
+  <time datetime="2017-02-19T19:15:28.000Z" itemprop="datePublished">2017-02-19</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Python/">Python</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 12 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：这次的博客，讲的是使用python编写一个爬虫工具。为什么要写这个爬虫呢？原因是小喵在看完《极黑的布伦希尔特》这个动画之后，又想看看漫画，结果发现各大APP都没有资源，最终好不容易找到一个网站可以看，但是由于网速太渣，看起来额外的费劲。这时候如果能提前下载下来就好了。</p>
+</blockquote>
+<p>先上项目地址（github）：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat">https://github.com/miaoerduo/cartoon-cat</a> 。欢迎大家随时<strong>fork</strong>、<strong>star</strong>和指教。</p>
+      
+      <a class="article-more-link" href="/2017/02/19/cartoon-cat-client/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-c-lambda-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2017/02/03/c-lambda-tutorial/">C++ Lambda表达式</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/02/03/c-lambda-tutorial/" class="article-date">
+  <time datetime="2017-02-03T00:13:58.000Z" itemprop="datePublished">2017-02-03</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话: 寒假之后，小喵在家里无所事事，最近用C++写代码的时候，用到了std::sort这个函数，每次用这个函数，小喵似乎都得查一下lambda表达式的写法。正好最近很闲，不如总结一下。 在Bing上搜索_C++ lambda_，第一条记录就是MSDN上的C++ lambda的介绍。本文也是基于这篇文章来写的。 那么接下来，我们分几个部分来介绍。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2017/02/03/c-lambda-tutorial/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-face-verify-annotate-tool" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2017/01/01/face-verify-annotate-tool/">一个简单粗暴的人脸认证标注工具的实现</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/01/01/face-verify-annotate-tool/" class="article-date">
+  <time datetime="2017-01-01T17:34:04.000Z" itemprop="datePublished">2017-01-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/QT/">QT</a>
+</div>
+
+      <div class="wordcount wordcount-num">4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 15 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：话说最近小喵也要开始写论文了，想了两周还是没有头绪，不知道该写些什么。恰好又被分配了一点标注数据的工作，于是乎想写点代码，休闲一下。结果也就是这篇博客。对了，小喵对GUI编程一窍不通，只知道Windows有MFC，Mac上的不知道。。。恰好听说过QT，而且知道这个界面库是跨平台的，也就选用了这个工具了。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2017/01/01/face-verify-annotate-tool/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-openmp-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/11/15/openmp-tutorial/">应用OpenMP的一个简单的设计模式</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/11/15/openmp-tutorial/" class="article-date">
+  <time datetime="2016-11-15T21:13:59.000Z" itemprop="datePublished">2016-11-15</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/OpenMP/">OpenMP</a>
+</div>
+
+      <div class="wordcount wordcount-num">5.2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：最近很久没写博客了，一是因为之前写的LSoftmax后馈一直没有成功，所以在等作者的源码。二是最近没什么想写的东西。前两天，在预处理图片的时候，发现处理200w张图片，跑了一晚上也才处理完一半。早上的时候，出于无奈，花半小时改写了一个简单调用OpenMP的处理程序，用了30个核心，然后一小时不到就处理完了。感慨在多核的时代，即使是简单的程序，如果能支持多核，应该都能节省不少时间。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/11/15/openmp-tutorial/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+  </article>
+  
+
+  
+  <nav class="page-nav">
+    <a class="extend prev" rel="prev" href="/page/3/">上一页</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/5/">下一页</a>
+  </nav>
+  
+</section>
+</div>
+
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

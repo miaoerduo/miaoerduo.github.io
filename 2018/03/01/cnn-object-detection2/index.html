@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    CNN的目标检测概述（二） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cnn-object-detection2" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  CNN的目标检测概述（二）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/03/01/cnn-object-detection2/" class="article-date">
+  <time datetime="2018-03-01T17:10:59.000Z" itemprop="datePublished">2018-03-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>这次介绍的是2015年的Kaiming He的一篇论文：Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition，以下简称SPP-net。 SPP-net的主要贡献是提出了一种新的pooling的方式，spatial pyramid pooling，简称为SPP。使用这种pooling的方式，可以将任意大小的输入feature map给pooling到固定的大小。使用这种pooling的方式，最终在分类和检测任务上均有一定的效果。</p>
+</blockquote>
+<span id="more"></span>
+<h3 id="二spp-net">二、SPP-net</h3>
+<h4 id="问题描述">1）问题描述</h4>
+<p>在介绍SPP这个pooling方式之前，我们先说一下，为什么需要这种特殊的pooling。</p>
+<p>一般来看，CNN结构通常都由两个部分组成：卷积层和全连接层。比如7层的AlexNet，就是由5层的卷积层和2层的全连接层组成。对于卷积层，它可以处理任意尺度的输入（= = 请忽略极端情况）。而全连接层需要固定大小的输入。因此最终，我们的CNN结构的输入大小是由全连接层所固定。</p>
+<p>那么固定大小的输入会造成什么问题呢？一般图像的大小并不是固定的，但是CNN要求输入固定，这样我们通常会采取两种方式得到固定大小的图像：裁剪和变形（仿射变换，缩放等）。</p>
+<p><img src="cnn-object-detection-crop-and-warp.jpg" /></p>
+<p>裁剪操作很难正好的包含需要的目标，而变形的方式会导致目标发生形变。两种方式都不能很好的处理图片的尺度问题。</p>
+<p>而SPP这种pooling方式的引入，就可以突破CNN固定输入的约束。SPP可以将任意大小的输入feature map给pooling到固定的大小。将SPP层加在最后一个卷积层的后面，这样就可以pooling出固定的大小，之后再接上全连接层。这样得到的CNN结构，就可以以任意尺度的图像作为输出了，而使用了SPP层的网络，就成为SPP-net。</p>
+<p><img src="cnn-and-spp-net.jpg" /></p>
+<p>这张图就是一般的CNN结构（上）和SPP-net（下）的结构示意图。</p>
+<h4 id="spp层工作流程">2）SPP层工作流程</h4>
+<p>使用SPP层的CNN结构如下：</p>
+<p><img src="cnn-object-detection-spp-framework.jpg" /></p>
+<p>这里重点介绍一下SPP层的工作方式，之前查阅其他的博客，发现都没有得到很好地解释，为此专门阅读了Caffe的SPPLayer实现代码，发现实现的方式很简单。</p>
+<p>上图中，最下方是CNN的卷积部分，黑色的部分是最后一个卷积层的输出，在这个图里面，卷积的最终输出的通道数为256。</p>
+<p>对于一个feature map，我们按照固定的方式对他进行划分。比如现在有一个feature map的宽和高分别是W和H，通道数不妨就取256。我们使用MAX-Pooling的方式做处理，金字塔的层数设置为3。</p>
+<p>首先，我们将这个feature map复制为3份。每一份都看成金字塔的一层。</p>
+<ol type="1">
+<li>对于第一层，也就是顶层，即图中最右边的示意图。我们将整个feature map看做一个整体。这样使用一个 <code>(W, H)</code> 的kernel来进行pooling，这样就得到了 <code>1*1*256</code> 的输出。</li>
+<li>对于第二层，即图中的中间的示意图。我们将feature map看成 <code>2*2</code> 个独立的区域，每个区域单独的pooling。实现上即使用了kernel大小为 <span class="math inline">\((\lceil \frac{W}{2}\rceil ,\lceil \frac{H}{2}\rceil )\)</span>，stride大小为 <span class="math inline">\((\lceil \frac{W}{2}\rceil ,\lceil \frac{H}{2}\rceil )\)</span> 的一个pooling层进行pooling。最终得到了 <code>2*2*256</code> 的输出。</li>
+<li>同理，第三层，即图中的左边的示意图。将feature map看成 <code>4*4</code> 个独立的区域，单独pooling。使用kernel大小为 <span class="math inline">\((\lceil \frac{W}{4}\rceil ,\lceil \frac{H}{4}\rceil )\)</span>，stride大小为 <span class="math inline">\((\lceil \frac{W}{4}\rceil ,\lceil \frac{H}{4}\rceil )\)</span> 的pooling层进行pooling。最终得到 <code>4*4*256</code> 的输出。</li>
+<li>总结下来，就是对于第N层，我们将整个feature map划分成 <span class="math inline">\((2^{N-1}*2^{N-1})\)</span> 的区域，分别pooling。实现上使用kernel为 <span class="math inline">\((\lceil \frac{W}{2^{N-1}}\rceil ,\lceil \frac{H}{2^{N-1}}\rceil )\)</span>，stride为 <span class="math inline">\((\lceil \frac{W}{2^{N-1}}\rceil ,\lceil \frac{H}{2^{N-1}}\rceil )\)</span> 的pooling层进行pooling即可，最终得到 <span class="math inline">\((2^{N-1}*2^{N-1}*dim)\)</span> 的输出。</li>
+</ol>
+<p>最终将所有的pooling的结果进行flatten，最后concat在一起就完成。这里由于输入的feature map的大小可能不能被 <span class="math inline">\(2^N\)</span>整除，采取了向上取整的做法，因此有时候需要额外的pad来填充feature map。</p>
+<p>还有，这里使用的 <span class="math inline">\(2^N\)</span> 这种区域划分的策略，那么我们能不能使用其他的策略呢？比如划分成 <code>1*1</code>，<code>3*3</code>，<code>5*5</code>，<code>7*7</code>...这个样子呢？这里，其实是可以的。SPP提供的是一个pooling的策略，只要能理解他的原理，我们完全可以设计一个自己的pooling方式。事实上，作者也使用了<code>1*1</code>，<code>2\*2</code>，<code>3*3</code>这样的三级划分。</p>
+<p>以上就是SPP层的实现原理，总结下来就是，对输入feature map使用多个不同大小的pooling层进行无重叠的pooling操作，最终再合并。</p>
+<p>如果这里解释的还不够清楚地话，可以参看一下Caffe的源码，相信聪慧的你一定能轻松的理解。</p>
+<h4 id="spp层的特性">3）SPP层的特性</h4>
+<p>这里直接照搬论文的说法：</p>
+<blockquote>
+<p>We note that SPP has several remarkable properties for deep CNNs: 1) SPP is able to generate a fixed-length output regardless of the input size, while the sliding window pooling used in the previous deep networks cannot; 2) SPP uses multi-level spatial bins, while the sliding window pooling uses only a single window size. Multi-level pooling has been shown to be robust to object deformations; 3) SPP can pool features extracted at variable scales thanks to the flexibility of input scales. Through experiments we show that all these factors elevate the recognition accuracy of deep networks.</p>
+</blockquote>
+<p>SPP有很多特性：</p>
+<ol type="1">
+<li>SPP能够对于任意大小的输入，得到固定大小的输出。（强调输出大小固定）</li>
+<li>SPP使用了多级的pooling维度（从上面的SPP工作流程就能看出来，他有各式各样的pooling尺寸），而传统的pooling策略是固定pooling大小的，多级pooling对目标的变形等有很好的鲁棒性。</li>
+<li>SPP能够处理任意大小的输入。（强调输入大小可变）</li>
+</ol>
+<h4 id="分类任务中的spp">4）分类任务中的SPP</h4>
+<p>分类不是这个系列要研究的重点，这里就简单的介绍一下，作者如何训练SPP-net的。</p>
+<h5 id="单尺度训练">1 单尺度训练</h5>
+<p>单尺度训练和一般的CNN的训练没有什么不同，图像经过缩放，然后截取224*224的区域用来训练。</p>
+<h5 id="多尺度训练">2 多尺度训练</h5>
+<p>由于SPP可以处理任意尺度的输入，这就使得多尺度的输入图像的训练成为可能。但是各种CNN框架的卷积的实现都是使用矩阵的操作来完成的，一个mini-batch中的图像的大小必须是相同的。这里，作者先使用一个尺度的图像进行训练，1个epoch之后，再换成另一种尺度进行训练，这样不断的改变尺度。</p>
+<p>最终，训练的收敛情况和一般的单尺度训练是差不多的，但是测试的效果要好了一些。</p>
+<p>上面是训练上的技巧，细节可以看原论文。在测试的时候，也有相应的不同策略。以下简单说明一下作者的实验和结论：</p>
+<h5 id="多级pooling提高准确率">1 多级Pooling提高准确率</h5>
+<p>将一般的网络，ZFNet，OverFeat等的最后一个卷积替换成SPP层，发现最终的效果有提升。</p>
+<h5 id="多尺度训练可以提高准确率">2 多尺度训练可以提高准确率</h5>
+<p><img src="cnn-object-detection-multi-scale-test.jpg" /></p>
+<p>多尺度训练即上面训练中的策略。多尺度训练的结果要比单尺度好。</p>
+<h5 id="使用整张图片会提高准确率">3 使用整张图片会提高准确率</h5>
+<p><img src="cnn-object-detection-full-image-train.jpg" /></p>
+<p>这里作者做了两组实验。一是中心crop的224*224的图像作为输入，另一个是将图像的短边缩放到256像素并保证长宽比，然后输入网络做前馈。</p>
+<h5 id="multi-view的测试方式">4 Multi-View的测试方式</h5>
+<p>这部分和之后的目标检测的方式类似。</p>
+<h4 id="目标检测中的spp">5）目标检测中的SPP</h4>
+<p>在R-CNN中，需要先是用selective search等方法，生成候选框，然后使用候选框的图像进行分类和回归的训练。在SPP-net，可以很大的简化这一流程，加速训练和测试。</p>
+<h5 id="目标检测中spp的训练">1 目标检测中SPP的训练</h5>
+<p>首先使用selective search得到2K的候选框。之后将图像缩放到短边固定大小（可以是多种尺度，这样可以一定程度提升性能），然后使用一个预训练好的网络的卷积的部分（比如ZFNet的前5层）进行前馈，得到整张图的feature map。根据候选框的位置，可以推出候选框在feature map上相应的位置，对这些位置上的feature map进行SPP操作，从而可以得到候选框的特征向量。</p>
+<p>作者做了两个方式的训练，一个是使用SVM做的类别分类器，另一种是fine-tune预训练的模型。 对于SVM的训练，目的是给每一种类别都训练一个二分类的分类器。因此总共需要训练20个SVM分类器。根据和groundtruth的iou来选择正负样本，具体的选择策略和R-CNN相同。最终得到了20个分类器，给每个候选框打分，最终的结果使用NMS来处理。</p>
+<p>预训练模型的fine-tune。这里只fune-tune了fc层。保留了前面的卷积部分。这样的话，就也只需要使用前面提取的候选框的特征向量作为输入了。训练十分的迅速。回归的训练，和R-CNN相同，使用了最后的pool5的特征来训练线性回归模型。</p>
+<h5 id="目标检测的测试流程">2 目标检测的测试流程</h5>
+<p>和训练部分类似，目标检测的首先使用selective search得到候选框，之后将图像缩放成固定尺度（可以是多个尺度，这样会有更好的效果），使用卷积部分前馈得到整张图的feature map。使用SPP得到每个候选框的特征向量。之后将特征向量输入到SVM或者fine-tune之后的网络的fc层，从而得到最终的框的得分和位置。最终使用NMS处理即可。</p>
+<h5 id="多模型融合">3 多模型融合</h5>
+<p>多模型融合可以很好的提高最终的准确率。论文中，作者使用了两种不同的网络，分别按照上面的方式得到候选框的得分和位置。之后将两个网络的候选框放在一起，使用NMS处理之后，作为最终的结果。检测的效果的确有了一些提升。</p>
+<h4 id="个人总结">6）个人总结</h4>
+<p>总体来说，本文最重要的部分还是在于SPP层的提出。这个层可以有效的将各种尺度的输入pooling到固定大小的输出。在分类任务上，多级pooling的策略可以从各种维度上保留特征的信息，在检测任务上，又可以通过一次性计算全图的feature map，再pooling出每个候选区域的特征，极大地减小特征提取部分的计算量。</p>
+<p>论文中有大量的实验和训练中的细节，这里并没有介绍到。感兴趣的同学最好还是看一下原文，相信应该可以收获更多。</p>
+<p>在检测部分，该方法还是有一些缺点的。首先是这个的训练过程和R-CNN还是差不多的，相比于之后的目标检测的方法，可以看出这里还是需要大量的人工的参与。其次，这里的特征是固定的，在SVM或者模型的fine-tune过程中，都是直接使用网络的卷积层的输出，并没有对卷及部分进行训练。那么图像的特征在检测任务中是否还具有优化的潜力呢？我相信还是有的。</p>
+<p>技术总是在不断的进步的。这里的SPP层的提出。可以说，一定程度上造就了另一个经典的目标检测方法Fast R-CNN的提出，Fast R-CNN就是下一篇博客的主角！</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/03/01/cnn-object-detection2/" target="_blank" title="CNN的目标检测概述（二）">
+        https://www.miaoerduo.com/2018/03/01/cnn-object-detection2/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/04/03/cnn-object-detection3/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      CNN的目标检测概述（三）
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/02/26/cnn-object-detection1/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">CNN的目标检测概述（一）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

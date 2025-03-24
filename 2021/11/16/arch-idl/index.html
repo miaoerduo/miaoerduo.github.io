@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    架构小试之IDL |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-arch-idl" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  架构小试之IDL
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/11/16/arch-idl/" class="article-date">
+  <time datetime="2021-11-16T16:24:07.000Z" itemprop="datePublished">2021-11-16</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Architecture/">Architecture</a>
+</div>
+
+      <div class="wordcount wordcount-num">4.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 17 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>为什么IDL的介绍也放在这里呢？一方面是我想不到放哪里，另一方面是之前说到，“架构”即“设计”，那么IDL、RPC框架也算是设计的一部分。不合理的选型在后续维护上会带来不小的麻烦。</p>
+<p>本文主要介绍我用过的一些IDL，并结合真实案例，分析他们的优劣。</p>
+<span id="more"></span>
+<h2 id="idl的作用">IDL的作用</h2>
+<p>在我接手第一个项目的时候，就问了一个问题：这个idl文件夹是做什么的？</p>
+<p>一年之后，当对新人介绍我们项目结构的时候，我都会忍不住试探的问句，你知道idl是什么意思吗？发现大家和我一样不了解，我才心满意足的解释一番。</p>
+<p>IDL其实有很多的含义，在这里一般可以理解为接口描述语言（Interface description language），即描述服务的接口，类似我们C程序的接口声明，包含：<strong>接口名</strong>和输入输出的<strong>数据结构</strong>。</p>
+<p>一般每个服务均有自己的IDL文件（也可以是多个服务依赖相同的IDL文件，因为懒，或者其他巧妙的目的），比如我现在公司常用的服务是基于C++和Go的，使用Thrift作为IDL。</p>
+<p>Thrift提供了工具，可以根据IDL编译生成服务端和客户端的代码：</p>
+<ul>
+<li>对于服务端而言，我们只需要继承生成的Server类，然后实现具体的接口的内容即可。</li>
+<li>客户端（即调用方），IDL可以生成Client类，方便的进行调用。</li>
+</ul>
+<p>因此，一个接口的声明，不仅指导当前服务的实现，同时也是对上游服务的约定。因此一般公司会将所有服务的IDL文件统一维护。这样只需要知道服务名和接口声明，即可完成RPC服务的接入。</p>
+<p>像Thrift这种IDL可以定义数据结构和接口，而有些IDL只可以定义数据结构。IDL生成的数据结构一般均支持序列化和反序列化，并且跨端、跨语言。这种本身不定义接口的IDL，也可以以string的方式搭配其他的RPC框架来使用（Thrift，gRPC等）。</p>
+<p>这里我们主要介绍几种典型的IDL：JSON、ProtoBuf、Thrift。当然IDL还有XML、FlatBuffer、BSON等，感兴趣可以自行查阅。</p>
+<h2 id="几类常见的idl">几类常见的IDL</h2>
+<h3 id="json">JSON</h3>
+<p><strong>JSON</strong>，JavaScript Object Notation，这个大家应该都了解，结构简单，可读性好，一般在Web开发中最常用到，是RESTFul API的首选。</p>
+<p>JSON只支持Object，Array和数值三种结构，Object和Array支持相互嵌套，标准的JSON的数值仅有：double/boolean/string这三种。以下是个例子：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+	<span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"miao"</span><span class="token punctuation">,</span>
+	<span class="token property">"age"</span><span class="token operator">:</span> <span class="token number">18</span><span class="token punctuation">,</span>
+	<span class="token property">"skill"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+		<span class="token punctuation">&#123;</span>
+			<span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"paint"</span><span class="token punctuation">,</span>
+			<span class="token property">"level"</span><span class="token operator">:</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        	<span class="token punctuation">&#123;</span>
+			<span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"coding"</span><span class="token punctuation">,</span>
+			<span class="token property">"level"</span><span class="token operator">:</span> <span class="token number">2</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">]</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>像C++的项目，一般直接使用RapidJSON这个库，他的性能是十分优秀的，并且支持拓展的数据类型。如果是纯C的项目，可以考虑cJSON，我曾经还提过MR😁。</p>
+<blockquote>
+<p>这里有个有意思的事情是，我之前编写过一个工具，可以将程序的中间结果Dump成JSON格式用于Debug。但是有同事通过JSON的在线格式化工具查看的时候，数值看起来都被截断了，数值的后几位都是0。 最后发现是因为网页版的工具只支持double，而RapidJSON可以准确的序列化出int64的数据，int64到double的转换导致了精度的丢失。闹了个乌龙。</p>
+</blockquote>
+<p>那么公司内部服务间的通信使用JSON是一个好的选择吗？</p>
+<p>我的观点是，这<strong>不是</strong>一个好的选择。（虽然现实是，我所在的公司经常在服务间传JSON）</p>
+<p>有以下几个原因：</p>
+<ol type="1">
+<li>没有Schema</li>
+<li>带宽占用大</li>
+<li>序列化和反序列化的时间开销</li>
+<li>解析复杂</li>
+</ol>
+<p>首先，JSON没有标准的Schema（RapidJSON提供了定义Schema的机制，但是校验JSON的开销也很大），比如我们在拿到数据之前，是不知道这个string中存在哪些数据，也不能假定任意数据是存在的。这会造成我们在获取任意的数据时，必须做各种判断，设置兜底值。</p>
+<p>JSON序列化的string一般也会很长，尤其数字的序列化，3.14159265359，这需要13个字节来存放。而实际上它是一个double，至多8个字节即可。</p>
+<p>JSON的序列化和反序列化也相比其他IDL要慢了一些，比如上面的数字，理论上仅对二进制进行操作即可，而JSON必须转成string。其次JSON序列化需要填充key和一些<code>,[]&#123;&#125;</code>的字符。如果需要传输二进制数据的话，JSON一般会需要转成Base64编码，整体的编码和体积又会进一步增大。</p>
+<p>最后是解析很复杂，由于没有Schema，导致每个字段都需要做解析和判断。另外很多JSON的解析库，对于Object和Array，底层使用链表来实现的，查询效率是线性的。</p>
+<h3 id="protobuf">Protobuf</h3>
+<p>Protocol Buffers，简称PB，是一种数据描述的工具，它可以定义丰富的数据结构，支持基础数据类型(int, float, string等)、常用容器list和map，以及自定义的组合数据类型(Message)。</p>
+<p>PB有2和3两个版本，二者并不兼容，以下是PB2的Schema的定义：</p>
+<pre class="line-numbers language-protobuf" data-language="protobuf"><code class="language-protobuf"><span class="token keyword">syntax</span> <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">package</span> med<span class="token punctuation">;</span>                  <span class="token comment">// 包名,相对于C++的namespace</span>
+
+<span class="token keyword">message</span> <span class="token class-name">Skill</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">required</span> <span class="token builtin">string</span> name <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">required</span> <span class="token builtin">int32</span> level <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">message</span> <span class="token class-name">User</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">required</span> <span class="token builtin">string</span> name <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment">// required表示该字段必须要有</span>
+  <span class="token keyword">optional</span> <span class="token builtin">int32</span> age <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>     <span class="token comment">// optional表示该字段可选</span>
+  <span class="token keyword">repeated</span> <span class="token positional-class-name class-name">Skill</span> skill <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>   <span class="token comment">// 多个Skill结构</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>通过<code>protoc user.proto —python_out=.</code> 编译生成了<code>user_pb2.py</code>文件。</p>
+<p>我们简单使用一下这个IDL，这里使用的Proto2生成的：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token triple-quoted-string string">"""
+pip3 install -i https://pypi.douban.com/simple/ protobuf
+"""</span>
+
+<span class="token keyword">import</span> user_pb2
+<span class="token keyword">import</span> json
+
+<span class="token comment"># raw data</span>
+user <span class="token operator">=</span> <span class="token punctuation">&#123;</span>
+    <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'miao'</span><span class="token punctuation">,</span>
+    <span class="token string">'age'</span><span class="token punctuation">:</span><span class="token number">18</span><span class="token punctuation">,</span>
+    <span class="token string">'skill'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'paint'</span><span class="token punctuation">,</span>
+            <span class="token string">'level'</span><span class="token punctuation">:</span> <span class="token number">1</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'coding'</span><span class="token punctuation">,</span>
+            <span class="token string">'level'</span><span class="token punctuation">:</span> <span class="token number">2</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># convert to pb</span>
+pb_user <span class="token operator">=</span> user_pb2<span class="token punctuation">.</span>User<span class="token punctuation">(</span><span class="token punctuation">)</span>
+pb_user<span class="token punctuation">.</span>name <span class="token operator">=</span> user<span class="token punctuation">[</span><span class="token string">'name'</span><span class="token punctuation">]</span>
+pb_user<span class="token punctuation">.</span>age <span class="token operator">=</span> user<span class="token punctuation">[</span><span class="token string">'age'</span><span class="token punctuation">]</span>
+
+<span class="token keyword">for</span> skill <span class="token keyword">in</span> user<span class="token punctuation">[</span><span class="token string">'skill'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    pb_skill <span class="token operator">=</span> user_pb2<span class="token punctuation">.</span>Skill<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    pb_skill<span class="token punctuation">.</span>name <span class="token operator">=</span> skill<span class="token punctuation">[</span><span class="token string">'name'</span><span class="token punctuation">]</span>
+    pb_skill<span class="token punctuation">.</span>level <span class="token operator">=</span> skill<span class="token punctuation">[</span><span class="token string">'level'</span><span class="token punctuation">]</span>
+    pb_user<span class="token punctuation">.</span>skill<span class="token punctuation">.</span>append<span class="token punctuation">(</span>pb_skill<span class="token punctuation">)</span>
+
+<span class="token comment"># convert to JSON</span>
+<span class="token comment">#  the given separators will make it compact</span>
+json_user <span class="token operator">=</span> json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span>user<span class="token punctuation">,</span> separators<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span> <span class="token string">':'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"============ JSON ============"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Size: &#123;&#125;\nContent:\n\t&#123;&#125;"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>json_user<span class="token punctuation">)</span><span class="token punctuation">,</span> json_user<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"============  PB  ============"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Size: &#123;&#125;\nContext:\n\t&#123;&#125;'</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>pb_user<span class="token punctuation">.</span>ByteSize<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> pb_user<span class="token punctuation">.</span>SerializeToString<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token triple-quoted-string string">'''
+OUTPUT:
+============ JSON ============
+Size: 89
+Content:
+&#123;"name":"miao","age":18,"skill":[&#123;"name":"paint","level":1&#125;,&#123;"name":"coding","level":2&#125;]&#125;
+============  PB  ============
+Size: 31
+Context:
+b'\n\x04miao\x10\x12\x1a\t\n\x05paint\x10\x01\x1a\n\n\x06coding\x10\x02'
+'''</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，首先PB是有Schema的，任何人只要拿到Schema，就可以容易的解析PB数据。</p>
+<p>PB序列化出的数据比JSON小了很多。只有大约1/3的大小。（这里主要是节省了JSON的Key的部分）。同时一般情况下，PB的序列化和反序列化的速度比JSON更快（有没有PB更慢的情况呢？后续案例会提到）。</p>
+<p>在读取值的情况下，JSON需要根据key去查找具体的数据，而PB的每个成员定义最终都是一个函数（C++中是函数，Python更像是成员变量），可以用调用函数的方式去取值，节省了一次查找的开销，因此读取的速度极高。</p>
+<p>另外PB支持反射，既可以输入一个string，可以通过反射的方式获取到他的值，但是PB反射的用法比较复杂，这个可以单独写篇博客来介绍。</p>
+<p>关于PB，其实也有许多坑的地方。比如PB2和PB3不兼容，PB3没有optional字段，PB的库版本不匹配容易出错等。所以我们尽量把PB2和3看成两个工具，一开始就决定好使用哪个。</p>
+<p>与PB十分相似的有个IDL是FlatBuffer，他和PB支持的数据类型基本一致，但在构建对象的时候，保证了数据是原始数据且内存分布和IDL定义一致。带来的好处是，FlatBuffer序列化的字符串，可以直接读取，而不需要反序列的操作，因此解码时间可以理解为0，在游戏行业应用较多。</p>
+<h3 id="thrift">Thrift</h3>
+<p>Thrift和上面两个存在本质的不同。</p>
+<p>Thrift不仅可以定义数据结构，这一点和PB相同，同时还可以定义RPC的接口。使用相关的工具，可以方便的生成RPC的Server和Client的代码。</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">struct</span> <span class="token class-name">Skill</span> <span class="token punctuation">&#123;</span>
+    <span class="token number">1</span><span class="token operator">:</span> string name<span class="token punctuation">,</span>
+    <span class="token number">2</span><span class="token operator">:</span> i32 level<span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">struct</span> <span class="token class-name">User</span> <span class="token punctuation">&#123;</span>
+    <span class="token number">1</span><span class="token operator">:</span> string name<span class="token punctuation">,</span>
+    <span class="token number">2</span><span class="token operator">:</span> i32 age<span class="token punctuation">,</span>
+    <span class="token number">3</span><span class="token operator">:</span> list<span class="token operator">&lt;</span>Skill<span class="token operator">></span> skill<span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">struct</span> <span class="token class-name">Req</span> <span class="token punctuation">&#123;</span>
+    <span class="token number">1</span><span class="token operator">:</span> string log_id<span class="token punctuation">,</span>
+    <span class="token number">2</span><span class="token operator">:</span> User user<span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">struct</span> <span class="token class-name">Rsp</span> <span class="token punctuation">&#123;</span>
+    <span class="token number">1</span><span class="token operator">:</span> string log_id<span class="token punctuation">,</span>
+    <span class="token number">2</span><span class="token operator">:</span> string data<span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span>
+
+service EstimateServer <span class="token punctuation">&#123;</span>
+    Rsp <span class="token function">estimate</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">:</span> Req<span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>thrift --gen py demo.thrift</code> 命令可以生成对应的python代码，这里默认在<code>gen-py</code>文件夹。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> thrift<span class="token punctuation">.</span>transport <span class="token keyword">import</span> TSocket
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>transport <span class="token keyword">import</span> TTransport
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>protocol <span class="token keyword">import</span> TBinaryProtocol
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>server <span class="token keyword">import</span> TServer
+<span class="token keyword">import</span> sys
+
+sys<span class="token punctuation">.</span>path<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"./gen-py/"</span><span class="token punctuation">)</span>
+<span class="token keyword">from</span> demo <span class="token keyword">import</span> EstimateServer
+
+<span class="token keyword">class</span> <span class="token class-name">EstimateHandler</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">pass</span>
+
+    <span class="token keyword">def</span> <span class="token function">estimate</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> req<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        user <span class="token operator">=</span> req<span class="token punctuation">.</span>user
+        rsp <span class="token operator">=</span> EstimateServer<span class="token punctuation">.</span>Rsp<span class="token punctuation">(</span>log_id<span class="token operator">=</span>req<span class="token punctuation">.</span>log_id<span class="token punctuation">)</span>
+        msg <span class="token operator">=</span> <span class="token string">'hi~ &#123;&#125;, Your Ability: \r\n'</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>user<span class="token punctuation">.</span>name<span class="token punctuation">)</span>
+        <span class="token keyword">for</span> skill <span class="token keyword">in</span> user<span class="token punctuation">.</span>skill<span class="token punctuation">:</span>
+            msg <span class="token operator">+=</span> <span class="token string">'    skill: &#123;&#125; level: &#123;&#125;\r\n'</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>skill<span class="token punctuation">.</span>name<span class="token punctuation">,</span> skill<span class="token punctuation">.</span>level<span class="token punctuation">)</span>
+        rsp<span class="token punctuation">.</span>data <span class="token operator">=</span> msg
+        <span class="token keyword">return</span> rsp
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+    <span class="token comment"># 创建处理器</span>
+    handler <span class="token operator">=</span> EstimateHandler<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    processor <span class="token operator">=</span> EstimateServer<span class="token punctuation">.</span>Processor<span class="token punctuation">(</span>handler<span class="token punctuation">)</span>
+
+    <span class="token comment"># 监听端口</span>
+    transport <span class="token operator">=</span> TSocket<span class="token punctuation">.</span>TServerSocket<span class="token punctuation">(</span>host<span class="token operator">=</span><span class="token string">"0.0.0.0"</span><span class="token punctuation">,</span> port<span class="token operator">=</span><span class="token number">9999</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 选择传输层</span>
+    tfactory <span class="token operator">=</span> TTransport<span class="token punctuation">.</span>TBufferedTransportFactory<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 选择传输协议</span>
+    pfactory <span class="token operator">=</span> TBinaryProtocol<span class="token punctuation">.</span>TBinaryProtocolFactory<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 创建服务端</span>
+    server <span class="token operator">=</span> TServer<span class="token punctuation">.</span>TThreadPoolServer<span class="token punctuation">(</span>processor<span class="token punctuation">,</span> transport<span class="token punctuation">,</span> tfactory<span class="token punctuation">,</span> pfactory<span class="token punctuation">)</span>
+
+    <span class="token comment"># 设置连接线程池数量</span>
+    server<span class="token punctuation">.</span>setNumThreads<span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 启动服务</span>
+    server<span class="token punctuation">.</span>serve<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> thrift <span class="token keyword">import</span> Thrift
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>transport <span class="token keyword">import</span> TSocket
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>transport <span class="token keyword">import</span> TTransport
+<span class="token keyword">from</span> thrift<span class="token punctuation">.</span>protocol <span class="token keyword">import</span> TBinaryProtocol
+<span class="token keyword">import</span> sys
+sys<span class="token punctuation">.</span>path<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"./gen-py/"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">from</span> demo <span class="token keyword">import</span> EstimateServer
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+    transport <span class="token operator">=</span> TSocket<span class="token punctuation">.</span>TSocket<span class="token punctuation">(</span><span class="token string">'127.0.0.1'</span><span class="token punctuation">,</span> <span class="token number">9999</span><span class="token punctuation">)</span>
+    transport <span class="token operator">=</span> TTransport<span class="token punctuation">.</span>TBufferedTransport<span class="token punctuation">(</span>transport<span class="token punctuation">)</span>
+    protocol <span class="token operator">=</span> TBinaryProtocol<span class="token punctuation">.</span>TBinaryProtocol<span class="token punctuation">(</span>transport<span class="token punctuation">)</span>
+    client <span class="token operator">=</span> EstimateServer<span class="token punctuation">.</span>Client<span class="token punctuation">(</span>protocol<span class="token punctuation">)</span>
+
+    user <span class="token operator">=</span> EstimateServer<span class="token punctuation">.</span>User<span class="token punctuation">(</span>name<span class="token operator">=</span><span class="token string">'miao'</span><span class="token punctuation">,</span> age<span class="token operator">=</span><span class="token number">18</span><span class="token punctuation">)</span>
+    user<span class="token punctuation">.</span>skill <span class="token operator">=</span> <span class="token punctuation">[</span>
+        EstimateServer<span class="token punctuation">.</span>Skill<span class="token punctuation">(</span>name<span class="token operator">=</span><span class="token string">'paint'</span><span class="token punctuation">,</span> level<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        EstimateServer<span class="token punctuation">.</span>Skill<span class="token punctuation">(</span>name<span class="token operator">=</span><span class="token string">'coding'</span><span class="token punctuation">,</span> level<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token punctuation">]</span>
+
+    <span class="token comment"># 连接服务端</span>
+    transport<span class="token punctuation">.</span><span class="token builtin">open</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    rsp <span class="token operator">=</span> client<span class="token punctuation">.</span>estimate<span class="token punctuation">(</span>EstimateServer<span class="token punctuation">.</span>Req<span class="token punctuation">(</span>log_id<span class="token operator">=</span><span class="token string">"10086"</span><span class="token punctuation">,</span> user<span class="token operator">=</span>user<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'log_id: &#123;&#125;'</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>rsp<span class="token punctuation">.</span>log_id<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>rsp<span class="token punctuation">.</span>data<span class="token punctuation">)</span>
+
+    <span class="token comment"># 断连服务端</span>
+    transport<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token triple-quoted-string string">"""
+log_id: 10086
+hi~ miao, Your Ability: 
+    skill: paint level: 1
+    skill: coding level: 2
+"""</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>Thrift的序列化有点复杂，感兴趣的可以查看<code>client.estimate</code>的源代码，我们大致可以知道，Thrift的序列化的体积和PB应该类似。</p>
+<p>Thrift和PB支持的数据类型基本上一致，但是同时支持了RPC接口的定义。但是比较遗憾的是Thrift不支持反射。当字段太多的时候，想支持参数解析的配置化，就比较麻烦。</p>
+<h2 id="idl之间的对比和选择">IDL之间的对比和选择</h2>
+<p>首先给出上面三种IDL的各类情况：</p>
+<table>
+<thead>
+<tr class="header">
+<th>IDL</th>
+<th style="text-align: center;">编解码</th>
+<th style="text-align: center;">体积</th>
+<th style="text-align: center;">反射</th>
+<th style="text-align: center;">RPC接口</th>
+<th style="text-align: center;">Schema</th>
+<th style="text-align: center;">可读性</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PB</td>
+<td style="text-align: center;">快</td>
+<td style="text-align: center;">小</td>
+<td style="text-align: center;">支持</td>
+<td style="text-align: center;">不支持</td>
+<td style="text-align: center;">支持</td>
+<td style="text-align: center;">需解码</td>
+</tr>
+<tr class="even">
+<td>Thrift</td>
+<td style="text-align: center;">快</td>
+<td style="text-align: center;">小</td>
+<td style="text-align: center;">不支持</td>
+<td style="text-align: center;">支持</td>
+<td style="text-align: center;">支持</td>
+<td style="text-align: center;">需解码</td>
+</tr>
+<tr class="odd">
+<td>JSON</td>
+<td style="text-align: center;">慢</td>
+<td style="text-align: center;">大</td>
+<td style="text-align: center;">支持</td>
+<td style="text-align: center;">不支持</td>
+<td style="text-align: center;">-</td>
+<td style="text-align: center;">好</td>
+</tr>
+</tbody>
+</table>
+<p>由于这里Thrift是用来定义服务的，因此一定会被用到，这里主要讨论的是一次RPC调用时，内部的具体数据的选择。</p>
+<p>以下我们分场景讨论。</p>
+<h3 id="ab参">AB参</h3>
+<p>AB参指是我们通过实验平台下发实验的参数。一般我们在开发完一个功能之后，并不一定会立刻上线推全，而是在线上保留新旧两套逻辑，再通过平台下发参数来控制分别启用新旧逻辑。用于做对比实验。</p>
+<p>一般AB参会随着请求下发到每个服务。如果AB实验得到了具体的结论，就可以固化AB参（删掉旧代码，或者全量新的AB参）。</p>
+<p>那么一个合格的AB参选型需要满足：</p>
+<ol type="1">
+<li>易于构造</li>
+<li>体积小</li>
+<li>组织灵活</li>
+<li>解析速度快</li>
+<li>Schema简单</li>
+</ol>
+<p>先说结论，这里优先考虑JSON和PB，PB依赖一些额外的工作。单纯使用Thrift不可行。</p>
+<p>这里排除直接使用PB和Thrift的Map结构的情况，因为这样和JSON几乎等价，表达能力却不如JSON。</p>
+<p>首先，JSON是很适合的选择。它的构造很简单，组织灵活，如果数据量不大的话，解析速度也还可以。同时由于支持反射，一些逻辑的配置化也比较方便的实现。并且基本上所有的语言都可以很好的支持。原生支持数据透传，不依赖上下游的服务升级。</p>
+<p>缺点是当数据量比较大的时候，JSON会占用很大一部分服务的CPU和带宽。</p>
+<p>那么PB和Thrift有什么问题呢？核心是数据传递的完整性。另外Thrift不支持反射也是个硬伤。</p>
+<p>假设服务调用是A-&gt;B-&gt;C，C是最下游的服务，我们的代码写在C中。新增AB参时，我们在IDL中增加一个字段。在开发上线完C后，A、B可能也需要同步升级以支持透传参数。不然在开实验时，A、B无法将数据透传到下游，影响实验的发布。Thrift的参数直接体现在RPC接口中，更新字段必须重新上线，因此这里Thrift就不太适合。</p>
+<p>而PB本身可以序列化成String放在请求里面，因此如果是透传全量的AB参，这是可以保证的。</p>
+<p>另一种情况是，B这个服务对AB参做了拆分，然后仅透传其中的一部分给C。那么如果B的IDL是旧版的，那么还能完成透传吗？这里其实PB是有相关的支持的。</p>
+<p>PB2直接支持低版本透传高版本的字段。</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://developers.google.cn/protocol-buffers/docs/proto?hl=zh-cn#updating">PB2</a></p>
+<p>Any new fields that you add should be optional or repeated. This means that any messages serialized by code using your "old" message format can be parsed by your new generated code, as they won't be missing any required elements. You should set up sensible default values for these elements so that new code can properly interact with messages generated by old code. Similarly, messages created by your new code can be parsed by your old code: old binaries simply ignore the new field when parsing. However, the unknown fields are not discarded, and if the message is later serialized, the unknown fields are serialized along with it – so if the message is passed on to new code, the new fields are still available.</p>
+</blockquote>
+<p>PB3，在3.5之前会丢弃新字段，3.5及以后会透传。</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://developers.google.cn/protocol-buffers/docs/proto3?hl=zh-cn#unknowns">PB3</a></p>
+<p>Originally, proto3 messages always discarded unknown fields during parsing, but in version 3.5 we reintroduced the preservation of unknown fields to match the proto2 behavior. In versions 3.5 and later, unknown fields are retained during parsing and included in the serialized output.</p>
+</blockquote>
+<p>当然这个特性是PB所支持的，如果使用其他的IDL，也需要提前调研一下。</p>
+<p>其实还有个问题是实验平台的支持。</p>
+<p>一般公司会都有个实验平台，在上面我们通过可视化的方式即可进行实验的配置。使用PB的话，意味着新增AB参时，都需要在平台进行注册，否则平台不认识，无法正确写入字段。当然对AB参的更严格的监管，其实也是好事，可以为整个服务链路做更好的监控，这取决于公司是否愿意投入人力去解决。</p>
+<h3 id="正排">正排</h3>
+<p>我们经常听到倒排索引这个概念，其实正排更常见。比如存放用户的信息，一般就是一个map，key是user_id，val是用户的具体信息。</p>
+<p>提到KV存储，我们很容易想到Redis，Memcached，LMDB等工具，具体的选择以后再讨论。一般正排是独立的一个服务，对于正排的查询就会是一次RPC请求。因此，正排中的val一般是序列化好的字符串，以减少再次序列化的开销。</p>
+<p>这里就是PB的极好的应用场景。</p>
+<p>对于一个正排服务，一般会将数据分shard然后放进内存，RPC是直接读取了内存的数据。这种服务一般瓶颈容易出现在内存和带宽上，压缩率越高，就意味着更少的资源。PB拥有极高的压缩率，序列化和反序列化均很快，又支持反射。</p>
+<p>另外，如果一个val存放了过多的字段，而我们只想获取少部分字段时，由于服务端不方便做解码，我们必须一次请求所有的数据，这样就会带来带宽上的浪费。一般的解决方案是将正排的val做拆分。大val时，数据库的选型也是个问题，比如Redis对大的val支持并不好。这个我们后续会再介绍。</p>
+<h3 id="稀疏字段的数据">稀疏字段的数据</h3>
+<p>这是指一个数据的定义有1000个字段，但是一条记录可能只会填充其中的几十个字段的情况。</p>
+<p>常见于埋点数据，还有上面AB参（随着时间推移，很多无用的AB参未及时清理）。</p>
+<p>这种情况下，PB和JSON哪个更好的？我们没有一个比较明确的答案。</p>
+<p>这里碰到了一个案例，有同事将埋点数据从JSON改成了PB，然后重构了整条链路之后，发现优化前后CPU和内存均持平。</p>
+<p>推测原因是，一条JSON只保存了几十个字段的KV，而PB保存了所有字段的状态和数据（PB2会记录每个字段是否被set），因此存储上PB有浪费。解析也同理。</p>
+<h2 id="写在最后">写在最后</h2>
+<p>上述的案例的答案可能并不适用于其他场景，仅供大家了解。这里的目的是，希望在大家选择IDL时，多一种思考的角度。</p>
+<p>本文写了真的好久，总算是写完啦~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2021/11/16/arch-idl/" target="_blank" title="架构小试之IDL">
+        https://www.miaoerduo.com/2021/11/16/arch-idl/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2021/12/16/architecture-terminology/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      服务端基本概念和指标
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2021/11/16/how-I-understand-architecture/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">我所理解的架构</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

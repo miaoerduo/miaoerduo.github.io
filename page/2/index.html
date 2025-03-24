@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="jumbotron">
+  <div class="video">
+    
+    <div class="video-frame">
+      <img src="/images/ocean/overlay-hero.png" alt="Decorative image frame">
+    </div>
+    
+    <div class="video-media">
+      <video playsinline="" autoplay="" loop="" muted="" data-autoplay="" poster="/images/ocean/ocean.png"
+        x5-video-player-type="h5">
+        <source src="/images/ocean/ocean.mp4" type="video/mp4">
+        <source src="/images/ocean/ocean.ogv" type="video/ogg">
+        <source src="/images/ocean/ocean.webm" type="video/webm">
+        <p>Your user agent does not support the HTML5 Video element.</p>
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+    <div class="video-inner text-center text-white">
+      <h1><a href="/">喵耳朵</a></h1>
+      <p>略懂算法 | 在学架构 | 梦想成为 | Top插画师</p>
+      <div><img src="/images/MED-logo-white.png" class="brand" alt="喵耳朵"></div>
+    </div>
+    <div class="video-learn-more">
+      <a class="anchor" href="#landingpage"><i class="fe fe-mouse"></i></a>
+    </div>
+  </div>
+</section>
+<div id="landingpage">
+  <section class="outer">
+  <article class="articles">
+    
+    <h1 class="page-type-title"></h1>
+    
+    
+    <article id="post-redis-data-struct" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2021/08/06/redis-data-struct/">Redis数据结构与对象</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/08/06/redis-data-struct/" class="article-date">
+  <time datetime="2021-08-06T21:04:48.000Z" itemprop="datePublished">2021-08-06</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.9k 字</div>
+      <div class="wordcount wordcount-time">大约需要 7 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>本文主要是《Redis设计与实现》的第一部分的总结，内容为数据结构和对象。这里类比了C++ STL中的数据结构，便于理解。</p>
+<p>Redis是使用C语言编写的，C语言本身没有复杂的数据结构。因此Redis自己实现了一套底层的数据结构，这些数据结构作为工具被Redis的其他模块使用。</p>
+      
+      <a class="article-more-link" href="/2021/08/06/redis-data-struct/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-talk-about-threads" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2021/07/17/talk-about-threads/">关于多线程的三两事</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/07/17/talk-about-threads/" class="article-date">
+  <time datetime="2021-07-17T06:45:57.000Z" itemprop="datePublished">2021-07-17</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 18 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>多线程一直是编程中的重要的工具，它可以分充分的利用硬件资源，是我们用更少的时间去完成更多的事情。在之前的博客中，我有介绍了OpenMP的基本使用，OpenMP可以理解为多线程的一个合理和高效的一套抽象工具。这次，打算仔细的介绍多线程编程中的常见的概念和典型的案例。</p>
+<h2 id="典型的案例">典型的案例</h2>
+<p>说到多线程，最核心的问题就是保证数据的读写安全。为了达到此目的，我们需要多很多常见的数据结构做一些改造，从而适应多线程的场景。以下是我工作中比较常见到的一些使用场景：</p>
+<ol type="1">
+<li>线程池</li>
+<li>读写锁</li>
+<li>消息队列</li>
+<li>ConcurrentCache</li>
+<li>PingPang Buffer</li>
+</ol>
+<p>在具体介绍这些使用场景之前，我们还是需要了解需要使用到的一些基本的工具：互斥量、条件变量、原子操作等。</p>
+      
+      <a class="article-more-link" href="/2021/07/17/talk-about-threads/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-hexo-trick" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2020/02/28/hexo-trick/">hexo的小技巧</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2020/02/28/hexo-trick/" class="article-date">
+  <time datetime="2020-02-28T00:35:48.000Z" itemprop="datePublished">2020-02-28</time>
+</a>
+      
+      <div class="wordcount wordcount-num">438 字</div>
+      <div class="wordcount wordcount-time">大约需要 1 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>从WordPress转到Hexo没多久。这里记录一下遇到的问题和解决方案。</p>
+      
+      <a class="article-more-link" href="/2020/02/28/hexo-trick/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-lua-state-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2020/02/26/lua-state-tutorial/">C程序优雅地调用Lua?一篇博客带你全面了解lua_State</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2020/02/26/lua-state-tutorial/" class="article-date">
+  <time datetime="2020-02-26T12:00:18.000Z" itemprop="datePublished">2020-02-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Lua/">Lua</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 14 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="一前言">一、前言</h2>
+<p>Lua是一种使用十分方便的脚本语言，同时又能C/C++无缝的粘合在一起，在速度上也比很多其他的脚本语言快了一个数量级，在使用LuaJit的情况下，速度甚至可以与C语言比肩。同时Lua支持模块的热更新，在游戏等行业受到广泛的应用。</p>
+<p>同时Lua虚拟机十分的轻量，在占用极少内存和依赖的情况下，可以方便的嵌入到我们的项目中。</p>
+<p>本文中，主要介绍了在C/C++项目中，使用Lua虚拟机的技巧，着重介绍Lua_State的原理和使用。简单的说就是用C去调用Lua。另一个技术是用Lua调用C库，可以为Lua程序加速，这个在以后的文章中再介绍。</p>
+      
+      <a class="article-more-link" href="/2020/02/26/lua-state-tutorial/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-tictoc-header-only-c-timer" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2019/03/29/tictoc-header-only-c-timer/">TICTOC: Header Only C++ Timer</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2019/03/29/tictoc-header-only-c-timer/" class="article-date">
+  <time datetime="2019-03-29T01:24:00.000Z" itemprop="datePublished">2019-03-29</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.8k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>感觉最近的更新频率略高啊～哈哈～</p>
+<p>这次的带来的是一个十分简单便利的C++计时库。</p>
+<p>项目地址：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/tictoc">https://github.com/miaoerduo/tictoc</a></p>
+<p>欢迎<strong>Start</strong>和提<strong>MR</strong>。</p>
+      
+      <a class="article-more-link" href="/2019/03/29/tictoc-header-only-c-timer/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-easy-pipeline" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2019/03/23/easy-pipeline/">Easy Pipeline，一种轻量级的Python Pipeline库</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2019/03/23/easy-pipeline/" class="article-date">
+  <time datetime="2019-03-23T14:05:52.000Z" itemprop="datePublished">2019-03-23</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Framework/">Framework</a> / <a class="article-category-link" href="/categories/Python/">Python</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 6 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>嗯，很久没有写博客了，最近的工作都是偏开发性质的，以至于没有时间对自己感兴趣的领域进行探索，感觉个人的成长停滞了一些。如何在枯燥的工作中，提取出有助于自己成长的养分，对于每个人来说都是不小的考验。</p>
+</blockquote>
+<p>这次，带来的是之前编写的一下挺简单的库，用来简化流水线作业的小框架。</p>
+<p>Github: <a target="_blank" rel="noopener" href="https://github.com/miaoerduo/easy-pipeline">https://github.com/miaoerduo/easy-pipeline</a> 欢迎Star和提交MR。</p>
+      
+      <a class="article-more-link" href="/2019/03/23/easy-pipeline/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-vim" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/11/13/vim/">vim配置</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/11/13/vim/" class="article-date">
+  <time datetime="2018-11-13T17:14:08.000Z" itemprop="datePublished">2018-11-13</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 5 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>下面是我的VIM的主要配置。应该就是网上找到的一个，加了点功能。权当在这里备份一下了。 将下面的内容写入自己的<code>~/.vimrc</code>文件即可。</p>
+      
+      <a class="article-more-link" href="/2018/11/13/vim/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-fix-rebuild-tensor-v2-error-in-pytorch" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/08/02/fix-rebuild-tensor-v2-error-in-pytorch/">_rebuild_tensor_v2？pytorch版本间模型兼容性脱坑实践</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/08/02/fix-rebuild-tensor-v2-error-in-pytorch/" class="article-date">
+  <time datetime="2018-08-02T16:52:51.000Z" itemprop="datePublished">2018-08-02</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">583 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>最近使用Pytorch 0.4.0 进行模型训练，之后使用一个转模型的工具时，报了一个错，就是标题里面的<code>_rebuild_tensor_v2</code>相关的错误。最后发现是本地使用的pytorch的版本是0.3.0，和0.4.0模型上不兼容。各论坛上的解决方案都是说pytorch版本不向后兼容，建议升级pytorch。无奈我这里不方便升级pytorch版本。那么问题就来了，有没有什么不需要修改pytorch源码，或是不升级pytorch，又能让老版本的pytorch读取新版本模型的方案呢？</p>
+</blockquote>
+<p>当然是有的，而且工作量很小。</p>
+      
+      <a class="article-more-link" href="/2018/08/02/fix-rebuild-tensor-v2-error-in-pytorch/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+  </article>
+  
+
+  
+  <nav class="page-nav">
+    <a class="extend prev" rel="prev" href="/">上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/3/">下一页</a>
+  </nav>
+  
+</section>
+</div>
+
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    Redis数据结构与对象 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-redis-data-struct" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  Redis数据结构与对象
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/08/06/redis-data-struct/" class="article-date">
+  <time datetime="2021-08-06T21:04:48.000Z" itemprop="datePublished">2021-08-06</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.9k 字</div>
+      <div class="wordcount wordcount-time">大约需要 7 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>本文主要是《Redis设计与实现》的第一部分的总结，内容为数据结构和对象。这里类比了C++ STL中的数据结构，便于理解。</p>
+<p>Redis是使用C语言编写的，C语言本身没有复杂的数据结构。因此Redis自己实现了一套底层的数据结构，这些数据结构作为工具被Redis的其他模块使用。</p>
+<span id="more"></span>
+<h2 id="简单动态字符串-sds">简单动态字符串 SDS</h2>
+<p>SDS Simple Dynamic String，和<code>std::string</code>类似。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">struct</span> <span class="token class-name">sdshdr</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> len<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> free<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> buf<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>与C语言字符串相比的优点：</p>
+<ul>
+<li>常熟复杂度获取字符串长度</li>
+<li>杜绝缓冲区溢出</li>
+<li>减少修改字符串长度时所需的内存分配次数</li>
+<li>二进制安全</li>
+<li>兼容部分C字符串函数</li>
+</ul>
+<p>特性：</p>
+<ul>
+<li>有长度和容量的概念，存储二进制</li>
+<li>动态扩容：小于1M，每次Double；大于1M，每次扩1M。</li>
+<li>惰性释放</li>
+</ul>
+<h2 id="链表-linkedlist">链表 LinkedList</h2>
+<p>LinkedList，这里使用双向链表来实现。然后通过函数指针支持List对象的拷贝、释放和匹配，这样就用C实现了和C++的<code>std::list&lt;T&gt;</code>相同的功能。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// 单个节点的定义</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">listNode</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">listNode</span> <span class="token operator">*</span>prev<span class="token punctuation">;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">listNode</span> <span class="token operator">*</span>next<span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span>value<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> listNode<span class="token punctuation">;</span>
+
+<span class="token comment">// list定义</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">list</span> <span class="token punctuation">&#123;</span>
+    listNode <span class="token operator">*</span>head<span class="token punctuation">;</span>
+    listNode <span class="token operator">*</span>tail<span class="token punctuation">;</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">long</span> len<span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>dup<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>ptr<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 复制</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>free<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>ptr<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 释放</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>match<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>ptr<span class="token punctuation">,</span> <span class="token keyword">void</span> <span class="token operator">*</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 比较</span>
+<span class="token punctuation">&#125;</span> list<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="字典-dict">字典 Dict</h2>
+<p>Redis的字典是Hash表来实现的，相当于<code>std::unordered_map&lt;K, T, cmp&gt;</code> ，并且有更只能的Rehash操作。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// 哈希表</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">dictht</span> <span class="token punctuation">&#123;</span>
+    dictEntry <span class="token operator">*</span><span class="token operator">*</span>table<span class="token punctuation">;</span>  <span class="token comment">// 哈希表数组</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">long</span> size<span class="token punctuation">;</span>  <span class="token comment">// 哈希表大小</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">long</span> sizemask<span class="token punctuation">;</span>  <span class="token comment">// 哈希表大小掩码，用于计算索引值，值为size - 1</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">long</span> used<span class="token punctuation">;</span>  <span class="token comment">// 该哈希表已有节点数量</span>
+<span class="token punctuation">&#125;</span> dictht<span class="token punctuation">;</span>
+
+<span class="token comment">// 哈希表的一项</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">dictEntry</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span>key<span class="token punctuation">;</span>
+    <span class="token keyword">union</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">void</span> <span class="token operator">*</span>val<span class="token punctuation">;</span>
+        <span class="token keyword">uint64_t</span> u64<span class="token punctuation">;</span>
+        <span class="token keyword">int64_t</span> s64<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> v<span class="token punctuation">;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">dictEntry</span> <span class="token operator">*</span>next<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> dictEntry<span class="token punctuation">;</span>
+
+<span class="token comment">// Redis的字典结构</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">dict</span> <span class="token punctuation">&#123;</span>
+    dictType <span class="token operator">*</span>type<span class="token punctuation">;</span> <span class="token comment">// 类型特定函数，用于实现多态</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">;</span> <span class="token comment">// 私有数据</span>
+    dictht ht<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment">// 两个hash表，另一个用于扩容</span>
+    <span class="token keyword">int</span> rehashidx<span class="token punctuation">;</span>    <span class="token comment">// rehash索引，当rehash不在进行时，值为-1</span>
+<span class="token punctuation">&#125;</span> dict<span class="token punctuation">;</span>
+
+<span class="token comment">// 类型特定函数，对于key和val都实现了拷贝和析构函数，支持key的比较。</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">dictType</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token punctuation">(</span><span class="token operator">*</span>hashFunction<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">void</span> <span class="token operator">*</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>keyDup<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">void</span> <span class="token operator">*</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>valDup<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">void</span> <span class="token operator">*</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>keyCompare<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">void</span> <span class="token operator">*</span>key1<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">void</span> <span class="token operator">*</span>key2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>keyDestructor<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">,</span> <span class="token keyword">void</span> <span class="token operator">*</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>valDestructor<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>privdata<span class="token punctuation">,</span> <span class="token keyword">void</span> <span class="token operator">*</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> dictType<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>特性：</p>
+<ul>
+<li>多态，支持任意的key和val类型</li>
+<li>根据负载因子，决定hash表的扩容和缩容。
+<ul>
+<li>load_factor = ht[0].used / ht[0].size</li>
+<li>缩容：load_factor &lt; 0.1</li>
+<li>扩容：load_factor ≥ 5</li>
+</ul></li>
+<li>渐进式rehash，为了优化rehash的时间，每次只rehash一部分（rehashidx，hash完会加一）。最终将ht[0] rehash到ht[1]。最后ht[1]变成ht[0]，ht[0]释放变成ht[1]，重置rehashidx。</li>
+</ul>
+<h2 id="跳跃表-skiplist">跳跃表 SkipList</h2>
+<p>跳跃表是一种有序数据结构，它通过在每个节点中维持多个指向其他节点的指针，从而达到快速访问节点的目的。支持平均O(logN)、最坏O(N)复杂度的查找，还可以通过顺序性操作来批量处理节点。</p>
+<p>可以直接参考 <a target="_blank" rel="noopener" href="https://redisbook.readthedocs.io/en/latest/internal-datastruct/skiplist.html">Redis设计与实现 skiplist章节</a></p>
+<p><img src="skiplist.png" alt="Redis SkipList" /></p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">zskiplistNode</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">zskiplistNode</span> <span class="token operator">*</span>backward<span class="token punctuation">;</span>  <span class="token comment">// 后退指针</span>
+    <span class="token keyword">double</span> score<span class="token punctuation">;</span> <span class="token comment">// 分值</span>
+    robj <span class="token operator">*</span>obj<span class="token punctuation">;</span>  <span class="token comment">// 成员对象</span>
+    <span class="token comment">// 层</span>
+    <span class="token keyword">struct</span> <span class="token class-name">zskiplistLevel</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">struct</span> <span class="token class-name">zskiplistNode</span> <span class="token operator">*</span>forward<span class="token punctuation">;</span>  <span class="token comment">// 前进指针</span>
+        <span class="token keyword">unsigned</span> <span class="token keyword">int</span> span<span class="token punctuation">;</span> <span class="token comment">// 跨度</span>
+    <span class="token punctuation">&#125;</span>  level<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> zskiplistNode<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="整数集合-intset">整数集合 IntSet</h2>
+<p>整数集合(intset)是Redis用于保存整数值的集合抽象数据结构。可以保存类型为int16_t、int32_t、int64_t的整数值，并且保证集合不重复。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">intset</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">uint32_t</span> encoding<span class="token punctuation">;</span>  <span class="token comment">// 编码方式</span>
+    <span class="token keyword">uint32_t</span> length<span class="token punctuation">;</span>  <span class="token comment">// 集合包含的元素数量</span>
+    <span class="token keyword">int8_t</span> contents<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>  <span class="token comment">// 保存元素的数组</span>
+<span class="token punctuation">&#125;</span> intset<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里encoding表示编码方式，也就是contents里面存的数据的类型。有INTSET_ENC_INT16/INTSET_ENC_INT32/INTSET_ENC_INT64三种。</p>
+<p>contents存放具体的数据，并且是有序存储，所以添加一个数字，极端情况下需要挪动所有的数字。</p>
+<p>特性：</p>
+<ol type="1">
+<li>有序数组</li>
+<li>通过encoding的方式，支持多种整数类型</li>
+<li>如果整数全都可以用INT16存储，则编码方式即INTSET_ENC_INT16（INT32也相同）。</li>
+<li>自动升级，如果添加的整数超过之前编码的范围，则整个集合所有的元素的升级。</li>
+<li>不支持降级，即如果当前编码为INT64，删掉所有int64_t的元素，剩下的全部在int16_t的范围的话集合也不会降级编码方式。</li>
+<li>contents的容量变化使用realloc</li>
+</ol>
+<h2 id="压缩列表-ziplist">压缩列表 ZipList</h2>
+<p>压缩列表是存储上更节省的一个列表。它是一块紧凑的内存，前面的字节记录了压缩列表的容量等信息，后面跟上每一个具体的数据，每种数据也是按照特定的编码方式组织的。因此相比于链表等数据结构，这里做到了极简。</p>
+<p>这里直接粘贴了原文的代码。</p>
+<p>ZipList的构成</p>
+<pre class="line-numbers language-none"><code class="language-none">area        |&lt;---- ziplist header ----&gt;|&lt;----------- entries -------------&gt;|&lt;-end-&gt;|
+
+size          4 bytes  4 bytes  2 bytes    ?        ?        ?        ?     1 byte
+            +---------+--------+-------+--------+--------+--------+--------+-------+
+component   | zlbytes | zltail | zllen | entry1 | entry2 |  ...   | entryN | zlend |
+            +---------+--------+-------+--------+--------+--------+--------+-------+
+                                       ^                          ^        ^
+address                                |                          |        |
+                                ZIPLIST_ENTRY_HEAD                |   ZIPLIST_ENTRY_END
+                                                                  |
+                                                         ZIPLIST_ENTRY_TAIL<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>一个 ziplist 可以包含多个节点，每个节点可以划分为以下几个部分：</p>
+<pre class="line-numbers language-none"><code class="language-none">area        |&lt;------------------- entry --------------------&gt;|
+
+            +------------------+----------+--------+---------+
+component   | pre_entry_length | encoding | length | content |
+            +------------------+----------+--------+---------+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>每个Entry的编码有许多的细节，这里就不记录了，感兴趣可以看看原文。</p>
+<h2 id="对象">对象</h2>
+<p>前面介绍了Redis封装的一些基础的数据结构。我们操作Redis的数据结构其实并不是前面提到的。比如LLEN，获取列表的长度，这里的列表其实可能是前面提到的ZipList或者LinkedList。</p>
+<p>面向我们用户的数据结构，Redis定义为对象。包含：</p>
+<ol type="1">
+<li>字符串对象 REDIS_STRING</li>
+<li>列表对象 REDIS_LIST</li>
+<li>哈希对象 REDIS_HASH</li>
+<li>集合对象 REDIS_SET</li>
+<li>有序集合对象 REDIS_ZSET</li>
+</ol>
+<p>Redis对象的定义：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">redisObject</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">unsigned</span> type<span class="token operator">:</span><span class="token number">4</span><span class="token punctuation">;</span>  <span class="token comment">// 类型，也就是上面的5种对象之一</span>
+    <span class="token keyword">unsigned</span> encoding<span class="token operator">:</span><span class="token number">4</span><span class="token punctuation">;</span>  <span class="token comment">// 编码，即使用的底层的存储结构，也就是上面的基础数据结构</span>
+    <span class="token keyword">void</span> <span class="token operator">*</span>ptr<span class="token punctuation">;</span>  <span class="token comment">// 指向底层实现数据结构的指针</span>
+<span class="token punctuation">&#125;</span> redisObject<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<table>
+<thead>
+<tr class="header">
+<th>类型</th>
+<th>编码</th>
+<th>对象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_INT</td>
+<td>使用整数值实现的字符串对象</td>
+</tr>
+<tr class="even">
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_EMBSTR</td>
+<td>使用embstr编码的简单动态字符串实现的字符串对象</td>
+</tr>
+<tr class="odd">
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_RAW</td>
+<td>使用简单动态字符串实现的字符串对象</td>
+</tr>
+<tr class="even">
+<td>REDIS_LIST</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的列表对象</td>
+</tr>
+<tr class="odd">
+<td>REDIS_LIST</td>
+<td>REDIS_ENCODING_LINKEDLIST</td>
+<td>使用双端链表实现的列表对象</td>
+</tr>
+<tr class="even">
+<td>REDIS_HASH</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的哈希对象</td>
+</tr>
+<tr class="odd">
+<td>REDIS_HASH</td>
+<td>REDIS_ENCODING_HT</td>
+<td>使用字典实现的哈希对象</td>
+</tr>
+<tr class="even">
+<td>REDIS_SET</td>
+<td>REDIS_ENCODING_INTSET</td>
+<td>使用整数集合实现的集合对象</td>
+</tr>
+<tr class="odd">
+<td>REDIS_SET</td>
+<td>REDIS_ENCODING_HT</td>
+<td>使用字典实现的整数集合对象</td>
+</tr>
+<tr class="even">
+<td>REDIS_ZSET</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的有序集合对象</td>
+</tr>
+<tr class="odd">
+<td>REDIS_ZSET</td>
+<td>REDIS_ENCODING_SKIPLIST</td>
+<td>使用跳跃表和字典实现的有序集合对象</td>
+</tr>
+</tbody>
+</table>
+<ol type="1">
+<li>字符对象
+<ol type="1">
+<li>INT编码：long可以保存的整数</li>
+<li>EMBSTR：
+<ol type="1">
+<li>短的字符串</li>
+<li>短的浮点数，会转换成字符串</li>
+</ol></li>
+<li>RAW
+<ol type="1">
+<li>long存不下的整数</li>
+<li>长的浮点数</li>
+<li>长的字符串</li>
+</ol></li>
+</ol></li>
+<li>列表对象
+<ol type="1">
+<li>ZIPLIST：每一项字符串长度均小于64字节，元素个数小于512个。</li>
+<li>LINKEDLIST：不满足上面的都用双向链表。</li>
+</ol></li>
+<li>哈希对象
+<ol type="1">
+<li>ZIPLIST：键值对的长度均小于64字节且数量小于512。
+<ol type="1">
+<li>Key1 Val1 Key2 Val2 ... 的方式存放，每对KV都是连续存放的。</li>
+</ol></li>
+<li>HT 哈希表：其他情况下用Hash表。</li>
+</ol></li>
+<li>集合对象
+<ol type="1">
+<li>INTSET：所有元素都是整数且数目小于512</li>
+<li>HT：其他情况</li>
+</ol></li>
+<li>有序集合
+<ol type="1">
+<li>使用Hash表和ziplist或者skiplist实现
+<ol type="1">
+<li>Hash表用于快速查找key对应的元素。</li>
+<li>ziplist/skiplist 用于维护顺序。</li>
+</ol></li>
+<li>元素数小于128且元素长度小于64字节时使用ziplist，其他情况使用skiplist。</li>
+</ol></li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2021/08/06/redis-data-struct/" target="_blank" title="Redis数据结构与对象">
+        https://www.miaoerduo.com/2021/08/06/redis-data-struct/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2021/08/18/2021-08-18/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      女头练习
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2021/07/17/talk-about-threads/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">关于多线程的三两事</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

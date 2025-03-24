@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    C++ Lambda表达式 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-c-lambda-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  C++ Lambda表达式
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/02/03/c-lambda-tutorial/" class="article-date">
+  <time datetime="2017-02-03T00:13:58.000Z" itemprop="datePublished">2017-02-03</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话: 寒假之后，小喵在家里无所事事，最近用C++写代码的时候，用到了std::sort这个函数，每次用这个函数，小喵似乎都得查一下lambda表达式的写法。正好最近很闲，不如总结一下。 在Bing上搜索_C++ lambda_，第一条记录就是MSDN上的C++ lambda的介绍。本文也是基于这篇文章来写的。 那么接下来，我们分几个部分来介绍。</p>
+</blockquote>
+<span id="more"></span>
+<h2 id="一什么是lambda表达式">一、什么是Lambda表达式</h2>
+<p>MSDN上对lambda表达式的解释：</p>
+<blockquote>
+<p>在 C++ 11 中，lambda 表达式（通常称为 "lambda"）是一种在被调用的位置或作为参数传递给函数的位置定义匿名函数对象的简便方法。 Lambda 通常用于封装传递给算法或异步方法的少量代码行。<a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">[1]</a></p>
+</blockquote>
+<p>看了这个解释，相信大家已经理解lambda表达式是什么。简而言之，lambda表达式就是一种定义函数的简单的方法。</p>
+<p>举一个简单的例子：求一个数的阶乘。这是一般的函数的写法：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// 这里要求n>=0，同时n的取值不能太大，会溢出</span>
+<span class="token comment">// 为了方便，这里并没有处理上面说到的问题</span>
+<span class="token keyword">int</span> <span class="token function">factorial</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> fact <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> fact <span class="token operator">*=</span> i<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> fact<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>Lambda表达式的写法：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">auto</span> factorial <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> fact <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> n<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> fact <span class="token operator">*=</span> i<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> fact<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>乍一看，这两种定义方式十分的相似。但其实这是两种完全不同的方式，前一种是函数定义式，而后一种是一个表达式。<code>factorial</code>是变量名，等于号后面的是值，也就是一个<code>lambda表达式</code>，本质上是一个匿名的函数。最终<code>factorial</code>就是一个函数。</p>
+<p>很多时候，我们只是直接书写<code>lambda表达式</code>，而不需要给他一个名字。比如排序的时候，sort可以接受一个自定义的比较函数，这时候直接书写lambda表达式即可。</p>
+<h2 id="二lambda表达式的作用">二、Lambda表达式的作用</h2>
+<p>由于lambda本身其实也就是一种函数的定义方式。因此它的主要作用还是和一般函数一样。但是lambda表达式相对于一般函数，又有一些功能之外的作用。参考了知乎上的一些回答<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/20125256">[2]</a>，小喵也进行了总结。 1) 可以用表达式来定义函数，这样使得函数的定义和调用在一起，语意和逻辑上更为紧凑。同时，对于只是用一次的短小的函数，直接调用匿名的lambda表达式是最好的选择，这样就不需要给每个函数起名字了。<span style="color: green">/* 起名字一直是一个很令人头疼的问题 */</span> 2) 闭包(Closure)。这个小喵的写javascript的时候时常会用到。闭包本质上就是能够访问上下文环境中变量的代码块。</p>
+<p>这里我们简单的举个例子，还是之前的求阶乘的问题，现在我们有些提高需求。 现在需要完成下面的三种阶乘的运算：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">n! = n * (n - 1) * (n - 2) * ...
+n!! = n * (n - 2) * (n - 4) * ...
+n!!! = n * (n - 3) * (n - 6) * ...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>要求编写3个函数，分别完成上述3种计算。 使用一般的方式写很容易实现，我们这里直接使用lambda表达式来实现：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+
+std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token operator">></span> <span class="token function">getFactorialFunc</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">int</span> fact <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token punctuation">;</span> x <span class="token operator">>=</span> <span class="token number">1</span><span class="token punctuation">;</span> x <span class="token operator">-=</span> n<span class="token punctuation">)</span> fact <span class="token operator">*=</span> x<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> fact<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 构造要求的三个函数</span>
+    <span class="token keyword">auto</span> factorial1 <span class="token operator">=</span> <span class="token function">getFactorialFunc</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> factorial2 <span class="token operator">=</span> <span class="token function">getFactorialFunc</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> factorial3 <span class="token operator">=</span> <span class="token function">getFactorialFunc</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 调用</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial1</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial2</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial3</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译的时候要注意，lambda表达式是C++11开始支持的，所以需要指定一下C++的版本。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">g++ factorial_lambda.cpp <span class="token parameter variable">-o</span> factorial_lambda.out <span class="token parameter variable">--std</span><span class="token operator">=</span>c++11<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>运行之后的结果为：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">./factorial_lambda.out
+3628800
+3840
+280<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里作为返回值的lambda表达式，可以访问先前传入的参数，这也就是闭包。具体的语法，我们后面会讲到。</p>
+<ol start="3" type="1">
+<li>柯里化(Currying)。这部分小喵也是第一次接触，维基百科有如下解释：</li>
+</ol>
+<blockquote>
+<p>在计算机科学中，柯里化（英语：Currying），又译为卡瑞化或加里化，是把接受多个参数的函数变换成接受一个单一参数（最初函数的第一个参数）的函数，并且返回接受余下的参数而且返回结果的新函数的技术。<a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/柯里化">[3]</a></p>
+</blockquote>
+<p>下面给出一个例子（也是实现之前的阶乘）：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+
+<span class="token comment">// 两个参数的阶乘</span>
+<span class="token keyword">int</span> <span class="token function">factorial</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">,</span> <span class="token keyword">int</span> step<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> r <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token punctuation">;</span> n <span class="token operator">>=</span> <span class="token number">1</span><span class="token punctuation">;</span> n <span class="token operator">-=</span> step<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        r <span class="token operator">*=</span> n<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> r<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// curring化的阶乘</span>
+std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token operator">></span> <span class="token function">currying_factorial</span><span class="token punctuation">(</span><span class="token keyword">int</span> step<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>step<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token function">factorial</span><span class="token punctuation">(</span>n<span class="token punctuation">,</span> step<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 调用普通函数</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">factorial</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+
+    <span class="token comment">// 调用currying函数</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">currying_factorial</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">currying_factorial</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">currying_factorial</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ol start="4" type="1">
+<li>lambda表达式整体可以被当做函数的参数或者返回值。 闭包和currying的例子就是将整个lambda表达式作为返回值。现在再举一个作为参数的例子：</li>
+</ol>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+
+<span class="token keyword">int</span> <span class="token function">operate</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">,</span> <span class="token keyword">int</span> y<span class="token punctuation">,</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token operator">></span> <span class="token operator">&amp;</span>op<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token function">op</span><span class="token punctuation">(</span>x<span class="token punctuation">,</span> y<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">auto</span> add <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">,</span> <span class="token keyword">int</span> y<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> x <span class="token operator">+</span> y<span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> mul <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">,</span> <span class="token keyword">int</span> y<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> x <span class="token operator">-</span> y<span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">operate</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> add<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">operate</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> mul<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行的结果：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">15
+5<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>其实函数也可以当参数传入的（函数指针），但是lambda表达式要更为直观和灵活一些。谁能一眼看出<code>int (*func(int))(int)</code>究竟是什么意思呢（这是一个函数的定义，输入的参数是int，返回值是一个函数指针，函数指针对应的函数的输入和输出类型都是int）。</p>
+<h2 id="三lambda表达式的语法">三、Lambda表达式的语法</h2>
+<p>看到前面的lambda表达式的各种有趣的功能，现在是不是非常迫切的想尝试一把？</p>
+<p>ISO C++ 标准展示了作为第三个参数传递给 <code>std::sort()</code> 函数的简单 lambda：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;algorithm></span>  </span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;cmath></span>  </span>
+  
+<span class="token keyword">void</span> <span class="token function">abssort</span><span class="token punctuation">(</span><span class="token keyword">float</span><span class="token operator">*</span> x<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+    std<span class="token double-colon punctuation">::</span><span class="token function">sort</span><span class="token punctuation">(</span>x<span class="token punctuation">,</span> x <span class="token operator">+</span> n<span class="token punctuation">,</span>  
+        <span class="token comment">// Lambda expression begins  </span>
+        <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">float</span> a<span class="token punctuation">,</span> <span class="token keyword">float</span> b<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span><span class="token function">abs</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span> <span class="token operator">&lt;</span> std<span class="token double-colon punctuation">::</span><span class="token function">abs</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+        <span class="token punctuation">&#125;</span> <span class="token comment">// end of lambda expression  </span>
+    <span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>lambda表达式的组成部分见下图：</p>
+<p><img src="lambdaexpsyntax.png" alt="lambda expression syntax" /></p>
+<ol type="1">
+<li>Capture 子句（在 C++ 规范中也称为 lambda 引导。）</li>
+<li>参数列表（可选）。 （也称为 lambda 声明符)</li>
+<li>可变规范（可选）。</li>
+<li>异常规范（可选）。</li>
+<li>尾随返回类型（可选）。</li>
+<li>“lambda 体”</li>
+</ol>
+<p>接下来我们需要学习这6个部分。</p>
+<h3 id="capture-子句">1、Capture 子句</h3>
+<p>我们知道，一般情况下，函数只能访问自己的参数和外部的全局变量。而lambda表达式却可以访问上下文的变量（参见闭包的例子）。那么如何指定要访问的变量，以及访问的方式（值或者引用）呢？这就是Capture 子句要解决的问题。</p>
+<p><code>Lambda</code> 可在其主体中引入新的变量（用 C++14），它还可以访问（或“捕获”）周边范围内的变量。<code>Lambda</code> 以 <code>Capture</code> 子句（标准语法中的 <code>lambda</code> 引导）开头，它指定要捕获的变量以及是通过值还是引用进行捕获:</p>
+<ul>
+<li>有与号 (<code>&amp;</code>) 前缀的变量通过引用访问，没有该前缀的变量通过值访问。</li>
+<li>空 <code>capture</code> 子句 <code>[ ]</code> 指示 lambda 表达式的主体不访问封闭范围中的变量。可以使用默认捕获模式（标准语法中的 <code>capture-default</code>）来指示如何捕获 <code>lambda</code> 中引用的任何外部变量：
+<ul>
+<li><code>[&amp;]</code> 表示通过引用捕获引用的所有变量</li>
+<li><code>[=]</code> 表示通过值捕获它们。</li>
+</ul></li>
+<li>可以使用默认捕获模式，然后为特定变量显式指定相反的模式。</li>
+</ul>
+<p>例如，如果 <code>lambda</code> 体通过引用访问外部变量 <code>total</code> 并通过值访问外部变量 <code>factor</code>，则以下 <code>capture</code> 子句等效：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token punctuation">[</span><span class="token operator">&amp;</span>total<span class="token punctuation">,</span> factor<span class="token punctuation">]</span>
+<span class="token punctuation">[</span>factor<span class="token punctuation">,</span> <span class="token operator">&amp;</span>total<span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&amp;</span><span class="token punctuation">,</span> factor<span class="token punctuation">]</span>
+<span class="token punctuation">[</span>factor<span class="token punctuation">,</span> <span class="token operator">&amp;</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>total<span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&amp;</span>total<span class="token punctuation">,</span> <span class="token operator">=</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>我们之前的闭包中使用的就是通过值访问。</p>
+<ul>
+<li>使用 <code>capture-default</code> 时，只有 <code>lambda</code> 中提及的变量才会被捕获。</li>
+<li>如果 capture 子句包含 <code>capture-default</code> <code>&amp;</code>，则该 capture 子句的 <code>identifier</code> 中没有任何 <code>capture</code> 可采用 <code>&amp; identifier</code> 形式。</li>
+<li>同样，如果 capture 子句包含 <code>capture-default</code> <code>=</code>，则该 capture 子句的 <code>capture</code> 不能采用 <code>= identifier</code> 形式。</li>
+<li>identifier 或 <code>this</code> 在 capture 子句中出现的次数不能超过一次。</li>
+</ul>
+<p>以下代码片段给出了一些示例。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">struct</span> <span class="token class-name">S</span> <span class="token punctuation">&#123;</span> <span class="token keyword">void</span> <span class="token function">f</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>  
+  
+<span class="token keyword">void</span> <span class="token class-name">S</span><span class="token double-colon punctuation">::</span><span class="token function">f</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+    <span class="token punctuation">[</span><span class="token operator">&amp;</span><span class="token punctuation">,</span> i<span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>    <span class="token comment">// OK  </span>
+    <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>i<span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>   <span class="token comment">// OK</span>
+    <span class="token punctuation">[</span><span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>i<span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>   <span class="token comment">// ERROR: i preceded by &amp; when &amp; is the default  </span>
+    <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span> <span class="token comment">// ERROR: this when = is the default  </span>
+    <span class="token punctuation">[</span>i<span class="token punctuation">,</span> i<span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>    <span class="token comment">// ERROR: i repeated  </span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>capture</code> 后跟省略号是包扩展，如以下可变参数模板<a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/dn439779.aspx">[4]</a>示例中所示：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> Args<span class="token operator">></span>  
+<span class="token keyword">void</span> <span class="token function">f</span><span class="token punctuation">(</span>Args<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+    <span class="token keyword">auto</span> x <span class="token operator">=</span> <span class="token punctuation">[</span>args<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token function">g</span><span class="token punctuation">(</span>args<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>  
+    <span class="token function">x</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>要在类方法的正文中使用 <code>lambda</code> 表达式，需要将 <code>this</code> 指针传递给 <code>Capture</code> 子句，以提供对封闭类的方法和数据成员的访问权限。</p>
+<p>这里大家可能觉得有点奇怪，将this指针传给Capture子句？</p>
+<p>其实我们常使用的成员函数也是用类似的方法实现的。我们知道，使用成员函数需要有一个类实例，但是调用类函数就不需要。这是因为成员函数的第一个参数是this，当然这个参数我们编写代码的时候不需要自己手动写出，而是默认的。使用像python这样的语言的时候就是需要显示的写出的。在使用类实例调用成员函数的时候，会默认将this指针传入。成员函数有这么一个参数，就可以访问类实例的各种变量和方法。而类函数是没有这个参数的，也就是没有this这个指针，因此它的调用并不需要类实例，当然也就不能访问类实例的变量。</p>
+<p>在使用 capture 子句时，要记住以下几点（尤其是使用采取多线程的 lambda 时）：</p>
+<ol type="1">
+<li>引用捕获可用于修改外部变量，而值捕获却不能实现此操作。（mutable允许修改副本，而不能修改原始项。）</li>
+<li>引用捕获会反映外部变量的更新，而值捕获却不会反映。</li>
+<li>引用捕获引入生存期依赖项，而值捕获却没有生存期依赖项。当 lambda 以异步方式运行时，这一点尤其重要。 如果在异步 lambda 中通过引用捕获本地变量，该本地变量将很可能在 lambda 运行时消失，从而导致运行时访问冲突。</li>
+</ol>
+<p>通用捕获 (C++14) 在 C++14 中，可在 <code>Capture</code> 子句中引入并初始化新的变量，而无需使这些变量存在于 lambda 函数的封闭范围内。</p>
+<p>初始化可以任何任意表达式表示；且将从该表达式生成的类型推导新变量的类型。此功能的一个好处是，在 C++14 中，可从周边范围捕获只移动的变量（例如 <code>std::unique_ptr</code>）并在 <code>lambda</code> 中使用它们。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">pNums <span class="token operator">=</span> <span class="token generic-function"><span class="token function">make_unique</span><span class="token generic class-name"><span class="token operator">&lt;</span>vector<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">>></span></span></span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token comment">//...  </span>
+<span class="token keyword">auto</span> a <span class="token operator">=</span> <span class="token punctuation">[</span>ptr <span class="token operator">=</span> <span class="token function">move</span><span class="token punctuation">(</span>pNums<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+    <span class="token comment">// use ptr  </span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="参数列表">2、参数列表</h3>
+<p>除了捕获变量，lambda 还可接受输入参数。 参数列表（在标准语法中称为 <em>lambda 声明符</em>）是可选的，它在大多数方面类似于函数的参数列表。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">auto</span> add <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token keyword">int</span> first<span class="token punctuation">,</span> <span class="token keyword">int</span> second<span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+    <span class="token keyword">return</span> first <span class="token operator">+</span> second<span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 C++14 中，如果参数类型是泛型，则可以使用 <code>auto</code> 关键字作为类型说明符。 这将告知编译器将函数调用运算符创建为模板。参数列表中的每个 <code>auto</code> 实例等效于一个不同的类型参数。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">auto</span> add <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> first<span class="token punctuation">,</span> <span class="token keyword">auto</span> second<span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+    <span class="token keyword">return</span> first <span class="token operator">+</span> second<span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>lambda 表达式</code>可以将另一个 <code>lambda 表达式</code>作为其参数。</p>
+<p>由于参数列表是可选的，因此在不将参数传递到 lambda 表达式，并且其 <code>lambda-declarator:</code> 不包含 <code>exception-specification</code>、<code>trailing-return-type</code> 或 <code>mutable</code> 的情况下，可以省略空括号。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span> <span class="token comment">// 这就是最简单的lambda表达式</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="可变规范">3、可变规范</h3>
+<p>通常，<code>lambda</code> 的函数调用运算符为 <code>const-by-value</code>，但对 <code>mutable</code> 关键字的使用可将其取消。它不会生成可变的数据成员。利用可变规范，<code>lambda 表达式</code>的主体可以修改通过值捕获的变量。本文后面的一些示例将显示如何使用 <code>mutable</code>。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> lambda1 <span class="token operator">=</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">/* ++ n; */</span> <span class="token comment">// 这句编译会出错，错误信息如下：</span>
+                    <span class="token comment">// error: cannot assign to a variable captured</span>
+                    <span class="token comment">// by copy in a non-mutable lambda</span>
+        <span class="token keyword">return</span> x <span class="token operator">+</span> n<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> lambda2 <span class="token operator">=</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> x<span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span>
+        <span class="token operator">++</span> n<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> x <span class="token operator">+</span> n<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">lambda1</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> n <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token function">lambda2</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> n <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出的结果是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">15 10
+16 10<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>可以看出n确实是通过值来访问，在<code>lambda1</code>中，我们运行<code>++ n</code>，在编译的时候会报错。使用<code>mutable</code>修饰之后，就可以修改参数（副本）的值。</p>
+<h3 id="异常规范">4、异常规范</h3>
+<p>你可以使用 <code>throw()</code> 异常规范来指示 <code>lambda 表达式</code>不会引发任何异常。与普通函数一样，如果 <code>lambda 表达式</code>声明 <a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/84e2zwhh.aspx">C4297</a> 异常规范且 <code>lambda 体</code>引发异常，Visual C++ 编译器将生成警告 <code>throw()</code>，如下所示：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// throw\_lambda\_expression.cpp  </span>
+<span class="token comment">// compile with: /W4 /EHsc</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">// C4297 expected  </span>
+<span class="token punctuation">&#123;</span>  
+   <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throw</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">throw</span> <span class="token number">5</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在MSDN的异常规范<a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx">[5]</a>中，明确指出异常规范是在 C++11 中弃用的 C++ 语言功能。因此这里不建议大家使用。</p>
+<h3 id="返回类型">5、返回类型</h3>
+<p>将自动推导 <code>lambda 表达式</code>的返回类型。无需使用 <code>auto</code> 关键字，除非指定<code>尾随返回类型</code>。<code>trailing-return-type</code> 类似于普通方法或函数的返回类型部分。但是，返回类型必须跟在参数列表的后面，你必须在返回类型前面包含 <code>trailing-return-type</code> 关键字 <code>-&gt;</code>。 如果 <code>lambda 体</code>仅包含一个返回语句或其表达式不返回值，则可以省略 <code>lambda 表达式</code>的<code>返回类型部分</code>。如果 <code>lambda 体</code>包含单个返回语句，编译器将从返回表达式的类型推导返回类型。否则，编译器会将返回类型推导为 <code>void</code>。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;typeinfo></span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">auto</span> lambda1 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token keyword">return</span> i<span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> lambda2 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">bool</span> <span class="token punctuation">&#123;</span><span class="token keyword">return</span> i<span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> lambda3 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">float</span> <span class="token punctuation">&#123;</span><span class="token keyword">return</span> i<span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token comment">/* auto lambda4 = []&#123; return &#123;1, 2&#125;; &#125;;*/</span> <span class="token comment">// ERROR: return type is void</span>
+                                              <span class="token comment">// cannot deduce lambda return type</span>
+
+    <span class="token keyword">auto</span> x1 <span class="token operator">=</span> <span class="token function">lambda1</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> x2 <span class="token operator">=</span> <span class="token function">lambda2</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> x3 <span class="token operator">=</span> <span class="token function">lambda3</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> x1 <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">typeid</span><span class="token punctuation">(</span>x1<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> x2 <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">typeid</span><span class="token punctuation">(</span>x2<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> x3 <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">typeid</span><span class="token punctuation">(</span>x3<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>typeinfo的功能是获取一个变量的类型，由于它的实现依赖于编译器，所以在不同平台下的输出可能不完全一样。小喵这边的输出是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">10 i
+1 b
+10 f<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，三个lambda的输出是不相同的。默认情况下，会返回一个最直接的类型。</p>
+<h3 id="lambda体">6、lambda体</h3>
+<p>lambda体其实和函数体几乎完全相同。 <code>lambda 表达式</code>的 <code>lambda 体</code>（标准语法中的 <code>compound-statement</code>）可包含普通方法或函数的主体可包含的任何内容。普通函数和 <code>lambda 表达式</code>的主体均可访问以下变量类型：</p>
+<ul>
+<li>从封闭范围捕获变量，如前所述（Capture）。</li>
+<li>参数</li>
+<li>本地声明变量</li>
+<li>类数据成员（在类内部声明并且捕获 <code>this</code> 时）</li>
+<li>具有静态存储持续时间的任何变量（例如，全局变量）</li>
+</ul>
+<p>这里要注意我们在<code>Capture 规范</code>中说到的值访问和引用访问的特点。</p>
+<p>下面的例子都是MSDN上给出的。以下示例包含显式捕获变量 <code>n</code> 和引用隐式捕获变量 <code>m</code> 的 lambda 表达式：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// captures_lambda_expression.cpp  </span>
+<span class="token comment">// compile with: /W4 /EHsc</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span>  </span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>  
+  
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+   <span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>  
+   <span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>  
+   <span class="token punctuation">[</span><span class="token operator">&amp;</span><span class="token punctuation">,</span> n<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token keyword">int</span> a<span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span> m <span class="token operator">=</span> <span class="token operator">++</span>n <span class="token operator">+</span> a<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+   cout <span class="token operator">&lt;&lt;</span> m <span class="token operator">&lt;&lt;</span> endl <span class="token operator">&lt;&lt;</span> n <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出结果：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">5
+0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>由于变量 <code>n</code> 是通过值捕获的，因此在调用 <code>lambda 表达式</code>后，变量的值仍保持 <code>0</code> 不变。  <code>mutable</code> 规范允许在 lambda 中修改 <code>n</code>。</p>
+<p>尽管 <code>lambda 表达式</code>只能捕获具有自动存储持续时间的变量，但你可以在 <code>lambda 表达式</code>的主体中使用具有静态存储持续时间的变量。</p>
+<p>以下示例使用 <code>generate</code> 函数和 <code>lambda 表达式</code>为 <code>vector</code> 对象中的每个元素赋值。 <code>lambda 表达式</code>将修改静态变量以生成下一个元素的值。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">fillVector</span><span class="token punctuation">(</span>vector<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span><span class="token operator">&amp;</span> v<span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+    <span class="token comment">// A local static variable.  </span>
+    <span class="token keyword">static</span> <span class="token keyword">int</span> nextValue <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>  
+  
+    <span class="token comment">// The lambda expression that appears in the following call to  </span>
+    <span class="token comment">// the generate function modifies and uses the local static</span>
+    <span class="token comment">// variable nextValue.  </span>
+    <span class="token function">generate</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> v<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> nextValue<span class="token operator">++</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">//WARNING: this is not thread-safe and is shown for illustration only  </span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="四应用lambda的比较函数的编写">四、应用Lambda的比较函数的编写</h2>
+<p>为什么要补充这一部分呢？因为我们在写程序的时候，往往最常用到lambda的地方就是数组的sort。 首先，我们知道std::sort默认是接受2个参数的，表示需要排序的序列的开始和结尾。对于一些复杂的数据类型，我们可以给它添加一个用来比较的函数 <code>operator &lt;</code>。但更多的是通过给sort添加第三个参数来实现。而这个参数就是一个比较器。</p>
+<p>sort默认使用 <code>&lt;</code> 比较符来进行比较，排序的结果是升序。我们写的比较函数的功能就是代替 <code>&lt;</code>。记住这个特点，就不会在编写比较函数的时候理不清思路。</p>
+<p>这里举一个小例子，给一组点坐标，按欧氏距离排序：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;algorithm></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    vector<span class="token operator">&lt;</span> pair<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> <span class="token operator">></span> arr<span class="token punctuation">;</span>
+    arr<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token function">make_pair</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    arr<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token function">make_pair</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    arr<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token function">make_pair</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    arr<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token function">make_pair</span><span class="token punctuation">(</span><span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">sort</span><span class="token punctuation">(</span>arr<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> arr<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>pair<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> left<span class="token punctuation">,</span> pair<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> right<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">int</span> d1 <span class="token operator">=</span> left<span class="token punctuation">.</span>first <span class="token operator">*</span> left<span class="token punctuation">.</span>first <span class="token operator">+</span> left<span class="token punctuation">.</span>second <span class="token operator">*</span> left<span class="token punctuation">.</span>second<span class="token punctuation">;</span>
+            <span class="token keyword">int</span> d2 <span class="token operator">=</span> right<span class="token punctuation">.</span>first <span class="token operator">*</span> right<span class="token punctuation">.</span>first <span class="token operator">+</span> right<span class="token punctuation">.</span>second <span class="token operator">*</span> right<span class="token punctuation">.</span>second<span class="token punctuation">;</span>
+            <span class="token keyword">return</span> d1 <span class="token operator">&lt;</span> d2<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> <span class="token operator">&amp;</span>p<span class="token operator">:</span> arr<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"("</span> <span class="token operator">&lt;&lt;</span> p<span class="token punctuation">.</span>first <span class="token operator">&lt;&lt;</span> <span class="token string">", "</span> <span class="token operator">&lt;&lt;</span> p<span class="token punctuation">.</span>second <span class="token operator">&lt;&lt;</span> <span class="token string">")"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出结果：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">(2, 3)
+(1, 4)
+(6, 2)
+(5, 7)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>唯一需要注意的是，我们的比较函数取代的是 <code>&lt;</code>。</p>
+<p>至此，关于<code>Lambda 表达式</code>的介绍也就结束了。说得不够详细的地方，请大家参考MSDN的官方文档，写的真心不错。小喵这里有一些地方都是直接照搬过来的。<a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">https://msdn.microsoft.com/zh-cn/library/dd293608.aspx</a></p>
+<h2 id="五补充">五、补充</h2>
+<p>最近在类中使用了<code>lambda表达式</code>，结果出现奇怪的问题，故记录下来。<code>lambda表达式</code>可以允许捕获局部变量，但是类成员变量并不是局部变量，因此不能被lambda捕获。我们想要在lambda中使用类成员变量的话，只需要捕获<code>this</code>指针就可以。之后在lambda函数体中就可以随时使用成员变量了。对于this的捕获，永远是值传递的方式，即使指定了默认捕获的方式为引用，另外<code>[&amp;this]</code>这样的捕获方式是不允许的。</p>
+<p><strong>转载请注明出处~</strong></p>
+<ul>
+<li>[1] <a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/dd293608.aspx">https://msdn.microsoft.com/zh-cn/library/dd293608.aspx</a></li>
+<li>[2] <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/20125256">https://www.zhihu.com/question/20125256</a></li>
+<li>[3] <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/柯里化">https://zh.wikipedia.org/wiki/柯里化</a></li>
+<li>[4] <a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/dn439779.aspx">https://msdn.microsoft.com/zh-cn/library/dn439779.aspx</a></li>
+<li>[5] <a target="_blank" rel="noopener" href="https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx">https://msdn.microsoft.com/zh-cn/library/wfa0edys.aspx</a></li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2017/02/03/c-lambda-tutorial/" target="_blank" title="C++ Lambda表达式">
+        https://www.miaoerduo.com/2017/02/03/c-lambda-tutorial/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2017/02/19/cartoon-cat-client/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      爬虫-漫画喵的100行逆袭
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2017/01/01/face-verify-annotate-tool/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">一个简单粗暴的人脸认证标注工具的实现</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

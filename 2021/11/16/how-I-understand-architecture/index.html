@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    我所理解的架构 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-how-I-understand-architecture" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  我所理解的架构
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/11/16/how-I-understand-architecture/" class="article-date">
+  <time datetime="2021-11-16T12:38:37.000Z" itemprop="datePublished">2021-11-16</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Architecture/">Architecture</a>
+</div>
+
+      <div class="wordcount wordcount-num">951 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>本来是打算写一篇介绍我目前工作中有意思的设计的博客，写着写着发现设计的知识点还是有点多的，因此这里单独增加一栏，用来不断的更新相关的内容。</p>
+</blockquote>
+<p>由于工作的变化，我从图像算法和框架，转向了服务端架构。做服务端架构，相较于算法和sdk框架，有着挺大的区别。而适应这一变化，确实需要花费挺长的时间，也学习到很多。</p>
+<p>服务端的概念很多，很难在一本书上找到所有的答案，平时也只能自己多问多摸索。</p>
+<p>这里总结了一下日常遇到的有意思的概念和技巧，希望耐心看完本文的你能够更快速的理解服务端的概念和开发过程。不至于在入职时每次讨论都一脸懵逼。</p>
+<p>另外，我会在各部分的章节中，插入一些工作中遇到的真实案例。事实上，由于这些案例太过有意思，让我忍不住分享出来，所以才有了本文。（本文的目录也是根据这些案例归纳出来的。）</p>
+<span id="more"></span>
+<h2 id="架构即设计">架构即设计</h2>
+<p>“架构”一词，在我换工作之后几乎每天都会听到，在我眼中是个高大上的存在。在具体接触到大家提到的架构设计的具体实践之后，我明白了一件事情，任何一个设计都可以认为是一种架构，而架构本身也有“好”、“坏”之分。因此，当发现很“挫”的设计的时候，我们可以说这是一个不合理的“架构”，或者是为了迎合当时的需求的特化的“架构”。</p>
+<p>这里，我理解“架构”其实是“设计”的别名。</p>
+<h2 id="架构解决的问题">架构解决的问题</h2>
+<p>那么一个好的架构，需要解决什么问题呢？</p>
+<p>前端架构，可能需要的是高性能、可拓展、易上手、兼容性、体积小等目标。后端架构可能是稳定性、高并发、一致性、快速迭代等目标。</p>
+<p>问题不是单一的和明确的，针对不同的业务场景，我们需要随机应变。需要理解在每种设计下，带来的优势和弊端，就像刷算法题一样，我们会分析时间复杂度和空间复杂度。对于一个架构设计而言，我们也有许多的指标，比如：CPU、内存、带宽、磁盘、扇出、扩容、容灾等等。没有银弹，好的架构需要的解决的目标有十分清晰的认识。</p>
+<p>在工作中，其实可以看到许多的架构的设计，比如最常见的RPC通信的参数的设计、正排服务的存储选型、服务发现的策略、一致性Hash的不均等。本系列的愿景是将这些有意思的问题和可能的方案，整理和分析。</p>
+<h2 id="本系列的内容">本系列的内容</h2>
+<p>本系列打算按以下方面进行介绍：</p>
+<ul>
+<li><strong>IDL</strong>，不同IDL的区别和优劣</li>
+<li><strong>服务状态指标</strong>，对于服务程序，我们需要从哪些维度去观察</li>
+<li><strong>服务拆分</strong>，高并发下，业务的水平和竖直拆分</li>
+<li><strong>一致性Hash</strong>，和服务拆分相关联的技术</li>
+<li><strong>降级</strong>，在突发情况下，比较常见的降级手段</li>
+<li><strong>缓存</strong>，计算和空间的tradeoff</li>
+<li><strong>案例</strong>，假如上面的内容都写完的话，那就介绍更多具体的案例</li>
+</ul>
+<p>由于水平有限，不同的部分不太可能面面俱到，这里只求能说清遇到的问题和方案，让大家在以后碰到类似的问题时，可以当做参考（正面或者负面的）。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2021/11/16/how-I-understand-architecture/" target="_blank" title="我所理解的架构">
+        https://www.miaoerduo.com/2021/11/16/how-I-understand-architecture/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2021/11/16/arch-idl/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      架构小试之IDL
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2021/08/18/2021-08-18/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">女头练习</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

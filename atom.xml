@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>喵耳朵</title>
+  
+  <subtitle>略懂算法 | 在学架构 | 梦想成为 | Top插画师</subtitle>
+  <link href="https://www.miaoerduo.com/atom.xml" rel="self"/>
+  
+  <link href="https://www.miaoerduo.com/"/>
+  <updated>2025-03-24T16:19:14.000Z</updated>
+  <id>https://www.miaoerduo.com/</id>
+  
+  <author>
+    <name>Zhao Yu</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Redis MGET延时排查</title>
+    <link href="https://www.miaoerduo.com/2025/03/24/redis-mget-latency/"/>
+    <id>https://www.miaoerduo.com/2025/03/24/redis-mget-latency/</id>
+    <published>2025-03-24T16:19:14.000Z</published>
+    <updated>2025-03-24T16:19:14.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;这是最近一个同事在开发中遇到的问题，觉得很有意思。记录了下来。&lt;/p&gt;
+&lt;p&gt;问题如下：&lt;/p&gt;
+&lt;p&gt;线上的服务，每个请求需要从Redis中 mget 300个key。发现P99延时高达20ms。不满足上线要求。&lt;/p&gt;
+&lt;p&gt;最后我们从集群负载，大Key问题，Proxy任务数以及分片的角度进行的分析。&lt;/p&gt;</summary>
+    
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>免费的云服务搜集</title>
+    <link href="https://www.miaoerduo.com/2024/01/26/free-serverless-provider/"/>
+    <id>https://www.miaoerduo.com/2024/01/26/free-serverless-provider/</id>
+    <published>2024-01-26T01:44:04.000Z</published>
+    <updated>2024-01-26T01:44:04.000Z</updated>
+    
+    
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;注意，以下的信息仅截止于2024年11月25，后续可能会有变化。 以下顺序不代表排名。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下面的内容主要是免费的一些云服务资源，具体有：&lt;/p&gt;
+&lt;ol type=&quot;1&quot;&gt;
+&lt;li&gt;计算资源
+&lt;ul&gt;
+&lt;li&gt;Serverless函数&lt;/li&gt;
+&lt;li&gt;容器&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;数据
+&lt;ul&gt;
+&lt;li&gt;KV&lt;/li&gt;
+&lt;li&gt;Redis&lt;/li&gt;
+&lt;li&gt;MySQL&lt;/li&gt;
+&lt;li&gt;MongoDB&lt;/li&gt;
+&lt;li&gt;Kafka&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ol&gt;</summary>
+    
+    
+    
+    <category term="Miscellanea" scheme="https://www.miaoerduo.com/categories/Miscellanea/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>C++和Go关于闭包递归调用的趣事</title>
+    <link href="https://www.miaoerduo.com/2024/01/05/lambda-recursive-call/"/>
+    <id>https://www.miaoerduo.com/2024/01/05/lambda-recursive-call/</id>
+    <published>2024-01-05T06:17:15.000Z</published>
+    <updated>2024-01-05T06:17:15.000Z</updated>
+    
+    
+    <summary type="html">&lt;h2 id=&quot;一次codereview引发的讨论&quot;&gt;一次CodeReview引发的讨论&lt;/h2&gt;
+&lt;p&gt;起因是这样的，Code Review的时候看到了下面这段Golang的代码：&lt;/p&gt;
+&lt;pre class=&quot;line-numbers language-go&quot; data-language=&quot;go&quot;&gt;&lt;code class=&quot;language-go&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;package&lt;/span&gt; main
+
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;fmt&quot;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;download&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token builtin&quot;&gt;error&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+	fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Println&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;download&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;token keyword&quot;&gt;return&lt;/span&gt; fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Errorf&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;download error&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+	times &lt;span class=&quot;token operator&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;3&lt;/span&gt;
+	&lt;span class=&quot;token keyword&quot;&gt;var&lt;/span&gt; tryDownload &lt;span class=&quot;token keyword&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token builtin&quot;&gt;error&lt;/span&gt;
+	tryDownload &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token builtin&quot;&gt;error&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+		&lt;span class=&quot;token keyword&quot;&gt;if&lt;/span&gt; times &lt;span class=&quot;token operator&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+			&lt;span class=&quot;token keyword&quot;&gt;return&lt;/span&gt; fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Errorf&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;exceed max times&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+		&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+		err &lt;span class=&quot;token operator&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;download&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+		&lt;span class=&quot;token keyword&quot;&gt;if&lt;/span&gt; err &lt;span class=&quot;token operator&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;nil&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+			&lt;span class=&quot;token keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;nil&lt;/span&gt;
+		&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+		times&lt;span class=&quot;token operator&quot;&gt;--&lt;/span&gt;
+		&lt;span class=&quot;token keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;tryDownload&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+	&lt;span class=&quot;token function&quot;&gt;tryDownload&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+	fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Println&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;last times&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; times&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;&lt;span aria-hidden=&quot;true&quot; class=&quot;line-numbers-rows&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;大致意思是尝试下载三次。&lt;/p&gt;
+&lt;p&gt;由于被Golang的闭包坑过，所以当时给的Code Review的意见是改成&lt;code&gt;for loop&lt;/code&gt;的方式，避免闭包捕获可能导致的问题。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="C++" scheme="https://www.miaoerduo.com/categories/C/"/>
+    
+    <category term="go" scheme="https://www.miaoerduo.com/categories/go/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>CGO函数调用与数据转换</title>
+    <link href="https://www.miaoerduo.com/2023/01/29/cgo/"/>
+    <id>https://www.miaoerduo.com/2023/01/29/cgo/</id>
+    <published>2023-01-29T22:03:24.000Z</published>
+    <updated>2023-01-29T22:03:24.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;CGO是Go程序调用C库的一套机制，可以使Go语言能够站在C/C++的肩膀上。比如Go调用Tensorflow，也就是使用了CGO来实现的。很多语言都支持对C库的调用，一般称为FFI（Foreign Function Interface）。这里需要注意一下，一般的Python、Lua等语言调用C函数的时候，是通过函数签名找到函数的地址，然后直接调用对应的函数。而CGO会先生成中间文件，然后再一起编译调用。这里不具体展开了，总之只需要知道CGO比一般的FFI多了一层中间的步骤。在程序出错的时候，能理解调用栈的关系即可。参考 &lt;a href=&quot;https://cloud.tencent.com/developer/article/1650525&quot;&gt;CGO 和 CGO 性能之谜&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id=&quot;函数调用&quot;&gt;函数调用&lt;/h2&gt;
+&lt;pre class=&quot;line-numbers language-go&quot; data-language=&quot;go&quot;&gt;&lt;code class=&quot;language-go&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;package&lt;/span&gt; main
+
+&lt;span class=&quot;token comment&quot;&gt;/*
+CGO的标准写法：
+1. 先用注释的方式写入，单行注释和多行注释都支持
+  1.1 编译器环境变量
+	1.1.1 CFLAGS: C编译选项
+	1.1.2 CXXFLAGS: C++编译选项
+	1.1.3 CPPFLAGS: C和C++共有的编译选项
+	1.1.4 FFLAGS: Fortran编译选项
+	1.1.4 LDFLAGS: 链接选项（不区分C和C++）
+  1.2 C代码
+2. import &quot;C&quot;，相当于将所有的C函数放入虚拟的package C。之后通过`C.xxx`的方式来调用。需要紧跟注释之后。
+*/&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;/*
+#cgo LDFLAGS: -lm
+
+#include &amp;lt;math.h&gt;
+double my_sqrt(double x) &amp;#123;
+	return sqrt(x);
+&amp;#125;
+*/&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;C&quot;&lt;/span&gt; &lt;span class=&quot;token comment&quot;&gt;// CGO的标准写法，相当于将C函数放入包`C`中&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;fmt&quot;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+	a &lt;span class=&quot;token operator&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;100&lt;/span&gt;
+	fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Printf&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;sqrt(%v) = %v\n&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; a&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; C&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;my_sqrt&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;C&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;double&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;a&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token comment&quot;&gt;// 调用上面自定义的函数&lt;/span&gt;
+	fmt&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;Printf&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;sqrt(%v) = %v\n&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; a&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; C&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;sqrt&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;C&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;double&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;a&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;    &lt;span class=&quot;token comment&quot;&gt;// 调用系统库函数（上述的m）&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;// Output:&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;//  sqrt(100) = 10&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;//  sqrt(100) = 10&lt;/span&gt;&lt;span aria-hidden=&quot;true&quot; class=&quot;line-numbers-rows&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过上述的例子，我们可以看出，CGO可以调用C的库函数，也可以执行注释中的C代码的函数。一般注释中的C代码都是比较简短的。&lt;/p&gt;
+&lt;p&gt;接下来要介绍C和Go之间的数据是如何传递的。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="go" scheme="https://www.miaoerduo.com/categories/go/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>C++对象模型</title>
+    <link href="https://www.miaoerduo.com/2023/01/19/cpp-object-model/"/>
+    <id>https://www.miaoerduo.com/2023/01/19/cpp-object-model/</id>
+    <published>2023-01-19T20:08:05.000Z</published>
+    <updated>2023-01-19T20:08:05.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文主要是在看《Inside the C++ Object Model》的时候，想通过案例的方式加深一下理解。&lt;/p&gt;
+&lt;p&gt;首先，由于编译器有内存对齐的优化，比如：&lt;/p&gt;
+&lt;pre class=&quot;line-numbers language-cpp&quot; data-language=&quot;cpp&quot;&gt;&lt;code class=&quot;language-cpp&quot;&gt;&lt;span class=&quot;token macro property&quot;&gt;&lt;span class=&quot;token directive-hash&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;token directive keyword&quot;&gt;include&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&amp;lt;iostream&gt;&lt;/span&gt;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;WithAlign&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;int&lt;/span&gt; a&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;char&lt;/span&gt; b&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token macro property&quot;&gt;&lt;span class=&quot;token directive-hash&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;token directive keyword&quot;&gt;pragma&lt;/span&gt; &lt;span class=&quot;token expression&quot;&gt;&lt;span class=&quot;token function&quot;&gt;pack&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;push&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;WithoutAlign&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;int&lt;/span&gt; a&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;char&lt;/span&gt; b&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token macro property&quot;&gt;&lt;span class=&quot;token directive-hash&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;token directive keyword&quot;&gt;pragma&lt;/span&gt; &lt;span class=&quot;token expression&quot;&gt;&lt;span class=&quot;token function&quot;&gt;pack&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;pop&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;&amp;#123;&lt;/span&gt;
+    std&lt;span class=&quot;token double-colon punctuation&quot;&gt;::&lt;/span&gt;cout &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;WithAlign: &quot;&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;sizeof&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;WithAlign&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; std&lt;span class=&quot;token double-colon punctuation&quot;&gt;::&lt;/span&gt;endl&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    std&lt;span class=&quot;token double-colon punctuation&quot;&gt;::&lt;/span&gt;cout &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;WithoutAlign: &quot;&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;sizeof&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;WithoutAlign&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; std&lt;span class=&quot;token double-colon punctuation&quot;&gt;::&lt;/span&gt;endl&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;&amp;#125;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;// Output:&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;//  WithAlign: 8&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;//  WithoutAlign: 5&lt;/span&gt;&lt;span aria-hidden=&quot;true&quot; class=&quot;line-numbers-rows&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;内存对齐的类大小为8（按int 4字节对齐），未对齐的为5（int + char）。这里为了更容易理解，全部默认使用1字节对齐。&lt;/p&gt;
+&lt;p&gt;注意，本文中的内容均仅在自己的机器的Docker容器中做测试，环境为：64位 ubuntu 16.04， gcc 5.5。&lt;/p&gt;
+&lt;pre class=&quot;line-numbers language-none&quot;&gt;&lt;code class=&quot;language-none&quot;&gt;# lsb_release -a
+Distributor ID: Ubuntu
+Description:    Ubuntu 16.04.7 LTS
+Release:        16.04
+Codename:       xenial
+
+# uname -a
+Linux 06f25c7abffd 5.15.49-linuxkit #1 SMP Tue Sep 13 07:51:46 UTC 2022 x86_64 x86_64 x86_64 GNU&amp;#x2F;Linux
+
+# gcc --version
+gcc (Ubuntu 5.5.0-12ubuntu1~16.04) 5.5.0 20171010&lt;span aria-hidden=&quot;true&quot; class=&quot;line-numbers-rows&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&quot;何为c对象模型&quot;&gt;何为C++对象模型?&lt;/h2&gt;
+&lt;p&gt;引用《深度探索C++对象模型》这本书中的话：&lt;/p&gt;
+&lt;p&gt;有两个概念可以解释C++对象模型：&lt;/p&gt;
+&lt;ol type=&quot;1&quot;&gt;
+&lt;li&gt;语言中直接支持面向对象程序设计的部分。包括构造函数、析构函数、多态、虚函数等。&lt;/li&gt;
+&lt;li&gt;对于各种支持的底层实现机制。这部分并没有标准化，因此不同的编译器可以有自己的实现。&lt;/li&gt;
+&lt;/ol&gt;</summary>
+    
+    
+    
+    <category term="C++" scheme="https://www.miaoerduo.com/categories/C/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>服务端基本概念和指标</title>
+    <link href="https://www.miaoerduo.com/2021/12/16/architecture-terminology/"/>
+    <id>https://www.miaoerduo.com/2021/12/16/architecture-terminology/</id>
+    <published>2021-12-16T20:46:48.000Z</published>
+    <updated>2021-12-16T20:46:48.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;这里主要介绍服务端架构工作中的一些常见的概念和指标，在我们部署、上线等运维工作时，方便排查问题，以及交流时的语义一致。&lt;/p&gt;
+&lt;h2 id=&quot;上游和下游-upstream-and-downstream&quot;&gt;上游和下游 upstream and downstream&lt;/h2&gt;
+&lt;p&gt;一般在谈论服务和调用关系的时候，我们会使用上游和下游来表示服务间的相关依赖。但是对于上下游的定义，会视情况而定的。&lt;/p&gt;
+&lt;p&gt;Stack Overflow上有个相同的问题：&lt;a href=&quot;https://stackoverflow.com/questions/32364579/upstream-downstream-terminology-used-backwards-e-g-nginx&quot;&gt;definition - Upstream / downstream terminology used backwards? (E.g. nginx) - Stack Overflow&lt;/a&gt;&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="Architecture" scheme="https://www.miaoerduo.com/categories/Architecture/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>架构小试之IDL</title>
+    <link href="https://www.miaoerduo.com/2021/11/16/arch-idl/"/>
+    <id>https://www.miaoerduo.com/2021/11/16/arch-idl/</id>
+    <published>2021-11-16T16:24:07.000Z</published>
+    <updated>2021-11-16T16:24:07.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;为什么IDL的介绍也放在这里呢？一方面是我想不到放哪里，另一方面是之前说到，“架构”即“设计”，那么IDL、RPC框架也算是设计的一部分。不合理的选型在后续维护上会带来不小的麻烦。&lt;/p&gt;
+&lt;p&gt;本文主要介绍我用过的一些IDL，并结合真实案例，分析他们的优劣。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="Architecture" scheme="https://www.miaoerduo.com/categories/Architecture/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>我所理解的架构</title>
+    <link href="https://www.miaoerduo.com/2021/11/16/how-I-understand-architecture/"/>
+    <id>https://www.miaoerduo.com/2021/11/16/how-I-understand-architecture/</id>
+    <published>2021-11-16T12:38:37.000Z</published>
+    <updated>2021-11-16T12:38:37.000Z</updated>
+    
+    
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;本来是打算写一篇介绍我目前工作中有意思的设计的博客，写着写着发现设计的知识点还是有点多的，因此这里单独增加一栏，用来不断的更新相关的内容。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;由于工作的变化，我从图像算法和框架，转向了服务端架构。做服务端架构，相较于算法和sdk框架，有着挺大的区别。而适应这一变化，确实需要花费挺长的时间，也学习到很多。&lt;/p&gt;
+&lt;p&gt;服务端的概念很多，很难在一本书上找到所有的答案，平时也只能自己多问多摸索。&lt;/p&gt;
+&lt;p&gt;这里总结了一下日常遇到的有意思的概念和技巧，希望耐心看完本文的你能够更快速的理解服务端的概念和开发过程。不至于在入职时每次讨论都一脸懵逼。&lt;/p&gt;
+&lt;p&gt;另外，我会在各部分的章节中，插入一些工作中遇到的真实案例。事实上，由于这些案例太过有意思，让我忍不住分享出来，所以才有了本文。（本文的目录也是根据这些案例归纳出来的。）&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="Architecture" scheme="https://www.miaoerduo.com/categories/Architecture/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>女头练习</title>
+    <link href="https://www.miaoerduo.com/2021/08/18/2021-08-18/"/>
+    <id>https://www.miaoerduo.com/2021/08/18/2021-08-18/</id>
+    <published>2021-08-18T20:40:51.000Z</published>
+    <updated>2021-08-18T20:40:51.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Redis数据结构与对象</title>
+    <link href="https://www.miaoerduo.com/2021/08/06/redis-data-struct/"/>
+    <id>https://www.miaoerduo.com/2021/08/06/redis-data-struct/</id>
+    <published>2021-08-06T21:04:48.000Z</published>
+    <updated>2021-08-06T21:04:48.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文主要是《Redis设计与实现》的第一部分的总结，内容为数据结构和对象。这里类比了C++ STL中的数据结构，便于理解。&lt;/p&gt;
+&lt;p&gt;Redis是使用C语言编写的，C语言本身没有复杂的数据结构。因此Redis自己实现了一套底层的数据结构，这些数据结构作为工具被Redis的其他模块使用。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="C++" scheme="https://www.miaoerduo.com/categories/C/"/>
+    
+    <category term="Redis" scheme="https://www.miaoerduo.com/categories/Redis/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>关于多线程的三两事</title>
+    <link href="https://www.miaoerduo.com/2021/07/17/talk-about-threads/"/>
+    <id>https://www.miaoerduo.com/2021/07/17/talk-about-threads/</id>
+    <published>2021-07-17T06:45:57.000Z</published>
+    <updated>2021-07-17T06:45:57.000Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;多线程一直是编程中的重要的工具，它可以分充分的利用硬件资源，是我们用更少的时间去完成更多的事情。在之前的博客中，我有介绍了OpenMP的基本使用，OpenMP可以理解为多线程的一个合理和高效的一套抽象工具。这次，打算仔细的介绍多线程编程中的常见的概念和典型的案例。&lt;/p&gt;
+&lt;h2 id=&quot;典型的案例&quot;&gt;典型的案例&lt;/h2&gt;
+&lt;p&gt;说到多线程，最核心的问题就是保证数据的读写安全。为了达到此目的，我们需要多很多常见的数据结构做一些改造，从而适应多线程的场景。以下是我工作中比较常见到的一些使用场景：&lt;/p&gt;
+&lt;ol type=&quot;1&quot;&gt;
+&lt;li&gt;线程池&lt;/li&gt;
+&lt;li&gt;读写锁&lt;/li&gt;
+&lt;li&gt;消息队列&lt;/li&gt;
+&lt;li&gt;ConcurrentCache&lt;/li&gt;
+&lt;li&gt;PingPang Buffer&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;在具体介绍这些使用场景之前，我们还是需要了解需要使用到的一些基本的工具：互斥量、条件变量、原子操作等。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="C++" scheme="https://www.miaoerduo.com/categories/C/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>画个小喵咪</title>
+    <link href="https://www.miaoerduo.com/2021/06/30/2021-06-30/"/>
+    <id>https://www.miaoerduo.com/2021/06/30/2021-06-30/</id>
+    <published>2021-06-30T08:24:07.000Z</published>
+    <updated>2021-06-30T08:24:07.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>女头练习</title>
+    <link href="https://www.miaoerduo.com/2021/06/29/2021-06-29/"/>
+    <id>https://www.miaoerduo.com/2021/06/29/2021-06-29/</id>
+    <published>2021-06-29T08:25:15.000Z</published>
+    <updated>2021-06-29T08:25:15.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>女头练习</title>
+    <link href="https://www.miaoerduo.com/2021/06/26/2021-06-26/"/>
+    <id>https://www.miaoerduo.com/2021/06/26/2021-06-26/</id>
+    <published>2021-06-26T17:21:46.000Z</published>
+    <updated>2021-06-26T17:21:46.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>材质练习</title>
+    <link href="https://www.miaoerduo.com/2021/06/09/2021-06-09/"/>
+    <id>https://www.miaoerduo.com/2021/06/09/2021-06-09/</id>
+    <published>2021-06-09T23:07:38.000Z</published>
+    <updated>2021-06-09T23:07:38.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>第三阶段 男性身体</title>
+    <link href="https://www.miaoerduo.com/2021/05/07/2021-05-07/"/>
+    <id>https://www.miaoerduo.com/2021/05/07/2021-05-07/</id>
+    <published>2021-05-07T23:24:07.000Z</published>
+    <updated>2021-05-07T23:24:07.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>第一阶段大作业</title>
+    <link href="https://www.miaoerduo.com/2020/12/30/2020-12-30/"/>
+    <id>https://www.miaoerduo.com/2020/12/30/2020-12-30/</id>
+    <published>2020-12-30T23:04:43.000Z</published>
+    <updated>2020-12-30T23:04:43.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>随笔</title>
+    <link href="https://www.miaoerduo.com/2020/04/12/2020-04-11/"/>
+    <id>https://www.miaoerduo.com/2020/04/12/2020-04-11/</id>
+    <published>2020-04-12T23:11:08.000Z</published>
+    <updated>2020-04-12T23:11:08.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Illustration" scheme="https://www.miaoerduo.com/categories/Illustration/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>《来自新世界》</title>
+    <link href="https://www.miaoerduo.com/2020/04/08/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E6%9D%A5%E8%87%AA%E6%96%B0%E4%B8%96%E7%95%8C/"/>
+    <id>https://www.miaoerduo.com/2020/04/08/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-%E6%9D%A5%E8%87%AA%E6%96%B0%E4%B8%96%E7%95%8C/</id>
+    <published>2020-04-08T21:58:01.000Z</published>
+    <updated>2020-04-08T21:58:01.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Reading" scheme="https://www.miaoerduo.com/categories/Reading/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>要开始记笔记啦——《如何有效阅读一本书》</title>
+    <link href="https://www.miaoerduo.com/2020/04/02/it-is-time-to-take-notes/"/>
+    <id>https://www.miaoerduo.com/2020/04/02/it-is-time-to-take-notes/</id>
+    <published>2020-04-02T17:34:56.000Z</published>
+    <updated>2020-04-02T17:34:56.000Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html"></summary>
+        
+      
+    
+    
+    
+    <category term="Reading" scheme="https://www.miaoerduo.com/categories/Reading/"/>
+    
+    
+  </entry>
+  
+</feed>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    Easy Pipeline，一种轻量级的Python Pipeline库 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-easy-pipeline" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  Easy Pipeline，一种轻量级的Python Pipeline库
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2019/03/23/easy-pipeline/" class="article-date">
+  <time datetime="2019-03-23T14:05:52.000Z" itemprop="datePublished">2019-03-23</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Framework/">Framework</a> / <a class="article-category-link" href="/categories/Python/">Python</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 6 分钟</div>
+    </div>
+    
+
+    
+    
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>嗯，很久没有写博客了，最近的工作都是偏开发性质的，以至于没有时间对自己感兴趣的领域进行探索，感觉个人的成长停滞了一些。如何在枯燥的工作中，提取出有助于自己成长的养分，对于每个人来说都是不小的考验。</p>
+</blockquote>
+<p>这次，带来的是之前编写的一下挺简单的库，用来简化流水线作业的小框架。</p>
+<p>Github: <a target="_blank" rel="noopener" href="https://github.com/miaoerduo/easy-pipeline">https://github.com/miaoerduo/easy-pipeline</a> 欢迎Star和提交MR。</p>
+<span id="more"></span>
+<p>起因是这样的，组内有一个需求，需要挖掘视频中的检测难样本，这样可以极大地减少标注的量，从而降低成本。难样本挖掘的策略，简单来说就是如果视频的前几帧和后几帧都能检测到目标，而就只有当前帧没有检测到，就说明当前帧很可能存在漏检（没有检测本到该检测到的目标）；反之，如果前后都没有检测到目标，而当前帧检测到了，那就很可能是误检（检测到不是目标的东西）。</p>
+<p><img src="simple-pipeline.png" alt="simple pipeline" /></p>
+<p>初步的方案是这样的，我们先把视频抽帧，直接用FFMpeg就可以方便的完成。然后调用现在的检测器，进行逐帧的检测，把检测结果存下来。最后写个脚本，分析检测的结果，然后输出可能有问题的帧，然后这些帧就会进行送标（发给标注员进行标注）。最终我们就只需要标注一些比较hard的样本就行了。</p>
+<p>但是这样会带来很多的问题，最显著的两个：1. 需要保存大量的中间结果（图片帧）；2. 必须依次完成每一步之后，才能得到最终的结果。</p>
+<p>这时候，相比大家都知道了该如何去解决。对的，我们应该用流水线作业的方式去进行。</p>
+<p><img src="simple-pipeline2.png" alt="simple pipeline2" /></p>
+<p>首先我们可以将每部分任务并行的去处理。抽帧之后的结果送入队列；之后检测模块从队列取帧，检测之后将结果送入下一个队列；最后一个队列得到检测结果，再做最终的分析。相比于之前的方式，这样可以尽量的减少中间的结果。</p>
+<p>实现该方案，只需要使用最简单的生产者消费者队列即可以完成。所以说，相信大家都十分了解了。对于上面的逻辑，我们需要的队列的数目和我们的模块数是正相关的。如果单纯的进行实现的话，实在的太麻烦了，给队列命名都要我们绞尽脑汁了。所以，为了更优雅的编写代码，这里就推出本文标题中的Easy Pipeline框架。</p>
+<p>首先，我们举个最简单的例子来说明该框架的工作模式。输入一个数字的序列，按要求对他们进行加减乘除的操作（这里的每个操作，其实可以等价于前面的抽帧或是检测的更复杂的操作 ），并且支持每个操作的进程数。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> easy_pipeline <span class="token keyword">import</span> SimplePipeline<span class="token punctuation">,</span> PipelineItem<span class="token punctuation">,</span> Task<span class="token punctuation">,</span> StopTask<span class="token punctuation">,</span> EmptyTask
+<span class="token keyword">import</span> multiprocessing <span class="token keyword">as</span> mp
+
+<span class="token comment"># define our Task</span>
+<span class="token keyword">class</span> <span class="token class-name">NumTask</span><span class="token punctuation">(</span>Task<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> x<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token builtin">super</span><span class="token punctuation">(</span>NumTask<span class="token punctuation">,</span> self<span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>val <span class="token operator">=</span> x
+
+<span class="token comment"># init function, here we use closure to get different function</span>
+<span class="token keyword">def</span> <span class="token function">get_init_fn</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> x
+    <span class="token keyword">return</span> init
+
+<span class="token comment"># operations</span>
+<span class="token keyword">def</span> <span class="token function">plus</span><span class="token punctuation">(</span>res<span class="token punctuation">,</span> task<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> NumTask<span class="token punctuation">(</span>task<span class="token punctuation">.</span>val <span class="token operator">+</span> res<span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">mul</span><span class="token punctuation">(</span>res<span class="token punctuation">,</span> task<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> NumTask<span class="token punctuation">(</span>task<span class="token punctuation">.</span>val <span class="token operator">*</span> res<span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">minus</span><span class="token punctuation">(</span>res<span class="token punctuation">,</span> task<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> NumTask<span class="token punctuation">(</span>task<span class="token punctuation">.</span>val <span class="token operator">-</span> res<span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">div</span><span class="token punctuation">(</span>res<span class="token punctuation">,</span> task<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> NumTask<span class="token punctuation">(</span>task<span class="token punctuation">.</span>val <span class="token operator">/</span> res<span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+
+    <span class="token comment"># job queue</span>
+    manager <span class="token operator">=</span> mp<span class="token punctuation">.</span>Manager<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    job_queue <span class="token operator">=</span> manager<span class="token punctuation">.</span>Queue<span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># define pipeline and start</span>
+
+    <span class="token comment"># x = （(x + 1) * 2 - 3）/ 5</span>
+    pipeline_items <span class="token operator">=</span> <span class="token punctuation">[</span>
+        PipelineItem<span class="token punctuation">(</span>plus<span class="token punctuation">,</span> get_init_fn<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>      <span class="token comment"># plus 1</span>
+        PipelineItem<span class="token punctuation">(</span>mul<span class="token punctuation">,</span> get_init_fn<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>       <span class="token comment"># mul 2</span>
+        PipelineItem<span class="token punctuation">(</span>minus<span class="token punctuation">,</span> get_init_fn<span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>     <span class="token comment"># minus 3</span>
+        PipelineItem<span class="token punctuation">(</span>div<span class="token punctuation">,</span> get_init_fn<span class="token punctuation">(</span><span class="token number">5.</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span>      <span class="token comment"># div 5</span>
+    <span class="token punctuation">]</span>
+
+    pipeline <span class="token operator">=</span> SimplePipeline<span class="token punctuation">(</span>pipeline_items<span class="token punctuation">,</span> job_queue<span class="token punctuation">)</span>
+    pipeline<span class="token punctuation">.</span>start<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    result_queue <span class="token operator">=</span> pipeline<span class="token punctuation">.</span>get_result_queue<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># Feed jobs anytime (before StopTask)</span>
+    <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        job_queue<span class="token punctuation">.</span>put<span class="token punctuation">(</span>NumTask<span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># get partial output</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Get Output Start'</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        result <span class="token operator">=</span> result_queue<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> StopTask<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"get stop task"</span><span class="token punctuation">)</span>
+            <span class="token keyword">break</span>
+        <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> EmptyTask<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">continue</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span>val<span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Get Output End'</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># Feed jobs anytime (before StopTask)</span>
+    <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        job_queue<span class="token punctuation">.</span>put<span class="token punctuation">(</span>NumTask<span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># Stop pipeline, means no more job will be added then.</span>
+    <span class="token comment"># Every process will exit when it has done all current jobs in job_queue</span>
+    pipeline<span class="token punctuation">.</span>stop<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># get all output</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Get Output Start'</span><span class="token punctuation">)</span>
+    <span class="token keyword">while</span> <span class="token boolean">True</span><span class="token punctuation">:</span>
+        result <span class="token operator">=</span> result_queue<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> StopTask<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Output Queue Empty"</span><span class="token punctuation">)</span>
+            <span class="token keyword">break</span>
+        <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>result<span class="token punctuation">,</span> EmptyTask<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">continue</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span>val<span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Get Output End'</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>下面，我们来简单的说明一下工作逻辑。</p>
+<ol type="1">
+<li><strong>首先，我们需要定义自己的任务Task。</strong> 只需要继承Task这个类即可，内部可以存放自己喜欢的任何数据。这里只是为了计算，所以就只存放了一个数字。</li>
+<li><strong>定义我们的初始化函数和工作函数。</strong> 初始化函数的作用是给每个进程初始化一些资源，如果不需要也可以不要。这里的初始化函数就是返回了一个值，表示操作数。工作函数是最重要的函数，他会处理接收到的Task，处理并返回新的Task（新的Task可以理解为处理的结果）。工作函数有两个输入，一个是资源，即初始化函数的返回值，另一个就是Task本身。</li>
+<li><strong>构建Pipeline。</strong> 每个工作模块都只需要用PipelineItem这个对象进行封装即可。器参数分别是：工作函数、初始化函数、进程数、结果队列的长度（-1表示不限长度）。结果队列的长度，通常设置为较大的值即可。因为不能的模块的处理速度可能不同，因此很容易出现结果堆积的现象，如果不支持队列长度，会导致内存的大量的占用。最后将PipelineItem的数组和输入的对垒传给SimplePipeline对象即可构建完我们的整套Pipeline程序了！</li>
+<li><strong>启动Pipeline程序，并输入数据。</strong></li>
+<li><strong>得到结果！</strong> 完事了，优秀。</li>
+</ol>
+<p>上面这是一个最简单的例子，可以比较直观的感受到这个框架的便捷之处。完全屏蔽掉对队列，并发等的操作。</p>
+<p>在我推荐给同事之后，确实一定程度地减小他的工作量，但同时，他也向我反馈了一些问题：这个框架在某些地方有些比较灵活的设计，应该给出足够多的实例，才能方便实用。关于该框架的设计思路和实例，将会在下一篇博客中进行详细介绍。</p>
+<p>最后，欢迎大家Star和提交MR。愿与你们一同进步。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2019/03/23/easy-pipeline/" target="_blank" title="Easy Pipeline，一种轻量级的Python Pipeline库">
+        https://www.miaoerduo.com/2019/03/23/easy-pipeline/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2019/03/29/tictoc-header-only-c-timer/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      TICTOC: Header Only C++ Timer
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/12/13/2018-12-13/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">随笔</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

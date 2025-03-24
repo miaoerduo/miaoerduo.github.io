@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    一、Redis基本操作——String(原理篇) |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-redis-string-principles" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  一、Redis基本操作——String(原理篇)
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/04/25/redis-string-principles/" class="article-date">
+  <time datetime="2016-04-25T23:37:09.000Z" itemprop="datePublished">2016-04-25</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：最近京东图书大减价，小喵手痒了就买了本《Redis设计与实现》[<a target="_blank" rel="noopener" href="http://redisbook.com/">1</a>]来看看。这里权当小喵看书的笔记啦。这一系列的模式，主要是先介绍Redis的实现原理（可能很大一部分会直接照搬原作者的描述），加上小喵自己的想法，之后配合Redis官网上的各种相关的操作命令（原书上貌似没有很多的介绍命令）。</p>
+</blockquote>
+<p>本章介绍Redis中最常用到的字符串(String)。</p>
+<span id="more"></span>
+<h2 id="redis的字符串string的实现">Redis的字符串(String)的实现</h2>
+<p>小喵之前有看到过《Redis设计与实现》的一部分章节。这是第一章的内容，小喵也是因为看了这一章的内容，才决定要买本仔细研究的。</p>
+<p>首先，我们知道Redis是由C语言编写的，以高效和轻量著称。而C语言中的字符串是怎么实现的呢？字符数组。 比如一个简单的字符串"hello world"，其实是一个如下的字符的数组：<code>['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '\0']</code>，最后的一个'\0'是空字符，表示字符串的结尾。</p>
+<p>Redis由于各种原因，并没有直接使用了C语言的字符串结构，而是对其做了一些封装，得到了自己的简单动态字符串(simple dynamic string, SDS)的抽象类型。Redis中，默认以SDS作为自己的字符串表示。只有在一些字符串不可能出现变化的地方使用C字符串。</p>
+<p><strong>SDS的定义</strong>如下：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">struct</span> <span class="token class-name">sdshdr</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 用于记录buf数组中使用的字节的数目</span>
+    <span class="token comment">// 和SDS存储的字符串的长度相等</span>
+    <span class="token keyword">int</span> len<span class="token punctuation">;</span>
+    <span class="token comment">// 用于记录buf数组中没有使用的字节的数目</span>
+    <span class="token keyword">int</span> free<span class="token punctuation">;</span>
+    <span class="token comment">// 字节数组，用于储存字符串</span>
+    <span class="token keyword">char</span> buf\<span class="token punctuation">[</span>\<span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出来，SDS的结构并不复杂:</p>
+<ul>
+<li>buf是一块可用的内存空间，通常大小会大于等于需要存储的字符串的大小（大于？为什么要大于呢？读者可以思考一下）。</li>
+<li>len表示字符串的长度，也表示buf中已经被使用的空间的大小。</li>
+<li>free表示buf中没有被使用的空间的大小。</li>
+<li>要注意的是，buf的大小等于len+free+1，其中多余的1个字节是用来存储'\0'的。</li>
+</ul>
+<p>那么这么封装到底有什么好处呢？我们一点一点剖析。</p>
+<h3 id="常数复杂度获取字符串长度">1，常数复杂度获取字符串长度</h3>
+<p>在C语言中的字符串只是简单的字符的数组，当使用strlen获取字符串长度的时候，C语言内部其实是直接顺序遍历数组的内容，找到对应的<code>'\0'</code>对应的字符，从而计算出字符串的长度。显然这个算法复杂度和字符串的长度成正比，即<code>O(N)</code>。而对于SDS来说，只需要访问SDS的len属性就能得到字符串的长度，复杂度为<code>O(1)</code>。这样，获取字符串长度的操作就不会成为Redis的瓶颈（当然len的作用不止这么简单，后面还会介绍别的）。</p>
+<h3 id="杜绝缓冲区溢出">2，杜绝缓冲区溢出</h3>
+<p>我们知道<code>C++</code>里面的字符串使用了<code>STL</code>的<code>string</code>类型，我们开发者不太需要关注内存的分配和释放的过程。但是Redis是C语言编写的，并没有这么方便的数据类型。对于字符串的拼接、复制等操作，C语言开发者必须确保目标字符串的空间足够大，不然就会出现溢出的情况。</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">char</span> a<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">"hello"</span><span class="token punctuation">;</span>
+<span class="token function">strcat</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> <span class="token string">" world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">strcpy</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> <span class="token string">"hello world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>上面的三句代码，就是C语言的字符串拼接和复制的使用，但是明显出现了缓冲区溢出的问题。字符数组a的长度是10，而<code>"hello world"</code>字符串的长度为11，则需要12个字节的空间来存储（不要忘记了'\0'）。</p>
+<p>然后，我们看看Redis的SDS是怎么处理字符串修改的这种情况。</p>
+<p>当使用SDS的API对字符串进行修改的时候，API内部第一步会检测字符串的大小是否满足。如果空间已经满足要求，那么就像C语言一样操作即可。如果不满足，则拓展buf的空间，使得满足操作的需求，之后再进行操作。每次操作之后，len和free的值会做相应的修改。</p>
+<p>这就是SDS的全部的高明之处了吗？当然不！</p>
+<p>当API发现SDS的buf的容量不够的时候，并不是简单申请正好适合的大小，而是额外申请了一倍的空间！我们以sds的API <code>sdscat</code> 函数为例，该函数实现了sds的拼接的功能。</p>
+<p>下面的例子是<code>"hello"</code> 和<code>" world"</code>的拼接的过程。</p>
+<p><img src="sds-before.png" alt="修改之前的sds" /></p>
+<center>
+图1 sdscat执行之前的sds
+</center>
+<p><img src="sds-after.png" alt="修改之后的sds" /></p>
+<center>
+图2 sdscat执行之后的sds
+</center>
+<p>这里的buf的容量是23（free + len + 1）。为什么要这么做呢？耐心向下看吧。</p>
+<h3 id="减少修改字符串时带来的内存重分配次数">3，减少修改字符串时带来的内存重分配次数</h3>
+<p>我们之前说到，对于一个N长的字符串，C语言中底层是一个N+1长的字符数组（有一个字节存放空字符）。C字符串的长度和底层数组之间的长度存在着这样的关系，因此当进行字符串的操作而导致字符串长度发生变化的时候，需要对内存进行重新分配。</p>
+<ul>
+<li>如果操作会增长字符串，那么在执行之前，就需要进行内存分配扩充底层数组的大小。</li>
+<li>如果是缩短字符串的操作，则需要释放额外的内存</li>
+</ul>
+<p>注：这是书中的意思，但小喵觉得如果字符串缩小的话，其实并不用立刻释放内存，如果字符串是malloc出来的话，需要释放的直接free就可以，也不需要给定空间的大小，所以不会出现内存泄露。当然，也可能Redis里面是用别的方式实现，这样小喵就不懂了）。</p>
+<p>对于一般的程序而言，如果修改字符串的操作并不是特别常出现，那么每次修改都重新分配一下内存也是可以接受的。但是Redis作为一个数据库，其读写速度，数据修改频率都被要求达到很高的效率。因此这种低效的方式并不适合Redis。</p>
+<p>为了避免C字符串的这些弊端，SDS通过<strong>未使用空间</strong>解除了字符串长度和底层数组长度之间的关系。也就是之前说的buf的长度为len和free之和（再加1）。数字里面可以包含未使用的空间，大小用free表示。</p>
+<p>Redis主要通过以下两种策略来处理内存问题：</p>
+<h4 id="i-空间预分配">i) 空间预分配</h4>
+<p>这种方式用于处理字符串长度增加的问题。如果对字符串的修改使得字符串的长度增加，API首先会判断buf的空间大小是否满足，如果满足则直接操作，如果不满足，则进行如下操作：</p>
+<p>如果对SDS进行修改之后的，SDS的长度（即len的值）小于1MB。程序将额外分配和len一样大小的未使用空间。以上面的"hello" + " world"的操作为例。在这个例子中"hello"的len是5（不考虑'\0')，修改之后的字符串"hello world"长度为11，那么新的SDS的buf的容量就是11*2+1。其中len和free都是11，多余的1字节用来存储'\0'。</p>
+<p>如果对SDS修改之后的长度大于1MB，那么程序会分配1MB的未使用空间。比如原数据是5MB，修改之后需要6MB的空间，进行修改的操作后，buf的实际空间应该是7MB，其中len为6MB，free为1MB。</p>
+<p>那么这些未使用空间能够做什么呢？为什么根据SDS的修改会的大小会有两种不同的分配原则呢？</p>
+<p>小喵是这么认为的，如果数据被更改，则说明这个数据很可能会被再次更改，如果能够提前分配多余的空间，那么下一次变化的时候很可能就不需要再次分配空间了。如果数据比较小（&lt;1MB）的时候，可以分配等大的未使用空间。但是如果数据已经很大的时候（&gt;1MB），再分配同等大小的内存会显得十分浪费，毕竟不能确保这个字符串一定会被再次修改，所以只额外分配1MB的空间。</p>
+<p>通过这种策略，SDS可以做到N次修改，最多进行N次内存分配。而C字符串在N次修改则一定要进行N次内存分配。一个是至多N次，一个是一定N次。用小喵的脑袋想，也觉得SDS这个策略简单、粗暴、高效。</p>
+<h4 id="ii-惰性空间释放">ii) 惰性空间释放</h4>
+<p>当执行字符串长度缩短的操作的时候，SDS并不直接重新分配多出来的字节，而是修改len和free的值（len相应减小，free相应增大，buf的空间大小不变化）。通过惰性空间释放，可以很好的避免缩短字符串需要的内存重分配的情况。而且多余的空间也可以为将来可能有的字符串增长的操作做优化。</p>
+<p>当然，SDS也提供直接释放未使用空间的API，在需要的时候，也能真正的释放掉多余的空间。</p>
+<h3 id="二进制安全">4，二进制安全</h3>
+<p>C字符串中的字符必须符合某种编码（比如ASCII），并且字符串除了末尾之外不能出现空字符，否则会被程序认为是字符串的结尾。这就使得C字符串只能存储文本数据，而不能保存图像，音频等二进制数据。（这里，小喵的观点是不同的，小喵本人是做图像的，opencv等的库，都是使用unsigned char*来存储图像的数据。我们完全可以把字符数组看成一堆内存，存放任何数据都可以）</p>
+<p>使用SDS就不需要依赖控制符，而是用len来指定存储数据的大小。同时所有的SDS操作的API都是二进制安全的（binary-safe），所有的SDS API都会以处理二进制的方式来处理SDS的buf的数据。程序不会对buf的数据做任何限制、过滤或假设，数据写入的时候是什么，读取的时候依然不变。</p>
+<p>这也是我们将SDS的buf属性程序字节数组的原因，Redis不是使用这个数组来保存字符，而是储存一系列二进制数据。</p>
+<h3 id="兼容部分c字符串函数">5，兼容部分C字符串函数</h3>
+<p>由于SDS的buf的定义和C字符串完全相同，因此很多的C字符串的操作都是适用于SDS-&gt;buf的。比如当buf里面存的是文本字符串的时候，printf函数，也完全可以试用。这样，Redis就不需要为所有的字符串的处理编写自己的函数，大多数通过调用C语言的函数就可以。</p>
+<h2 id="总结">总结</h2>
+<table>
+<thead>
+<tr class="header">
+<th>C字符串</th>
+<th>SDS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>获取字符串长度的复杂度为O(N)</td>
+<td>获取字符串长度的复杂度为O(1)</td>
+</tr>
+<tr class="even">
+<td>API是不安全的，可能会造成缓冲区溢出</td>
+<td>API是安全的，不会造成缓冲区溢出</td>
+</tr>
+<tr class="odd">
+<td>修改字符串长度N次必然需要执行N次内存重分配</td>
+<td>修改字符串长度N次最多需要执行N次内存重分配</td>
+</tr>
+<tr class="even">
+<td>只能保存文本数据</td>
+<td>可以保存文本或者二进制数据</td>
+</tr>
+<tr class="odd">
+<td>可以使用所有库中的函数</td>
+<td>可以使用一部分库的函数</td>
+</tr>
+</tbody>
+</table>
+<p>以上则是Redis的string结构的原理部分。下一章我们会介绍一些string操作的redis命令。</p>
+<p><strong>转载请注明出处。</strong></p>
+<p>参考： [1] <a target="_blank" rel="noopener" href="http://redisbook.com/">http://redisbook.com/</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/04/25/redis-string-principles/" target="_blank" title="一、Redis基本操作——String(原理篇)">
+        https://www.miaoerduo.com/2016/04/25/redis-string-principles/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/05/01/redis-string-practice/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      二、Redis基本操作——String(实战篇)
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/02/07/hello-cuda/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">Hello CUDA - CUDA程序简单入门</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

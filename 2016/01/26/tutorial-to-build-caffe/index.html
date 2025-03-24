@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    从0到1，手把手教你配置Caffe环境 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-tutorial-to-build-caffe" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  从0到1，手把手教你配置Caffe环境
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/01/26/tutorial-to-build-caffe/" class="article-date">
+  <time datetime="2016-01-26T18:15:32.000Z" itemprop="datePublished">2016-01-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 12 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：之前小喵也说过，自己主要是学习图像方面的深度学习算法的，深度学习可以理解为神经网络的拓展，是近年来最火的一项技术。小喵学得不好，就不在这里卖弄了。图像中，最常用到的是CNN模型，也就是卷积神经网络（Convolutional Neural Networks）。实现CNN有许多框架，Caffe，MXNet，Tensor Flow，ConvNet等。这次主要教给大家怎么从0开始，配置自己的Caffe环境。</p>
+</blockquote>
+<span id="more"></span>
+<p>由于是从0开始安装，如果有什么软件是大家已经装好的，就可以自行跳过。小喵的电脑是CentOS7,64位。主要按照下列的软件顺序进行安装：</p>
+<ol type="1">
+<li>GMP</li>
+<li>MPFR</li>
+<li>MPC</li>
+<li>GCC 4.7.4</li>
+<li>CMAKE</li>
+<li>Python</li>
+<li>Boost</li>
+<li>Opencv：Python-Opencv</li>
+<li>Glog</li>
+<li>Gflags：Python-gflags</li>
+<li>Google-apputils</li>
+<li>Protobuf</li>
+<li>Snappy</li>
+<li>LevelDB：Pyhton-leveldb</li>
+<li>Lmdb</li>
+<li>OpenBlas</li>
+<li>CUDA</li>
+<li>cuDNN</li>
+<li>Caffe</li>
+</ol>
+<p>第一步，更新系统的 <code>GCC</code> 如果是在个人的PC上进行更新，可能只需要使用 <code>yum</code> 或者 <code>apt-get</code> 等工具。小喵的实验环境是服务器，因此自己并没有root权限，还是需要按部就班的安装。</p>
+<p><code>GCC</code> 依赖 <code>GMP</code>，<code>MPFR</code> 和 <code>MPC</code> 这三个库，它们主要是提供了一些数值计算等的函数。</p>
+<p><strong>Tips: 编译的时候使用make命令的时候，可以加入参数-jn，可以多核一起编译，速度会快很多。</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">make</span> <span class="token parameter variable">-j4</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>则表示4个核一起编译。</p>
+<h3 id="gmp">1，GMP</h3>
+<p><code>GMP</code>，<a target="_blank" rel="noopener" href="https://gmplib.org/">https://gmplib.org/</a>，一个高精度计算的库。从官网上下载得到安装文件，小喵下载的是6.1.0的版本。解压之后，使用命令:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/gmp/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>完成安装(/path/to/install/表示你希望安装的位置)。注意prefix前面是两个<code>'-'</code>。</p>
+<p>安装完成之后，修改根目录中的 <code>.bash_profile</code>。将 <code>gmp</code> 安装后的文件夹中的lib的路径加入到 <code>LD_LIBRARY_PATH</code> 中。</p>
+<p><strong>注意：之后每步操作都检查安装后的文件夹中，是否有lib目录或lib64目录，如果有，则加入 <code>LD_LIBRARY_PATH</code> 中。（lib64是64位的系统的库，如果两个目录都存在，将lib64加入到 <code>LD_LIBRARY_PATH</code> 就可以）。如果发现有bin目录，则将它加入PATH中，bin目录放置的都是可执行程序，只有加进PATH里面，系统才能够找到（大家都不会希望用ls命令的时候，都写成/bin/ls吧）。配置完后，可以source一下自己的 <code>.bash_profile</code> 文件，确保当前的环境是最新的。</strong></p>
+<h3 id="mpfr">2，MPFR</h3>
+<p><code>MPFR</code>，<a target="_blank" rel="noopener" href="http://www.mpfr.org/">http://www.mpfr.org/</a>，一个浮点数计算的库，该库对 <code>GMP</code> 有依赖，所以要在 <code>GMP</code> 之后安装。下载安装文件，小喵的是3.1.3版本。解压，使用命令。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/mpfr/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install --with-gmp<span class="token operator">=</span>/path/to/gmp/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里的/path/to/gmp/表示上一步的gmp安装的位置。</p>
+<h3 id="mpc">3，MPC</h3>
+<p><code>MPC</code>，<a target="_blank" rel="noopener" href="http://www.multiprecision.org/">http://www.multiprecision.org/</a>，一个复数的代数库，依赖 <code>GMP</code> 和 <code>MPFR</code>。下载安装包，版本1.0.3。解压。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/mpc/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/ --with-gmp<span class="token operator">=</span>/path/to/gmp/ --with-mpfr<span class="token operator">=</span>/path/to/mpfr/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>/path/to/gmp/，/path/to/mpfr/分别表示gmp和mpfr的安装路径，以下的说明都是这种形式，不再特意强调。</p>
+<h3 id="gcc">4，GCC</h3>
+<p>完成上述的三个代数运算库的安装之后，则可以开始GCC的升级工作。小喵的电脑上是CentOS 7，GCC默认版本是4.4。4.4版本的GCC只能编译到4.7版本或以下的GCC，所以如果需要编译更高版本的GCC，则需要先编译较低版本的GCC，再使用新安装的GCC编译更高版本的。另外GCC编译时间较旧，可以考虑多核一起编译（还记得make -j4这个命令了吗？:-D）。</p>
+<p><code>GCC</code>，<a target="_blank" rel="noopener" href="https://gcc.gnu.org/">https://gcc.gnu.org/</a>，一个Linux上的强大的编译环境，提供对各种语言：<code>C/C++</code>，<code>Fortran</code>，<code>Java</code>等的编译支持。下载安装程序，这里选择4.7.4版本（不要选择更高的版本，低版本的GCC不一定能编译）。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/gcc/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/ --enable-threads<span class="token operator">=</span>posix --disable-checking --disable-multilib --enable-languages<span class="token operator">=</span>c,c++,fortran --with-gmp<span class="token operator">=</span>/path/to/gmp/ --with-mpfr<span class="token operator">=</span>/path/to/mpfr/ --with-mpc<span class="token operator">=</span>/path/to/mpc/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>安装完成，不要忘记把bin目录和lib64目录分别加入 <code>PATH</code> 和 <code>LD_LIBRARY_PATH</code>。source一下后，使用 <code>gcc --version</code>，你会发现gcc的版本已经变成4.7.4了。</p>
+<h3 id="cmake">5，CMAKE</h3>
+<p><code>CMAKE</code>，<a target="_blank" rel="noopener" href="https://cmake.org/">https://cmake.org/</a>，是一个跨平台的安装（编译）工具，可以用简单的语句来描述所有平台的安装(编译过程)。版本3.4.1。解压。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/cmake/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="python">6，Python</h3>
+<p><code>Python</code>，<a target="_blank" rel="noopener" href="https://www.python.org/">https://www.python.org/</a>，一种超好用的编程语言，有着胶水语言的美称。不仅语言简洁，相关的工具库也异常丰富。用 <code>Python</code> 可以很快的编写出测试原型，而且 <code>Caffe</code> 本身也提供了 <code>Python</code> 的接口。这里选择2.7.*版本。注意Python2.7.<em>和3.5.</em>并不完全兼容，目前主流的 <code>Python</code> 还是2.7，而且相关库的支持也比较成熟。由于还需要安装许多依赖的计算方面的库，不建议直接从官网下载。推荐下载 <code>Anaconda</code> 这个集成好的 <code>Python</code>环境。<a target="_blank" rel="noopener" href="https://www.continuum.io/">https://www.continuum.io/</a>，记住，2.7.*版本。小喵这里安装好的是2.7.10。</p>
+<p>下载好之后，直接运行，然后跟个提示就刻轻松安装。</p>
+<p>安装完成后，需要在 <code>.bash_profile</code> 中进行基础修改。</p>
+<p>假定 <code>ANACONDA_ROOT</code> 表示安装的目录。将 <code>$ANACONDA/bin/</code> 加入 <code>PATH</code>，将 <code>$ANACONDA/lib/</code> 加入 <code>LD_LIBRARY_PATH</code> 加入新变量 <code>PYTHONPATH</code>，并 <code>export</code> 出来。<code>export PYTHONPATH=$ANACONDA/lib/python2.7/site-packages</code>，source一下则配置完成。</p>
+<p>如果是安装官网的 <code>Python</code>，之后可能需要再安装 <code>Numpy</code> 这个库，否则不能正确调用 <code>OpenCV</code>。<code>Anaconda</code> 已经集成了，所以我们这里不用再次安装。</p>
+<h3 id="boost">7，Boost</h3>
+<p><code>Boost</code>，<a target="_blank" rel="noopener" href="http://www.boost.org/">http://www.boost.org/</a>，又称 <code>C++准标准库</code>。传言，如果希望自己的库可以进入C++标准库，那么可以让它成为Boost的一部分，久而久之，Boost中的精华就会融进C++标准库。如果比较关注C++标准库的发展，重看每次更新的部分，应该大多都能看到Boost的身影。Boost中提供了很多强大又稳定的库，包括智能指针，各种算法库等等。这些在Caffe中都有用到。</p>
+<p>这里下载1.58.0版本，Caffe对最新的1.60.0并不完全兼容。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/boost/
+./bootstrap.sh <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+./b2 <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>加入环境后，则完成安装。</p>
+<h3 id="opencv">8，OpenCV</h3>
+<p><code>OpenCV</code>，<a target="_blank" rel="noopener" href="http://opencv.org/">http://opencv.org/</a>，一个开源的图像处理相关的库，不仅能够进行图像的各种处理（缩放，翻转，模糊等等），还内置了许多的机器学习的算法（比如 <code>AdaBoost</code> 的人脸检测）。图像处理必备库。这里下载版本2.4.11（小喵试了2.4.9和2.4.11两个版本，都可以正确安装）。3.0或以上的版本安装可能会有问题。</p>
+<p><code>OpenCV</code> 的安装需要使用 <code>cmake</code> 工具来完成 <code>configure</code> 工作。请确保之前的 <code>cmake</code> 已经安装，并加入到 <code>PATH</code>。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/opencv/
+<span class="token function">mkdir</span> build                    <span class="token comment"># 创建一个临时目录</span>
+<span class="token builtin class-name">cd</span> build
+ccmake <span class="token punctuation">..</span>                      <span class="token comment"># 这里使用ccmake，比cmake界面更友好</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>刚进入的时候，显示 <code>EMPTY CACHE</code>，根据提示，按 <code>c</code>，进行 <code>configure</code> 之后便可以看到配置界面，有许多的变量和其对应的值。我们主要检查以下几项 <code>PYTHON_NUMPY_INCLUDE_DIR</code>， <code>PYTHON_PACKAGES_PATH</code>， <code>SPHINX_BUILD</code> 如果之前的步骤都完成的话，这几项参数应该可以从系统中直接读取，如果发现没有读取，可能是没有加入环境变量或者安装错误。检查结束后，修改 <code>CMAKE_INSTALL_PREFIX</code> 的值，改成自己期望安装的位置。</p>
+<p>在界面中，可以看到几个类似 <code>BUILD_PNG</code>， <code>BUILD_JPEG</code> 的参数，它们是图像处理的相关的库。如果系统中之前没有安装过这些库，而你需要 <code>OpenCV</code> 能够处理这些类型的文件，就把这些变量设成 <code>ON</code>，这样就会把这些库一起编译。</p>
+<p>界面中有类似 <code>WITH_PNG</code>，<code>WITH_JPEG</code> 的变量，如果选成 <code>ON</code>，则 <code>OpenCV</code> 会安装对这些类型图片的支持。 <strong>Warning: 小喵在安装的时候就犯了一个错误，把 <code>WITH_PNG</code> 设成了 <code>ON</code>，但是把 <code>BUILD_PNG</code> 设成了 <code>OFF</code>，导致编译的时候找不到 <code>libpng</code> 的一些.so文件。所以如果大家需要对特殊类型图片的支持，要记得把前后都设成 <code>ON</code>。</strong></p>
+<p>最后根据提示进行操作，就会生成对于的 <code>Makefile</code> 文件，则可进行下面的步骤：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>记得把bin和lib分别加入到环境变量。至此，<code>OpenCV</code> 也就装完了。</p>
+<p>接下来，要让 <code>Python</code> 能够调用 <code>OpenCV</code>。 方法很简单，将 <code>%OPENCV_INSTALL_PATH%/lib/python2.7/site-packages</code> 下的文件（应该只有两个），拷贝到 <code>%ANACONDA_INSTALL_PATH%/lib/python2.7/site-packages</code> 中，即可。</p>
+<p>为了保险起见，你可以打开 <code>python</code>，输入 <code>import cv2</code>，看看有没有异常，没有的话，应该就是配置成功。</p>
+<h3 id="glog">9，glog</h3>
+<p><code>glog</code>，<code>google-log</code>，<a target="_blank" rel="noopener" href="https://github.com/google/glog">https://github.com/google/glog</a>，是google做的一项开源的项目，是一个C++的记录日志的工具。<code>Caffe</code>中有用到。可以下载源码，然后自己编译（貌似必须再装三个google的软件才可以），小喵安装的时候直接下载了release版本的程序 <a target="_blank" rel="noopener" href="https://github.com/google/glog/releases">https://github.com/google/glog/releases</a>。解压，执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/glog/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>加入lib目录。安装完成。</p>
+<h3 id="gflags">10，gflags</h3>
+<p><code>gflags</code>，<a target="_blank" rel="noopener" href="https://github.com/gflags/gflags">https://github.com/gflags/gflags</a>，貌似是一个处理命令行的C++工具，Caffe需要用到。该工具的安装也需要cmake。解压后执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/gflags/
+<span class="token function">mkdir</span> build
+<span class="token builtin class-name">cd</span> build
+ccmake <span class="token punctuation">..</span>
+<span class="token comment"># 设置安装路径CMAKE_INSTALL_PREFIX</span>
+<span class="token comment"># 把BUILD_SHARED_LIBS设成ON</span>
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>把lib目录加入 <code>LD_LIBRARY_PATH</code>，则完成安装。使用 <code>Python</code> 调 <code>Caffe</code> 的时候，也会用到这个库，所以需要给 <code>Python</code> 也安装对于的库。这里可以用源码安装，也可以使用 <code>pip</code> 这个工具。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> python-gflags<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="google-apputils">11，google-apputils</h3>
+<p>下载源码安装，或者使用 <code>pip</code> 安装</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> google-apputils<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="protobuf">12，Protobuf</h3>
+<p><code>Protobuf</code>，<a target="_blank" rel="noopener" href="https://github.com/google/protobuf">https://github.com/google/protobuf</a>，又是一个google出品的软件。可以通过简单的方式定义各种语言下数据结构。Caffe中有用到。</p>
+<p>下载realse版本的程序来安装，<a target="_blank" rel="noopener" href="https://developers.google.com/protocol-buffers/docs/downloads">https://developers.google.com/protocol-buffers/docs/downloads</a>。解压，执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/protobuf/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>增加python的支持：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> protobuf<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="snappy">13，Snappy</h3>
+<p><code>Snappy</code>，<a target="_blank" rel="noopener" href="https://github.com/google/snappy">https://github.com/google/snappy</a>。可以通过源码安装，也可以下载release版本，<a target="_blank" rel="noopener" href="https://github.com/google/snappy/releases/">https://github.com/google/snappy/releases/</a>。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/snappy/
+./configure <span class="token parameter variable">--prefix</span><span class="token operator">=</span>/path/to/install/
+<span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="leveldb">14，leveldb</h3>
+<p><code>leveldb</code>，<a target="_blank" rel="noopener" href="https://github.com/google/leveldb">https://github.com/google/leveldb</a>，一个轻量级的数据库。直接下载源码，解压。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">cd</span> /download/path/to/leveldb/
+<span class="token function">make</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>之后直接生成了库文件。建议把生成的库文件和include文件夹都放置到合适的目录，并将库所在的目录加入 <code>LD_LIBRARY_PATH</code>。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> leveldb<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>增加python的支持。</p>
+<h3 id="lmdb">15，LMDB</h3>
+<p><code>LMDB</code>，<a target="_blank" rel="noopener" href="https://github.com/glycerine/liblmdb">https://github.com/glycerine/liblmdb</a>，也是一个轻量级的数据库。解压之后，修改里面的 <code>Makefile</code> 文件的 <code>prefix</code> 为需要安装的位置。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<h3 id="openblas">16，OpenBlas</h3>
+<p><code>OpenBlas</code>，<a target="_blank" rel="noopener" href="http://www.openblas.net/">http://www.openblas.net/</a>，一个代数库，同为代数库的还有 <code>MKL</code>，<code>ATLAS</code>。解压，执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">make</span>
+<span class="token function">make</span> <span class="token function">install</span> <span class="token assign-left variable">PREFIX</span><span class="token operator">=</span>/path/to/install/<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>完成安装。</p>
+<h3 id="cuda">17，CUDA</h3>
+<p><code>CUDA</code>，<a target="_blank" rel="noopener" href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>，GPU支持。小喵下载的是 <code>cuda_7.0.28_linux.run</code> 这个版本的安装程序。官网说明的安装过程需要用root执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">sh</span> cuda_7.0.28_linux.run<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>但事实上，不需要 <code>sudo</code> 也可以执行安装。非root的话，可能不能进行显卡驱动的安装，我这里已经有了驱动，所以不需要root安装。</p>
+<p>另外驱动和cuda的版本必须一致，不然后出现cuda不能启动的错误。直接:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sh</span> cuda_7.0.28_linux.run<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>之后根据提示安装即可。</p>
+<h3 id="cudnn">18，CUDNN</h3>
+<p><code>cuDNN</code>，<a target="_blank" rel="noopener" href="https://developer.nvidia.com/cudnn">https://developer.nvidia.com/cudnn</a>，是CUDA的加速程序。解压之后貌似就算成功。CUDA7.0建议使用CuDNN v3。</p>
+<h3 id="caffe">19，CAFFE</h3>
+<p><code>Caffe</code>，<a target="_blank" rel="noopener" href="http://caffe.berkeleyvision.org/">http://caffe.berkeleyvision.org/</a>，卷积神经网络的训练框架。在 <code>github</code> 上下载源码，<a target="_blank" rel="noopener" href="https://github.com/BVLC/caffe">https://github.com/BVLC/caffe</a>。修改 <code>Makefile.json</code> 文件, 这里需要修改很多地方，需要自对照着修改。最后需要执行:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">make</span>
+<span class="token function">make</span> pycaffe
+<span class="token comment"># 如果需要验证是否安装成功，使用下面的命令</span>
+<span class="token comment"># make test</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>则完成安装！</p>
+<p>以上便是整套Caffe环境的安装教程。如果有任何错误，请大家指正。</p>
+<p><strong>转载请注明出处。</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/01/26/tutorial-to-build-caffe/" target="_blank" title="从0到1，手把手教你配置Caffe环境">
+        https://www.miaoerduo.com/2016/01/26/tutorial-to-build-caffe/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/02/05/gpu-hardware/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      GPU硬件结构
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2015/12/18/about-cuda/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">关于CUDA</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

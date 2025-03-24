@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="jumbotron">
+  <div class="video">
+    
+    <div class="video-frame">
+      <img src="/images/ocean/overlay-hero.png" alt="Decorative image frame">
+    </div>
+    
+    <div class="video-media">
+      <video playsinline="" autoplay="" loop="" muted="" data-autoplay="" poster="/images/ocean/ocean.png"
+        x5-video-player-type="h5">
+        <source src="/images/ocean/ocean.mp4" type="video/mp4">
+        <source src="/images/ocean/ocean.ogv" type="video/ogg">
+        <source src="/images/ocean/ocean.webm" type="video/webm">
+        <p>Your user agent does not support the HTML5 Video element.</p>
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+    <div class="video-inner text-center text-white">
+      <h1><a href="/">喵耳朵</a></h1>
+      <p>略懂算法 | 在学架构 | 梦想成为 | Top插画师</p>
+      <div><img src="/images/MED-logo-white.png" class="brand" alt="喵耳朵"></div>
+    </div>
+    <div class="video-learn-more">
+      <a class="anchor" href="#landingpage"><i class="fe fe-mouse"></i></a>
+    </div>
+  </div>
+</section>
+<div id="landingpage">
+  <section class="outer">
+  <article class="articles">
+    
+    <h1 class="page-type-title"></h1>
+    
+    
+    <article id="post-the-usage-of-cpp-boost-json" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/06/22/the-usage-of-cpp-boost-json/">C++ Boost JSON解析库的使用</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/06/22/the-usage-of-cpp-boost-json/" class="article-date">
+  <time datetime="2018-06-22T20:22:54.000Z" itemprop="datePublished">2018-06-22</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>最近在写一个C++项目的时候，有大量的配置信息，于是将这些配置信息整合进一个文本文件中，选择了JSON这种数据格式。C++在处理JSON数据的库有很多，比如Jsoncpp，Boost等，这个项目中由于本身就已经用到了Boost这个库，因此，也就选用Boost来进行JSON的解析了。</p>
+</blockquote>
+<p>Boost的JSON解析，使用的是property_tree这个数据类型，它可以方便的解析XML和JSON。</p>
+      
+      <a class="article-more-link" href="/2018/06/22/the-usage-of-cpp-boost-json/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cpp-concurrent" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/04/30/cpp-concurrent/">C++ 并发队列的原理简介与开源库concurrentqueue安利</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/04/30/cpp-concurrent/" class="article-date">
+  <time datetime="2018-04-30T12:46:59.000Z" itemprop="datePublished">2018-04-30</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 8 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>由于最近在做一个项目，但是框架本身有个不合理的设计。其中的代码是单线程的，数据的读取和计算都在一个线程里面完成。也就是说，我们的程序有很大的一部分时间在读取文件数据，导致最终的运行速度很慢。这里就可以使用多线程来优化。</p>
+<p>这里需要使用最基本的<strong>生产者消费者模式</strong>。使用若干个线程作为生产者，负责数据的读取和预处理，这部分任务是IO密集型的，也就是不太占CPU，但是比较占带宽，而且有延时。在处理完数据之后，将数据放到一个队列中。</p>
+<p>同时，使用若干个线程充当消费者，从这个队列里面获取数据，然后进行计算。计算的部分是CPU密集型的（其实我这里计算是GPU做的，就只有一个消费者），计算完成之后输出结果。</p>
+<p>那么贯穿这一整套方案的，就是我们的队列。</p>
+<p>在并发任务中，通常都需要一个队列机制，将并行的任务转化成串行的任务，或者将串行的任务提供给并行工作的线程。这个队列会同时被多个线程读写，因此也必须是线程安全的。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2018/04/30/cpp-concurrent/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cnn-object-detection3" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/04/03/cnn-object-detection3/">CNN的目标检测概述（三）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/04/03/cnn-object-detection3/" class="article-date">
+  <time datetime="2018-04-03T20:30:28.000Z" itemprop="datePublished">2018-04-03</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.7k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>本次介绍的是Fast R-CNN，与之前的RCNN和SPPNet不同，Fast R-CNN是一个清晰和快速的目标检测的框架。在训练和测试的速度上都远超过上述两种方法。同时，Fast R-CNN的训练是一次性的端到端的训练，同时训练的分类和回归两个任务。极大的简化的训练的流程。</p>
+<p>项目代码：<a target="_blank" rel="noopener" href="https://github.com/rbgirshick/fast-rcnn">https://github.com/rbgirshick/fast-rcnn</a></p>
+      
+      <a class="article-more-link" href="/2018/04/03/cnn-object-detection3/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cnn-object-detection2" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/03/01/cnn-object-detection2/">CNN的目标检测概述（二）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/03/01/cnn-object-detection2/" class="article-date">
+  <time datetime="2018-03-01T17:10:59.000Z" itemprop="datePublished">2018-03-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>这次介绍的是2015年的Kaiming He的一篇论文：Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition，以下简称SPP-net。 SPP-net的主要贡献是提出了一种新的pooling的方式，spatial pyramid pooling，简称为SPP。使用这种pooling的方式，可以将任意大小的输入feature map给pooling到固定的大小。使用这种pooling的方式，最终在分类和检测任务上均有一定的效果。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2018/03/01/cnn-object-detection2/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cnn-object-detection1" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/02/26/cnn-object-detection1/">CNN的目标检测概述（一）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/02/26/cnn-object-detection1/" class="article-date">
+  <time datetime="2018-02-26T23:48:18.000Z" itemprop="datePublished">2018-02-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>在2012年的ImageNet中，AlexNet拔得头筹。之后，CNN成为了图像识别中的一大利器。</p>
+<p>在目标检测中引入CNN，开山之作就是2013年的 Rich feature hierarchies for accurate object detection and semantic segmentation，之后简称R-CNN。</p>
+      
+      <a class="article-more-link" href="/2018/02/26/cnn-object-detection1/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-my-wordpress-plugins" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/02/12/my-wordpress-plugins/">本站的WordPress插件一览</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/02/12/my-wordpress-plugins/" class="article-date">
+  <time datetime="2018-02-12T19:35:59.000Z" itemprop="datePublished">2018-02-12</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.7k 字</div>
+      <div class="wordcount wordcount-time">大约需要 7 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>其实Jetpack这个插件里面已经提供了大量的工具。如果安装了这个插件，那么下面的很多插件都是可以不用安装的。不过在国内使用Jetpack这个插件有点麻烦。我这里就一直没有用，等换了国外的服务器之后，之前的博客的很多内容都得重新编辑，太麻烦了，所以干脆不用了。</p>
+      
+      <a class="article-more-link" href="/2018/02/12/my-wordpress-plugins/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-tricks-for-maintaining-blog-server" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/02/02/tricks-for-maintaining-blog-server/">博客服务器维护中的小技巧</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/02/02/tricks-for-maintaining-blog-server/" class="article-date">
+  <time datetime="2018-02-02T23:59:17.000Z" itemprop="datePublished">2018-02-02</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">597 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这里记录了小喵的博客的服务器的一些小的技巧，包括安装和各种参数的配置，便于以后查看。不定期更新。</p>
+      
+      <a class="article-more-link" href="/2018/02/02/tricks-for-maintaining-blog-server/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-shadowsocks-toturial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2018/01/25/shadowsocks-toturial/">shadowsocks安装和配置</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/01/25/shadowsocks-toturial/" class="article-date">
+  <time datetime="2018-01-25T19:48:35.000Z" itemprop="datePublished">2018-01-25</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">899 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="shadowsocks服务端安装和配置">Shadowsocks服务端安装和配置</h2>
+<p>shadowsocks是一个十分方便安装和配置的代理工具。官网是：<a target="_blank" rel="noopener" href="http://shadowsocks.org">http://shadowsocks.org</a> 这里记录一下，shadowsocks的安装和配置的过程，方便以后的查阅。这里使用的是python版本的shadowsocks。</p>
+      
+      <a class="article-more-link" href="/2018/01/25/shadowsocks-toturial/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+  </article>
+  
+
+  
+  <nav class="page-nav">
+    <a class="extend prev" rel="prev" href="/page/2/">上一页</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><a class="page-number" href="/page/5/">5</a><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/4/">下一页</a>
+  </nav>
+  
+</section>
+</div>
+
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    shadowsocks安装和配置 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-shadowsocks-toturial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  shadowsocks安装和配置
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/01/25/shadowsocks-toturial/" class="article-date">
+  <time datetime="2018-01-25T19:48:35.000Z" itemprop="datePublished">2018-01-25</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">899 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="shadowsocks服务端安装和配置">Shadowsocks服务端安装和配置</h2>
+<p>shadowsocks是一个十分方便安装和配置的代理工具。官网是：<a target="_blank" rel="noopener" href="http://shadowsocks.org">http://shadowsocks.org</a> 这里记录一下，shadowsocks的安装和配置的过程，方便以后的查阅。这里使用的是python版本的shadowsocks。</p>
+<span id="more"></span>
+<p>首先安装shadowsocks，使用pip可以方便的安装：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> shadowsocks<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>安装完成之后，这时候就会发现我们的系统里多了一些命令，主要需要用到的是 ssserver 这个工具。 使用 <code>ssserver -h</code> 可以查看其具体的用法。</p>
+<pre class="line-numbers language-none"><code class="language-none">ssserver -s 127.0.0.1 -p 8388 -k password -m aes-256-cfb --workers 10 -t 300 -q -d start<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>上述命令就可以以后台程序的方式启动shadowsocks服务，其中监听的端口是8388，密码是password，加密方式是aes-256-cfb，其他的参数使用<code>ssserver -h</code>就能看到。</p>
+<p>这里介绍另一种配置文件的方式，新建一个文件，比如叫<code>config.json</code>，内容为:</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+    <span class="token property">"server"</span><span class="token operator">:</span><span class="token string">"::"</span><span class="token punctuation">,</span>
+    <span class="token property">"server_port"</span><span class="token operator">:</span><span class="token number">8388</span><span class="token punctuation">,</span>
+    <span class="token property">"local_address"</span><span class="token operator">:</span> <span class="token string">"127.0.0.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"local_port"</span><span class="token operator">:</span><span class="token number">1080</span><span class="token punctuation">,</span>
+    <span class="token property">"password"</span><span class="token operator">:</span><span class="token string">"password"</span><span class="token punctuation">,</span>
+    <span class="token property">"timeout"</span><span class="token operator">:</span><span class="token number">300</span><span class="token punctuation">,</span>
+    <span class="token property">"method"</span><span class="token operator">:</span><span class="token string">"aes-256-cfb"</span><span class="token punctuation">,</span>
+    <span class="token property">"workers"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+    <span class="token property">"fast_open"</span><span class="token operator">:</span> <span class="token boolean">false</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>如果希望支持多个端口的话，可以参考一下的配置：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+    <span class="token property">"server"</span><span class="token operator">:</span><span class="token string">"::"</span><span class="token punctuation">,</span>
+    <span class="token property">"local_address"</span><span class="token operator">:</span> <span class="token string">"127.0.0.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"local_port"</span><span class="token operator">:</span><span class="token number">1080</span><span class="token punctuation">,</span>
+    <span class="token property">"port_password"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+        <span class="token property">"10000"</span><span class="token operator">:</span> <span class="token string">"password0"</span><span class="token punctuation">,</span>
+        <span class="token property">"10001"</span><span class="token operator">:</span> <span class="token string">"password1"</span><span class="token punctuation">,</span>
+        <span class="token property">"10002"</span><span class="token operator">:</span> <span class="token string">"password2"</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token property">"timeout"</span><span class="token operator">:</span><span class="token number">300</span><span class="token punctuation">,</span>
+    <span class="token property">"method"</span><span class="token operator">:</span><span class="token string">"aes-256-cfb"</span><span class="token punctuation">,</span>
+    <span class="token property">"workers"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+    <span class="token property">"fast_open"</span><span class="token operator">:</span> <span class="token boolean">false</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里需要注意的是，<code>"server"</code>字段填写的是<code>"::"</code>，这样可以同时监听ipv4和ipv6的地址，如果你的服务器同时支持ipv4和ipv6的话，那么你就可以通过代理顺便完成ipv4和ipv6的相互转换了。其他的参数可以按照自己的喜好去填写，加密方式也可以改成其他的更有效的方式。 启动方式现在变成了：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">ssserver <span class="token parameter variable">-c</span> /path/to/config.json <span class="token parameter variable">-d</span> start<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h2 id="shadowsocks客户端">Shadowsocks客户端</h2>
+<p>客户端下载： <a target="_blank" rel="noopener" href="http://shadowsocks.org/en/download/clients.html">http://shadowsocks.org/en/download/clients.html</a></p>
+<p>上述网址安卓版需要用Google Play下载，国内可以使用github的release程序：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/shadowsocks/shadowsocks-android/releases">https://github.com/shadowsocks/shadowsocks-android/releases</a></p>
+<h2 id="bbr安装">BBR安装</h2>
+<p>据说安装可以对服务器进行网络加速，我也试了一下，可能服务器本来就很快吧，没什么特别的感觉。</p>
+<p>可以参考教程：<a target="_blank" rel="noopener" href="https://q.aka.moe/2017/01/28/google-bbr/">https://q.aka.moe/2017/01/28/google-bbr/</a></p>
+<p>这里简单复制一下我使用的操作： 使用root用户登录，运行以下命令：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">wget</span> --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh
+<span class="token function">chmod</span> +x bbr.sh
+./bbr.sh<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>安装完成后，脚本会提示需要重启VPS，输入<code>y</code>并回车后重启。重启完成后，进入 VPS，验证一下是否成功安装最新内核并开启 TCP BBR，输入以下命令：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">uname</span> <span class="token parameter variable">-r</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>查看内核版本，含有 4.9 就表示 OK 了。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sysctl</span> net.ipv4.tcp_available_congestion_control<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>返回值一般为： <code>net.ipv4.tcp_available_congestion_control = bbr cubic reno</code></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sysctl</span> net.ipv4.tcp<span class="token punctuation">\</span>_congestion<span class="token punctuation">\</span>_control<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>返回值一般为： <code>net.ipv4.tcp_congestion_control = bbr</code></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sysctl</span> net.core.default_qdisc<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>返回值一般为： <code>net.core.default_qdisc = fq</code></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">lsmod <span class="token operator">|</span> <span class="token function">grep</span> bbr<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>返回值有<code>tcp_bbr</code>模块即说明bbr已启动。</p>
+<h2 id="开机启动">开机启动</h2>
+<p>这里使用的是CentOS7，修改<code>rc.local</code>文件实现。原理这里不解释，我也是查的，不适用于其他的操作系统。</p>
+<p>首先赋予<code>rc.local</code>可执行权限：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">chmod</span> +x /etc/rc.local<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>然后修改<code>/etc/rc.local</code>文件，在下面增加我们需要执行的内容，我这里就比较简单的添加了启动ss服务的脚本：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">/usr/bin/ssserver <span class="token parameter variable">-c</span> /path/to/shadowsocks/config.json <span class="token parameter variable">-d</span> start<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>建议全部写上绝对路径，免得系统找不到我们的程序和配置文件。</p>
+<h2 id="utorrent配置代理">utorrent配置代理</h2>
+<p>现在以utorrent为例，需要在“网络”中设置代理。shadowsocks默认的socks5代理地址是<code>127.0.0.1:1080</code>。最终的配置如下图：</p>
+<p><img src="utorrent.jpg" alt="utorrent config" /></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/01/25/shadowsocks-toturial/" target="_blank" title="shadowsocks安装和配置">
+        https://www.miaoerduo.com/2018/01/25/shadowsocks-toturial/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/02/02/tricks-for-maintaining-blog-server/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      博客服务器维护中的小技巧
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/01/25/python-trick/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">Python Trick</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

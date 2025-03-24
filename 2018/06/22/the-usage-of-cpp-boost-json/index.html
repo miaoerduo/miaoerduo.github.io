@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    C++ Boost JSON解析库的使用 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-the-usage-of-cpp-boost-json" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  C++ Boost JSON解析库的使用
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/06/22/the-usage-of-cpp-boost-json/" class="article-date">
+  <time datetime="2018-06-22T20:22:54.000Z" itemprop="datePublished">2018-06-22</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>最近在写一个C++项目的时候，有大量的配置信息，于是将这些配置信息整合进一个文本文件中，选择了JSON这种数据格式。C++在处理JSON数据的库有很多，比如Jsoncpp，Boost等，这个项目中由于本身就已经用到了Boost这个库，因此，也就选用Boost来进行JSON的解析了。</p>
+</blockquote>
+<p>Boost的JSON解析，使用的是property_tree这个数据类型，它可以方便的解析XML和JSON。</p>
+<span id="more"></span>
+<h2 id="一boost-json解析库的几个注意事项">一、Boost JSON解析库的几个注意事项</h2>
+<p>在具体介绍之前，必须要强调一下，这个库默认不是线程安全的！不是线程安全的！不是线程安全的！不做任何处理的情况下，如果直接在多线程的程序中使用Boost解析JSON，可能会在奇怪的时候报段错误。这是由于Boost的JSON解析是基于SPIRIT语法解析的，而SPIRIT本身就不是线程安全的，我们如果需要它支持线程安全，就必须加入一个宏<code>#define BOOST_SPIRIT_THREADSAFE</code>，把它放在引用boost的头文件的最开始就行。理论上，在编译的时候加入宏也是可以的。另一个需要注意的是，一般网上找的教程中，property_tree都是不支持unicode编码的，如果想要支持unicode，需要一些额外的操作。这个从网上可以查到，我尝试了一下，最终还是放弃了。取而代之的一个方案就是把中文的各种路径啥的，用软链接替换成英文和数字。之后世界就美好了。</p>
+<h2 id="二boostproperty_treeptree-类型">二、boost::property_tree::ptree 类型</h2>
+<p>对于JSON或者XML，boost将他们解析之后都会生成一个ptree的数据结构。类似于下面的结构。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">struct</span> <span class="token class-name">ptree</span>
+<span class="token punctuation">&#123;</span>
+    data_type data<span class="token punctuation">;</span>                         <span class="token comment">// data associated with the node</span>
+    list<span class="token operator">&lt;</span> pair<span class="token operator">&lt;</span>key_type<span class="token punctuation">,</span> ptree<span class="token operator">></span> <span class="token operator">></span> children<span class="token punctuation">;</span> <span class="token comment">// ordered list of named children</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，这是一个很标准的树的结构。对于树中的每一个节点，都有自己的数值和子节点，每个子节点都有一个唯一的名字。<code>data_type</code>和<code>key_type</code>通常是<code>std::string</code>或<code>std::wstring</code>。如果希望处理unicode的字符串的话，就需要用到<code>std::wstring</code>了。下面的例子中，使用的全部都是<code>std::string</code>。</p>
+<h2 id="三json文件的解析">三、JSON文件的解析</h2>
+<p>首先，我们用一个小栗子，来介绍一下Boost是如何读取JSON数据的。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/ptree.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/json_parser.hpp></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    std<span class="token double-colon punctuation">::</span>string s <span class="token operator">=</span> <span class="token string">"&#123; \"a\": 100, \"b\": [1, 2, 3, 4] &#125;"</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>stringstream <span class="token function">ss</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree ptree<span class="token punctuation">;</span>
+    <span class="token comment">// 读取JSON数据</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">read_json</span><span class="token punctuation">(</span>ss<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"a"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token comment">// 写回JSON数据</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">write_json</span><span class="token punctuation">(</span><span class="token string">"./tmp.json"</span><span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里首先我们需要定义一个<code>boost::property_tree::ptree</code>类型的对象，之后通过<code>boost::property_tree::read_json</code>函数进行数据的读取，之后就可以使用各种ptree的接口进行数据的操作了。在<code>boost/property_tree/json_parser.hpp</code>文件中我们可以看到读写JSON的一些接口。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">namespace</span> boost <span class="token punctuation">&#123;</span>
+    <span class="token keyword">namespace</span> property_tree <span class="token punctuation">&#123;</span>
+        <span class="token keyword">namespace</span> json_parser <span class="token punctuation">&#123;</span>
+            <span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token operator">></span> 
+            <span class="token keyword">void</span> <span class="token function">read_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>basic_istream<span class="token operator">&lt;</span> <span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token double-colon punctuation">::</span>key_type<span class="token double-colon punctuation">::</span>value_type <span class="token operator">></span> <span class="token operator">&amp;</span><span class="token punctuation">,</span> 
+                           Ptree <span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token operator">></span> 
+            <span class="token keyword">void</span> <span class="token function">read_json</span><span class="token punctuation">(</span><span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string <span class="token operator">&amp;</span><span class="token punctuation">,</span> Ptree <span class="token operator">&amp;</span><span class="token punctuation">,</span> 
+                            <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>locale <span class="token operator">&amp;</span> <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">locale</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token operator">></span> 
+            <span class="token keyword">void</span> <span class="token function">write_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>basic_ostream<span class="token operator">&lt;</span> <span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token double-colon punctuation">::</span>key_type<span class="token double-colon punctuation">::</span>value_type <span class="token operator">></span> <span class="token operator">&amp;</span><span class="token punctuation">,</span> 
+                            <span class="token keyword">const</span> Ptree <span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token keyword">bool</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Ptree</span><span class="token operator">></span> 
+            <span class="token keyword">void</span> <span class="token function">write_json</span><span class="token punctuation">(</span><span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string <span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token keyword">const</span> Ptree <span class="token operator">&amp;</span><span class="token punctuation">,</span> 
+                            <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>locale <span class="token operator">&amp;</span> <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">locale</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">bool</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>它支持读写JSON，对于读取操作，它支持直接根据文件名称来加载JSON或者通过输入流来加载。输出也是相同。所以我们上面的Demo中，需要将字符串<code>s</code>转换成字符串流对象<code>ss</code>，之后才能进行加载。写文件支持写入到文件或者输出流中，最后一个bool值表示是否格式化输出json。</p>
+<h2 id="四json对象的读取">四、JSON对象的读取</h2>
+<p>我们知道JSON对象主要有两种格式：键值对和数组。JSON灵活就在于键值对的值还可以键值对或者数组，数组的每个元素也是。那么我们分别介绍键值对和数组的数据获取方式。</p>
+<h3 id="键值对的解析">1）键值对的解析</h3>
+<p>ptree支持一个操作叫做<code>get_child</code>，可以根据键的名字，来获取子节点。而且这个名字还可以是累加的。什么叫可以累加呢？我们看一下下面的代码：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/ptree.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/json_parser.hpp></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>string s <span class="token operator">=</span> <span class="token string">"&#123; \"a\": &#123; \"b\":1, \"c\":2 &#125;, \"d\":3 &#125;"</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>stringstream <span class="token function">ss</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree ptree<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">read_json</span><span class="token punctuation">(</span>ss<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"input text:"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">write_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>cout<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"-------------------------"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"parse result: "</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"a->b: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"a"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"b"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"a->b: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"a.b"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"a->c: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"a.c"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"d: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span><span class="token string">"d"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出的结果为：</p>
+<pre class="line-numbers language-none"><code class="language-none">input text:
+&#123;
+    &quot;a&quot;: &#123;
+        &quot;b&quot;: &quot;1&quot;,
+        &quot;c&quot;: &quot;2&quot;
+    &#125;,
+    &quot;d&quot;: &quot;3&quot;
+&#125;
+-------------------------
+parse result:
+a-&gt;b: 1
+a-&gt;b: 1
+a-&gt;c: 2
+d: 3<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>get_child</code>这个函数，可以根据节点的名字，获取到子节点的ptree对象。这个节点的名字可以使用<code>.</code>连接各个层级的名称。<code>get_value&lt;Type&gt;</code>方法，可以获取节点的值，并且转换成期望的数据类型。如果我们就是想获取节点的值。不期望有任何转换，可以使用<code>data</code>这个函数。 <code>get_child</code>要求输入的名称路径必须是存在的，否则会抛异常。如果我们不知道某个名称路径是否存在的话，可以使用<code>get_child_optional</code>这个函数，如果路径不存在，该函数会返回<code>boost::null</code>。<code>get_child_optional</code>返回的类似于指针的结构，如果需要获取值，可以用这样的写法：<code>pt.get_child_optional("some_key")-&gt;get_value&lt;int&gt;()</code>。 我们可以向现在这样通过各种树的操作，选择到我们的需要的节点，再通过<code>get_value&lt;Type&gt;</code>函数获取到数据值。但这样的操作有时候会有点繁琐。boost支持更简化的一些操作。下面是同样功能的一个例子：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/ptree.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/json_parser.hpp></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>string s <span class="token operator">=</span> <span class="token string">"&#123; \"a\": &#123; \"b\":1, \"c\":2 &#125;, \"d\":3 &#125;"</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>stringstream <span class="token function">ss</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree ptree<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">read_json</span><span class="token punctuation">(</span>ss<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"input text:"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">write_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>cout<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"-------------------------"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"parse result: "</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"a->b: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token string">"a.b"</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"a->c: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token string">"a.c"</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"d: "</span> <span class="token operator">&lt;&lt;</span> ptree<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token string">"d"</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>get</code>这个函数相当于先<code>get_child</code>得到要找的节点，之后再调用<code>get_value&lt;Type&gt;</code>这个函数。<code>get_value&lt;Type&gt;</code>这个函数可以获取节点的值，同时把它转换成<code>Type</code>格式。即<code>ptree.get&lt;int&gt;("a.b")</code>等价于<code>ptree.get_child("a.b").get_value&lt;int&gt;()</code>。 通过<code>get</code>函数，我们可以很方便的获取某个节点的数据，而且还能顺便完成类型的转换，真的不能更方便了！</p>
+<h3 id="数组的解析">2）数组的解析</h3>
+<p>为什么数组的解析要单独来说呢？因为，数组格式中，没有键，所以我们不能根据名字来获取节点了，所以读取的方式有了些许的不同。 Boost针对数组，给我们提供了遍历子节点的迭代器接口。可以十分方便的遍历某节点的所有的子节点（当然在键值对的解析中也可以使用）。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/ptree.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/json_parser.hpp></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    std<span class="token double-colon punctuation">::</span>string s <span class="token operator">=</span> <span class="token string">"[1, 2, 3, 4]"</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>stringstream <span class="token function">ss</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree ptree<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">read_json</span><span class="token punctuation">(</span>ss<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">write_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>cout<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// visit array data</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span>boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree<span class="token double-colon punctuation">::</span>iterator it <span class="token operator">=</span> ptree<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> it <span class="token operator">!=</span> ptree<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> it<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> it<span class="token operator">-></span>second<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    
+    <span class="token comment">// simpler in c++11</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> it<span class="token operator">:</span> ptree<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> it<span class="token punctuation">.</span>second<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>打印的结果：</p>
+<pre class="line-numbers language-none"><code class="language-none">&#123;
+    &quot;&quot;: &quot;1&quot;,
+    &quot;&quot;: &quot;2&quot;,
+    &quot;&quot;: &quot;3&quot;,
+    &quot;&quot;: &quot;4&quot;
+&#125;
+1 2 3 4
+1 2 3 4<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，Boost中将JSON数组也是按照键值对的方式去存储，只是键的内容是一个空的字符串。迭代器的<code>first</code>是键的结果，数组中就是空字符串。<code>second</code>就是我们的值。</p>
+<h3 id="其他的实用接口">3）其他的实用接口</h3>
+<ul>
+<li><code>bool empty()</code>: 返回该节点是否含有子节点。比如当一个节点已经是叶子节点的时候，可以用这个函数来判断。</li>
+<li><code>assoc_iterator find(const key_type &amp;key)</code>: 给定一个名字路径，返回指向该节点的迭代器或者<code>boost::property_tree::ptree::not_found</code>。</li>
+<li><code>size_type count(const key_type &amp;key)</code>: 返回指定名称路径的节点的子节点的数目。</li>
+</ul>
+<h2 id="五json对象的编辑">五、JSON对象的编辑</h2>
+<p>Boost支持很多的对JSON对象的写的操作，但是我在项目中没有用到，所以在这里暂时就没有动力整理下去了~~ 这里附上Boost ptree的文档，方便大家查阅：<a target="_blank" rel="noopener" href="https://www.boost.org/doc/libs/1_65_1/boost/property_tree/ptree.hpp">https://www.boost.org/doc/libs/1_65_1/boost/property_tree/ptree.hpp</a></p>
+<h2 id="六疑难杂症">六、疑难杂症</h2>
+<h3 id="怎么判断某个键是否存在">1.怎么判断某个键是否存在？</h3>
+<p>使用<code>get_child_optional</code>，再判断返回是否为<code>boost::null</code>，这个对象直接相当于<code>false</code>。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">auto</span> node <span class="token operator">=</span> ptree<span class="token punctuation">.</span><span class="token function">get_child_optional</span><span class="token punctuation">(</span><span class="token string">"somekey"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>node<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// node not exists</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="怎么方便的遍历数组">2.怎么方便的遍历数组？</h3>
+<p>这个功能，我还专门查过。其实懂了之前的迭代器的使用，就能方便的遍历了。下面是我用的一个代码。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">T</span><span class="token operator">></span>
+std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>T<span class="token operator">></span> <span class="token function">as_vector</span><span class="token punctuation">(</span>boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree <span class="token keyword">const</span> <span class="token operator">&amp;</span>pt<span class="token punctuation">,</span> boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree<span class="token double-colon punctuation">::</span>key_type <span class="token keyword">const</span><span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>T<span class="token operator">></span> r<span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> <span class="token operator">&amp;</span>item<span class="token operator">:</span> pt<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        r<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>second<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span>T<span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> r<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>使用的话就这样：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/ptree.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;boost/property_tree/json_parser.hpp></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">T</span><span class="token operator">></span>
+std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>T<span class="token operator">></span> <span class="token function">as_vector</span><span class="token punctuation">(</span>boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree <span class="token keyword">const</span> <span class="token operator">&amp;</span>pt<span class="token punctuation">,</span> boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree<span class="token double-colon punctuation">::</span>key_type <span class="token keyword">const</span><span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>T<span class="token operator">></span> r<span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> <span class="token operator">&amp;</span>item<span class="token operator">:</span> pt<span class="token punctuation">.</span><span class="token function">get_child</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        r<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>second<span class="token punctuation">.</span><span class="token generic-function"><span class="token function">get_value</span><span class="token generic class-name"><span class="token operator">&lt;</span>T<span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> r<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    std<span class="token double-colon punctuation">::</span>string s <span class="token operator">=</span> <span class="token string">"&#123;\"arr\": [1, 2, 3, 4]&#125;"</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>stringstream <span class="token function">ss</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span>ptree ptree<span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">read_json</span><span class="token punctuation">(</span>ss<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    boost<span class="token double-colon punctuation">::</span>property_tree<span class="token double-colon punctuation">::</span><span class="token function">write_json</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>cout<span class="token punctuation">,</span> ptree<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">auto</span> result <span class="token operator">=</span> <span class="token generic-function"><span class="token function">as_vector</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>ptree<span class="token punctuation">,</span> <span class="token string">"arr"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> <span class="token operator">&amp;&amp;</span>d<span class="token operator">:</span> result<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> d <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>不过这个解决方案有个问题，就是如果根节点就是数组的话，似乎就不能很好的work了。</p>
+<h3 id="怎么解析中文">3.怎么解析中文</h3>
+<p>/(ㄒoㄒ)/~~</p>
+<p><strong>转载请注明出处，谢谢！</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/06/22/the-usage-of-cpp-boost-json/" target="_blank" title="C++ Boost JSON解析库的使用">
+        https://www.miaoerduo.com/2018/06/22/the-usage-of-cpp-boost-json/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/08/02/fix-rebuild-tensor-v2-error-in-pytorch/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      _rebuild_tensor_v2？pytorch版本间模型兼容性脱坑实践
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/04/30/cpp-concurrent/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">C++ 并发队列的原理简介与开源库concurrentqueue安利</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

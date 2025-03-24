@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    GPU硬件结构 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-gpu-hardware" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  GPU硬件结构
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/02/05/gpu-hardware/" class="article-date">
+  <time datetime="2016-02-05T14:26:57.000Z" itemprop="datePublished">2016-02-05</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/CUDA/">CUDA</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 4 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：没想到研究生的生活这么繁忙，居然还有考试。小喵都快累成狗了。终于稍微闲下来一点了，开始继续写博客。这次的题目，其实是差不多一个月之前就想好的，但是一直碰到许多的事情，就耽搁了。</p>
+</blockquote>
+<p>这片文章主要介绍一下GPU的硬件结构。</p>
+<span id="more"></span>
+<p>首先，给大家看一张示意图（图片资源来自网上）。</p>
+<p><img src="GPU_hardware.jpg" alt="GPU（G80/GT200）卡的组成模块图" /></p>
+<center>
+图1 GPU（G80/GT200）卡的组成模块图
+</center>
+<p><img src="GPU_hardware.jpg" alt="GPU硬件结构示意图" /></p>
+<center>
+图2 GPU结构示意图
+</center>
+<p>这里，我们主要了解需要有以下几个认识：</p>
+<h3 id="一个主机可以有多个gpu">1，一个主机可以有多个GPU</h3>
+<p>像我们一般的PC机，就大多数有集显和独显。一般的运算服务器，也是可以一个机器上有多显卡。不同的主板上的有不同数目的显卡的插槽，需要强大的计算性能就可以考虑多卡的结构。当然电源和散热可能就会成为新的问题。</p>
+<h3 id="smstreaming-multiprocessors-and-spstream-processor">2，SM(Streaming Multiprocessors) and SP(Stream Processor)</h3>
+<p>GPU是一种<strong>SPMD</strong>（single program, multiple data）的工作方式是<strong>SIMD</strong>（Single Instruction Multiple Data）的一个升华。在同一时间，多个处理器运行同一套程序，但是处理的数据可以不同。这样带来的效果就是，如果简单的重复的任务特别多的话（比如向量的加法），GPU可以在同一时间处理多条数据。而且每个处理器需要处理的程序是相同的，因此只需要一次指令的取操作，所有处理器可以共同执行，效率上大大提高了。 流处理器簇（SM）的概念与CPU的核心类似，GPU的程序的执行单位就是SM，GPU的SM的数目通常有15-16个，一个SM中包含了多个SP，通常是32个，SP是实际的执行单元。对于一堆任务，GPU会按照以32个为一个单位分配到每个SM中执行。 举个例子，对于向量的加法，假设有两个向量长度分别为1024，每个SP都执行一个加法，那么一共会有1024/32=32批任务，如果每个GPU有16个SM，则每个SM被调用了32/16=2次。<strong>不考虑内存读写，指令优化，或其他的延时，只考虑计算时间</strong>。那么可以理解该次计算只需要2个计算的周期（切记，这里有取指令，取数据，运算和写数据的各种时间）。而对于一个四核的CPU机器而言，需要1024/4=256次计算周期。100倍的差距。</p>
+<h3 id="内存">3，内存</h3>
+<p>GPU的内存通常称为显存，是GPU上高速读写的存储介质，功能上和PC的内存类似。但GPU上的内存分为多种，具体有：寄存器内存，共享内存，全局内存，纹理内存，常量内存。看到这么多种内存，有没有和小喵一样目瞪口呆？</p>
+<p>下面表格里是内存的带宽和延时</p>
+<center>
+Access Time by Memory Type
+</center>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 29%" />
+<col style="width: 18%" />
+<col style="width: 19%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Storage Type</th>
+<th>Registers Shared Memory</th>
+<th>Texture Memory</th>
+<th>Constant Memory</th>
+<th>Global Memory</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Bandwidth</td>
+<td>~8 TB/s ~1.5 TB/s</td>
+<td>~200 MB/s</td>
+<td>~200 MB/s</td>
+<td>~200 MB/s</td>
+</tr>
+<tr class="even">
+<td>Latency</td>
+<td>1 cycle</td>
+<td>1 to 32 cycles</td>
+<td>~400 to 600</td>
+<td>~400 to 600</td>
+</tr>
+</tbody>
+</table>
+<h4 id="寄存器内存">寄存器内存</h4>
+<p>读写最高效的内存，在CPU上，可用的寄存器内存微乎其微。</p>
+<p>于是小喵专门Google了一下：</p>
+<blockquote>
+<p>Registers are memories located within the Central Processing Unit (CPU). They are few in number (there are rarely more than 64 registers) and also small in size, typically a register is less than <strong>64 bits</strong> in size.[1]</p>
+</blockquote>
+<p>但是GPU上，每个SM就提供了至少8192个寄存器！也就是说，如果一个SM上只运行32个线程，平均每个线程可以得到8192/32=256个寄存器（虽然通常不会只运行这么少的线程）。</p>
+<p>GPU为了能够高效的工作，在粗细两个粒度对内存和任务进行管理。合理的使用各种内存可以使自己的程序更加高效。</p>
+<h4 id="共享内存">共享内存</h4>
+<p>顾名思义，是指数据能够共享的一块内存。该内存主要在每个SM内部，同一个SM中的所有的SP都可以访问该块内存。而且读写速度仅次于寄存器内存，因此在线程间进行通信用共享内存最适合不过了。</p>
+<h4 id="全局内存">全局内存</h4>
+<p>在整个GPU上，任何部件都能访问的内存，我们平时说的显存1G等等的就是说的全局内存。全局内存是GPU上最大的内存，也是我们最常打交道的内存。相比于寄存器内存和共享内存，全局内存的读写速度慢了几个数量级。所以我们在设计GPU的程序的时候，要尽量充分利用寄存器内存和共享内存，才能设计出高效的程序。</p>
+<h4 id="常量内存">常量内存</h4>
+<p>存放常量，大小通常是32K（本质上和L2缓存共享了内存，可以通过API修改模式）。</p>
+<h4 id="纹理内存">纹理内存</h4>
+<p>这个现在的作用比较少了，但功能很特殊，在后面会详细介绍。 以上就是GPU的硬件结构的简单介绍。感兴趣的同学可以访问NVIDIA的官网，获取更多的信息。</p>
+<p>[1]<a target="_blank" rel="noopener" href="http://www.doc.ic.ac.uk/~eedwards/compsys/memory/">http://www.doc.ic.ac.uk/~eedwards/compsys/memory/</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/02/05/gpu-hardware/" target="_blank" title="GPU硬件结构">
+        https://www.miaoerduo.com/2016/02/05/gpu-hardware/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/02/07/hello-cuda/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      Hello CUDA - CUDA程序简单入门
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/01/26/tutorial-to-build-caffe/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">从0到1，手把手教你配置Caffe环境</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

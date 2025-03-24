@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    简易漫画网站搭建-漫画喵Server版 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cartoon-cat-server" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  简易漫画网站搭建-漫画喵Server版
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/03/14/cartoon-cat-server/" class="article-date">
+  <time datetime="2017-03-14T12:44:08.000Z" itemprop="datePublished">2017-03-14</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a> / <a class="article-category-link" href="/categories/Nodejs/">Nodejs</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 13 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：寒假的时候写了一个漫画爬虫，爬取了好几个漫画，不过一直没有找到合适的漫画阅读的工具。因此最近就试着自己写一个漫画的网站，放在公网上或者局域网里，这样就能随时随地用手机、Pad看漫画了。</p>
+</blockquote>
+<p>先放上项目的地址：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat-server">https://github.com/miaoerduo/cartoon-cat-server</a>，欢迎大家随时star、fork和指教。</p>
+<span id="more"></span>
+<p>关于漫画爬虫的内容，请参看之前的博客。</p>
+<h2 id="写在前面">写在前面</h2>
+<p>这里，我们先试着思考几个问题：</p>
+<h3 id="为什么要做一个漫画网站而不是app呢">1、为什么要做一个漫画网站，而不是APP呢</h3>
+<p>小喵最开始其实是打算做一个QT的漫画阅读软件，这样能够在各种操作系统上用。开发了一小段时间之后，觉得用手机或者Pad看漫画的情况会更多。难道要给手机、平板甚至是PC都编写一套软件吗？这个小喵确实能力上达不到。其次是，如果是本地的APP的话，图片可能还是需要存到设备上，这样同样很麻烦。于是，漫画网站就成为最适合的选择，只要在联网的情况下（或者在同一个局域网中），只要有浏览器，就能够看漫画。这才是真正的跨平台，也是小喵要编写这个工具的原因。</p>
+<h3 id="那么一个简单的漫画网站可以怎么去实现">2、那么，一个简单的漫画网站可以怎么去实现</h3>
+<p>讲道理的话，其实单纯的静态的网页可能就足够了，给每个漫画图片编写一个页面，包含图片、下一页、上一页等部分就可以。页面的生成可以是一个脚本程序。不过这样的话，也有点麻烦，而且最终的页面的数目可能会很多。小喵不喜欢这种方式。这里，小喵采用的方式是前、后端分离的方式。</p>
+<p>整个网站由三个部分组成：</p>
+<ul>
+<li><strong>数据</strong>：也就是漫画本身。</li>
+<li><strong>后台</strong>：后台程序的功能是根据请求返回用户漫画的列表、章节和图片URL等信息。</li>
+<li><strong>前端</strong>：调用后台的程序，得到漫画的信息并友好的进行显示。</li>
+</ul>
+<h3 id="最后我们使用什么技术来实现呢">3、最后，我们使用什么技术来实现呢</h3>
+<p>前端的话，使用标准的 <code>Html</code>，<code>Css</code> 和 <code>Js</code> 就可以。后台是个 <code>API Server</code>，<code>Python + Flask</code> 或者 <code>Nodejs + Express</code> 都是不错的选择（使用起来很简单。。。），小喵这里就选用 <code>Nodejs + Express</code> 的方式编写后台（一直写Js就可以了 :P ）。另外，大型的漫画网站，漫画的信息应该会存到数据库中，这样会方便查找和管理。这里考虑到漫画数目比较少，就去掉了数据库这一步骤，直接通过文件操作来得到漫画信息，工作量也大大减少了。</p>
+<p>先看一下最终的效果图（虽然界面很简单）：</p>
+<p><img src="cartooncat-server.png" alt="cartooncat-server" /></p>
+<center>
+图1 网站的最终效果图
+</center>
+<p>现在，喵粉们是不是已经迫不及待的想要动手写代码了呢？</p>
+<h2 id="一目录结构">一、目录结构</h2>
+<p>下面是小喵的目录结构：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">$ tree blog -N -L 2
+blog
+├── README.md
+├── main.js
+├── package.json
+└── public
+    ├── api.html
+    ├── cartoon.html
+    ├── chapter.html
+    ├── css
+    ├── img
+    ├── index.html
+    ├── js
+    └── store<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>main.js</code> 这里就是后台API的程序。因为功能很简单，所以就放在一个文件中。<code>package.json</code> 是nodejs的包管理器，在这里可以定义依赖。我们这里只依赖Express。<code>public</code> 这个文件夹用来存放静态的资源，包括Html、Css、js、image以及漫画资源(store)。</p>
+<h2 id="二后台程序">二、后台程序</h2>
+<h3 id="依赖安装">1. 依赖安装</h3>
+<p>原生的 <code>Nodejs</code> 就已经十分适合写API程序了，<code>Express</code> 只是让它更加的方便了而已（至少对于这个项目来说）。</p>
+<p><code>Nodejs</code> 的安装十分简单，在官网上 <a target="_blank" rel="noopener" href="https://nodejs.org">https://nodejs.org</a> 有下载链接，服务器上使用 <code>apt-get</code> 等工具也很容易安装。</p>
+<p><code>Express</code> 的话，可以使用 <code>npm install express —save</code> 来安装。这里小喵使用的 <code>package</code> 的方式来安装。在项目根目录新建 <code>package.json</code> 文件，写入配置信息：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"cartoon-cat-server"</span><span class="token punctuation">,</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token string">"0.0.1"</span><span class="token punctuation">,</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+    <span class="token property">"express"</span><span class="token operator">:</span> <span class="token string">"visionmedia/express"</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>之后使用 <code>npm install</code> 命令就可以完成安装。安装完成之后会发现根目录多了一个 <code>node_modules</code> 文件夹，里面就是我们的依赖库了。喵粉们如果下载了我的这个项目的话，第一步也是要进入项目目录然后输入 <code>npm install</code> 。</p>
+<h3 id="漫画的文件结构">2. 漫画的文件结构</h3>
+<p>我们的漫画资源都是通过 <code>漫画喵</code> 这个爬虫工具下载下来的，因此漫画都是每个章节都是一个文件夹，每个章节的漫画图片都放在对应的文件夹中，而且按照页码来命名。</p>
+<p>这样通过遍历文件夹似乎就能获取漫画的信息了！</p>
+<p>漫画列表和章节中的图片列表都可以通过上述的方式来解决，但是章节的列表却不行。因为漫画的章节有时候并没有明确的顺序（比如突然出现一个番外篇啥的），这样遍历文件夹默认的顺序（按名称）就可能是错误的。 我们有两个解决办法：</p>
+<ol type="1">
+<li>按照文件夹的创建时间来显示文件名。这样有点不灵活。</li>
+<li>在每个漫画的根目录建一个文本文件，用来存放章节的信息。</li>
+</ol>
+<p>小喵选择第二种策略，创建这个list的方法十分简单粗暴，在漫画目录下面使用:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">ls</span> <span class="token parameter variable">-t</span> <span class="token parameter variable">-r</span> <span class="token operator">></span> index<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p><code>ls</code> 是linux上面的显示目录的工具，<code>-t</code> 表示按时间排序（最上面是最新的），<code>-r</code> 表示倒序，<code>&gt;</code> 是重定向，最终输出到 <code>index</code> 这个文件。然后编辑这个文件，删掉 <code>index</code> 这一行(系统貌似是先生成 <code>index</code> 这个文件，然后再执行 <code>ls</code>，最后把结果输入到文件中，因此文件里面多了一个 <code>index</code> 的文件名)，再做一些必要的调整。</p>
+<p>Windows上可以使用:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">dir</span> /OD /B <span class="token operator">></span> index<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p><code>dir</code> 是windows的查看目录的命令，<code>/OD</code> 表示按照时间排序，<code>/B</code> 表示只显示文件名，<code>&gt;</code> 重定向到 <code>index</code>。<code>windows</code> 上的这个列表文件中也会出现 <code>index</code> 这个文件名(看来各种操作系统都一样)。另外需要注意的是 <code>windows</code> 的换行和 <code>linux</code> 或 <code>mac</code> 不一样。</p>
+<p>这样，我们就可以通过读这个 <code>index</code> 文件来获取章节的信息了。</p>
+<p>最终的漫画的结构（为了显示的方便，删除了很多图片和章节）如下：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">$ tree store -N -L 3
+store
+├── 犬夜叉
+│   ├── index
+│   ├── 第1章
+│   │   ├── 00001.jpg
+│   │   └── 00002.jpg
+│   └── 第2章
+│       ├── 00001.jpg
+│       └── 00002.jpg
+└── 极黑的布伦希尔特
+    ├── index
+    ├── 第1章
+    │   ├── 00001.jpg
+    │   └── 00002.jpg
+    └── 第2章
+        ├── 00001.jpg
+        └── 00002.jpg<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="api-编写">3. API 编写</h3>
+<p><code>Express</code> 十分的容易使用。这里小喵给一个官网的Hello World的教程让大家看一下：</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token keyword">var</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span>
+<span class="token keyword">var</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+app<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token string">'Hello World!'</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+
+app<span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token number">3000</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'Example app listening on port 3000!'</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>将上述代码保存成 <code>main.js</code>，使用 <code>node main.js</code> 就可以启动这个程序，然后用浏览器访问 <code>http://localhost:3000</code> ，就能看到一个显示着 <code>hello world</code> 的页面。</p>
+<p><code>require</code> 语句用来引入依赖，<code>app</code> 是express的封装的对象。</p>
+<p>通过 <code>app.get</code> 方法就可以给指定的url（官方说法叫route）绑定相应的处理方法（GET方法的请求）。处理函数有2个参数 <code>req</code> 表示request，也就是用户的请求，通过这个对象我们可以获取用户的输入的参数，<code>res</code> 表示response，是一个向用户返回数据的对象。</p>
+<p><code>listen</code> 用来监听一个端口启动服务。</p>
+<p>这里小喵先给出自己定义的一些辅助的函数，定义错误信息和参数校验，后面会使用到：</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token comment">// 引入依赖</span>
+<span class="token keyword">var</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">"fs"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 即file system，用来进行文件操作</span>
+<span class="token keyword">var</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * 错误提示
+ */</span>
+<span class="token keyword">var</span> ErrorHelper <span class="token operator">=</span> <span class="token punctuation">&#123;</span>
+    <span class="token string-property property">'internal_error'</span><span class="token operator">:</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>
+            <span class="token string-property property">'msg'</span><span class="token operator">:</span> <span class="token string">'something wrong with server'</span><span class="token punctuation">,</span>
+            <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">1</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token string-property property">'missing_param'</span><span class="token operator">:</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">param</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>
+            <span class="token string-property property">'msg'</span><span class="token operator">:</span> <span class="token string">'missing param: '</span> <span class="token operator">+</span> param<span class="token punctuation">,</span>
+            <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">2</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token string-property property">'error_param'</span><span class="token operator">:</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">param<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>
+            <span class="token string-property property">'msg'</span><span class="token operator">:</span> <span class="token string">'the param '</span> <span class="token operator">+</span> param <span class="token operator">+</span> <span class="token string">'('</span> <span class="token operator">+</span> data <span class="token operator">+</span> <span class="token string">') is illegal'</span><span class="token punctuation">,</span>
+            <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">3</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token string-property property">'not_found'</span><span class="token operator">:</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">param</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>
+            <span class="token string-property property">'msg'</span><span class="token operator">:</span> <span class="token string">'cannot find '</span> <span class="token operator">+</span> param<span class="token punctuation">,</span>
+            <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">4</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * 检查参数格式，只能输入字母，数字和汉字
+ */</span>
+<span class="token keyword">function</span> <span class="token function">checkParam</span><span class="token punctuation">(</span><span class="token parameter">param</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">^[\u4e00-\u9fa5_a-zA-Z0-9]+$</span><span class="token regex-delimiter">/</span></span><span class="token punctuation">.</span><span class="token function">test</span><span class="token punctuation">(</span>param<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h4 id="get_cartoon_list">1) get_cartoon_list</h4>
+<p>这个接口用来获取所有的漫画列表。</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token comment">/**
+ * 获取漫画列表
+ */</span>
+app<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">'/get_cartoon_list'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    fs<span class="token punctuation">.</span><span class="token function">readdir</span><span class="token punctuation">(</span>__dirname <span class="token operator">+</span> <span class="token string">'/public/store'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">err <span class="token punctuation">,</span> files</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">internal_error</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string-property property">'cartoon'</span><span class="token operator">:</span> files<span class="token punctuation">,</span> <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这个函数十分的简单，通过 <code>fs</code> 读取store中的文件名，然后用json的格式返回回去。这里小喵用的jsonp，为了解决跨域请求的问题，不过我们的页面和服务是一台机器的，所以这部分并不需要。</p>
+<h4 id="get_chapter_list">2) get_chapter_list</h4>
+<p>这个接口用来获取漫画的章节的信息，所以需要输入参数，这里定为cartoon。</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token comment">/**
+ * 获取章节信息
+ */</span>
+app<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">'/get_chapter_list'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">var</span> cartoon <span class="token operator">=</span> req<span class="token punctuation">.</span>query<span class="token punctuation">.</span>cartoon<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>cartoon<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">missing_param</span><span class="token punctuation">(</span><span class="token string">'cartoon'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">checkParam</span><span class="token punctuation">(</span>cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">error_param</span><span class="token punctuation">(</span><span class="token string">'cartoon'</span><span class="token punctuation">,</span> cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">var</span> cartoon_dir <span class="token operator">=</span> __dirname <span class="token operator">+</span> <span class="token string">'/public/store/'</span> <span class="token operator">+</span> cartoon<span class="token punctuation">;</span>
+    fs<span class="token punctuation">.</span><span class="token function">exists</span><span class="token punctuation">(</span>cartoon_dir <span class="token operator">+</span> <span class="token string">'/index'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">exists</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>exists<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">not_found</span><span class="token punctuation">(</span>cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        fs<span class="token punctuation">.</span><span class="token function">readFile</span><span class="token punctuation">(</span>cartoon_dir <span class="token operator">+</span> <span class="token string">'/index'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">err<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">internal_error</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+
+            <span class="token keyword">var</span> chapter_list <span class="token operator">=</span> data<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">split</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">d</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">return</span> d<span class="token punctuation">.</span>length <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string-property property">'chapter'</span><span class="token operator">:</span> chapter_list<span class="token punctuation">,</span> <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>首先判断输入的参数，之后判断对应漫画的文件夹中是否有index这个文件，如果有的话就读取然后返回给用户。</p>
+<h4 id="get_img_list">3) get_img_list</h4>
+<p>这个接口用来返回漫画的具体章节的图片的URL，用户需要输入漫画名(cartoon)和章节名(chapter)。注意要修改自己的HOST的地址。</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token keyword">var</span> <span class="token constant">HOST</span> <span class="token operator">=</span> <span class="token string">"localhost"</span><span class="token punctuation">;</span> <span class="token comment">// 如果不是在本机上使用，请改成实际的ip地址</span>
+                        <span class="token comment">// 后面的图片的URL会使用这个变量来构造</span>
+<span class="token keyword">var</span> <span class="token constant">PORT</span> <span class="token operator">=</span> <span class="token number">3000</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">'/get_img_list'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">var</span> cartoon <span class="token operator">=</span> req<span class="token punctuation">.</span>query<span class="token punctuation">.</span>cartoon<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>cartoon<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">missing_param</span><span class="token punctuation">(</span><span class="token string">'cartoon'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">checkParam</span><span class="token punctuation">(</span>cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">error_param</span><span class="token punctuation">(</span><span class="token string">'cartoon'</span><span class="token punctuation">,</span> cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">var</span> chapter <span class="token operator">=</span> req<span class="token punctuation">.</span>query<span class="token punctuation">.</span>chapter<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>chapter<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">missing_param</span><span class="token punctuation">(</span><span class="token string">'chapter'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">checkParam</span><span class="token punctuation">(</span>chapter<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">error_param</span><span class="token punctuation">(</span><span class="token string">'chapter'</span><span class="token punctuation">,</span> chapter<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">var</span> cartoon_dir <span class="token operator">=</span> __dirname <span class="token operator">+</span> <span class="token string">'/public/store/'</span> <span class="token operator">+</span> cartoon<span class="token punctuation">;</span>
+    fs<span class="token punctuation">.</span><span class="token function">exists</span><span class="token punctuation">(</span>cartoon_dir <span class="token operator">+</span> <span class="token string">'/index'</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">exists</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>exists<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">not_found</span><span class="token punctuation">(</span>cartoon<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        fs<span class="token punctuation">.</span><span class="token function">readdir</span><span class="token punctuation">(</span>cartoon_dir <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> chapter<span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">err<span class="token punctuation">,</span> images</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span>ErrorHelper<span class="token punctuation">.</span><span class="token function">error_param</span><span class="token punctuation">(</span><span class="token string">'chapter'</span><span class="token punctuation">,</span> chapter<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token comment">// 按名字排序</span>
+            images<span class="token punctuation">.</span><span class="token function">sort</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">lhs<span class="token punctuation">,</span> rhs</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">return</span> <span class="token function">parseInt</span><span class="token punctuation">(</span>lhs<span class="token punctuation">.</span><span class="token function">split</span><span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">parseInt</span><span class="token punctuation">(</span>rhs<span class="token punctuation">.</span><span class="token function">split</span><span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            <span class="token keyword">var</span> urls <span class="token operator">=</span> images<span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">image</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">return</span> <span class="token string">'http://'</span> <span class="token operator">+</span> <span class="token constant">HOST</span> <span class="token operator">+</span> <span class="token string">':'</span> <span class="token operator">+</span> <span class="token constant">PORT</span> <span class="token operator">+</span> <span class="token string">'/store/'</span> <span class="token operator">+</span> cartoon <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> chapter <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> image<span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            res<span class="token punctuation">.</span><span class="token function">jsonp</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string-property property">'img'</span><span class="token operator">:</span> urls<span class="token punctuation">,</span> <span class="token string-property property">'code'</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这是目前最复杂的函数了，先检查参数，然后判断漫画是否存在，再判断章节是否存在，列出章节文件夹里面的图片名，并按数字的顺序排序。最终构造成URL，返回给用户。</p>
+<h4 id="静态资源">4) 静态资源</h4>
+<p>public文件夹中的资源都是静态资源，用户可以通过URL访问。在这里Nodejs也是支持的：</p>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js">app<span class="token punctuation">.</span><span class="token function">use</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> express<span class="token punctuation">.</span><span class="token function">static</span><span class="token punctuation">(</span><span class="token string">'public'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>不过Nodejs本身并不适这种静态资源的工作，所以如果是生产环境中，建议大家还是使用Nginx等工具，让Nodejs安心的处理业务逻辑吧。</p>
+<h4 id="启动服务">5) 启动服务</h4>
+<pre class="line-numbers language-js" data-language="js"><code class="language-js"><span class="token keyword">var</span> server <span class="token operator">=</span> app<span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token constant">PORT</span><span class="token punctuation">,</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"应用实例，访问地址为 http://%s:%s"</span><span class="token punctuation">,</span> <span class="token constant">HOST</span><span class="token punctuation">,</span> <span class="token constant">PORT</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<h2 id="三前端">三、前端</h2>
+<h3 id="ajax">1. Ajax</h3>
+<p>前端使用Ajax就可以很容易完成，相信即使是前端小白也能实现，而且还比小喵做的好看（无奈脸）。小喵使用了<a target="_blank" rel="noopener" href="http://jquery.com">JQuery</a> 来处理Ajax的内容，界面库使用了 <a target="_blank" rel="noopener" href="https://metroui.org.ua">Metro</a>，然而即使这样也没有提高网站的颜值。</p>
+<p>源码可以从github上下载到，所以小喵就不重点介绍前端了。</p>
+<h3 id="懒加载">2. 懒加载</h3>
+<p>有一点需要注意，在漫画图片的页面中，通常会出现大量的图片，如果只是简单的使用 <code>img</code> 标签的话，可能会导致浏览器同时加载所有的图片，如果网速不好的话，我们的体验也会相当的差（局域网请无视）。所以我们使用一种 <strong>懒加载</strong> 的策略，只有可见的图片才会加载。然后小喵就从github上找相关的插件，然后发现了一个使用比较方便的代码，还有详细的原理介绍，感兴趣的话大家可以看一下。</p>
+<p>图片懒加载插件实战：<a target="_blank" rel="noopener" href="http://www.cnblogs.com/beidan/p/5648240.html">http://www.cnblogs.com/beidan/p/5648240.html</a></p>
+<p>插件的github：<a target="_blank" rel="noopener" href="https://github.com/beidan/lazeLoadImg">https://github.com/beidan/lazeLoadImg</a></p>
+<h2 id="四写在后面">四、写在后面</h2>
+<p>至此，我们就搭建好了一个可以随时玩耍的个人漫画网站了。喵粉们感兴趣可以star、fork这个项目，如果喜欢开发的话，能帮忙一起提高网站的颜值就更好了 O(∩_∩)O哈！</p>
+<p>项目地址：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat-server">https://github.com/miaoerduo/cartoon-cat-server</a> ，欢迎大家随时star、fork和指教。</p>
+<p>PS. 请搭配漫画喵爬虫版一起食用：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat">https://github.com/miaoerduo/cartoon-cat</a></p>
+<p>使用的话，按如下的流程：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">git</span> clone git@github.com:miaoerduo/cartoon-cat-server.git
+<span class="token builtin class-name">cd</span> cartoon-cat-server
+<span class="token function">npm</span> <span class="token function">install</span>
+<span class="token function">node</span> main.js<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>另外，为了避免程序突然崩掉，建议大家使用 <code>forever</code> 这个工具。上面的流程的最后一句 <code>node main.js</code> 就可以改成下面的。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">npm</span> <span class="token function">install</span> forever <span class="token parameter variable">-g</span>
+forever start main.js<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>这样，我们的程序就更健壮了。 最后，小喵再说一句，这个项目有很多的缺陷，比如直接访问文件，Nodejs直接管理静态文件，需要提供奇怪的参数，没有验证用户等等。因此不适合真的生成中的使用。不过，自娱自乐应该是足够了。小喵自己是放在宿舍的树莓派里，睡前躺床上看会儿漫画。</p>
+<p>希望小喵能和大家一起学习和进步~~</p>
+<p><strong>转载请注明出处~</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2017/03/14/cartoon-cat-server/" target="_blank" title="简易漫画网站搭建-漫画喵Server版">
+        https://www.miaoerduo.com/2017/03/14/cartoon-cat-server/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+<ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Interest/" rel="tag">Interest</a></li></ul>
+
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2017/07/02/shared-online-editor/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      小喵的在线共享编辑器
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2017/02/19/cartoon-cat-client/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">爬虫-漫画喵的100行逆袭</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

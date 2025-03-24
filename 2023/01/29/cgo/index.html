@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    CGO函数调用与数据转换 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cgo" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  CGO函数调用与数据转换
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2023/01/29/cgo/" class="article-date">
+  <time datetime="2023-01-29T22:03:24.000Z" itemprop="datePublished">2023-01-29</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/go/">go</a>
+</div>
+
+      <div class="wordcount wordcount-num">4.4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>CGO是Go程序调用C库的一套机制，可以使Go语言能够站在C/C++的肩膀上。比如Go调用Tensorflow，也就是使用了CGO来实现的。很多语言都支持对C库的调用，一般称为FFI（Foreign Function Interface）。这里需要注意一下，一般的Python、Lua等语言调用C函数的时候，是通过函数签名找到函数的地址，然后直接调用对应的函数。而CGO会先生成中间文件，然后再一起编译调用。这里不具体展开了，总之只需要知道CGO比一般的FFI多了一层中间的步骤。在程序出错的时候，能理解调用栈的关系即可。参考 <a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1650525">CGO 和 CGO 性能之谜</a>。</p>
+<h2 id="函数调用">函数调用</h2>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+CGO的标准写法：
+1. 先用注释的方式写入，单行注释和多行注释都支持
+  1.1 编译器环境变量
+	1.1.1 CFLAGS: C编译选项
+	1.1.2 CXXFLAGS: C++编译选项
+	1.1.3 CPPFLAGS: C和C++共有的编译选项
+	1.1.4 FFLAGS: Fortran编译选项
+	1.1.4 LDFLAGS: 链接选项（不区分C和C++）
+  1.2 C代码
+2. import "C"，相当于将所有的C函数放入虚拟的package C。之后通过`C.xxx`的方式来调用。需要紧跟注释之后。
+*/</span>
+
+<span class="token comment">/*
+#cgo LDFLAGS: -lm
+
+#include &lt;math.h>
+double my_sqrt(double x) &#123;
+	return sqrt(x);
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span> <span class="token comment">// CGO的标准写法，相当于将C函数放入包`C`中</span>
+<span class="token keyword">import</span> <span class="token string">"fmt"</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	a <span class="token operator">:=</span> <span class="token number">100</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"sqrt(%v) = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">my_sqrt</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">double</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 调用上面自定义的函数</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"sqrt(%v) = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">sqrt</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">double</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">// 调用系统库函数（上述的m）</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output:</span>
+<span class="token comment">//  sqrt(100) = 10</span>
+<span class="token comment">//  sqrt(100) = 10</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>通过上述的例子，我们可以看出，CGO可以调用C的库函数，也可以执行注释中的C代码的函数。一般注释中的C代码都是比较简短的。</p>
+<p>接下来要介绍C和Go之间的数据是如何传递的。</p>
+<span id="more"></span>
+<h2 id="数据类型">数据类型</h2>
+<p>我们可以将数据类型分为以下几类： 1. 数值：两种语言均有自己的定义关键字 1. 整型: 8/16/32/64位有符号和无符号整数 2. 浮点型：32/64位浮点数 2. 字符串：C中的字符串是以<code>\0</code>结尾的字符数组，而Go中使用<code>string</code> 3. 结构体：包含0到多个字段的自定义结构。在两种语言中均可以用<code>struct</code>关键字来定义，二者十分相似。 4. 指针：本质上其实是一个32或64位的整数。用来指向内存的数据或函数的地址。 5. 数组：连续存放相同类型数据的一种结构。在C中一般理解为一块连续内存，在Go中，有Array和Slice两种形式，后续会介绍到。</p>
+<p>接下来我们分别介绍不同的数据类型是如何在两种语言间传递和转换的。</p>
+<h3 id="基础数据类型">基础数据类型</h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;">C</th>
+<th style="text-align: left;">stdint</th>
+<th style="text-align: left;">GO</th>
+<th style="text-align: left;">C/stdint -&gt; GO</th>
+<th style="text-align: left;">Go -&gt; C</th>
+<th style="text-align: left;">Go -&gt; stdint</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">int8</td>
+<td style="text-align: left;">signed char</td>
+<td style="text-align: left;">int8_t</td>
+<td style="text-align: left;">int8</td>
+<td style="text-align: left;">int8</td>
+<td style="text-align: left;">C.schar</td>
+<td style="text-align: left;">C.int8_t</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">int16</td>
+<td style="text-align: left;">short</td>
+<td style="text-align: left;">int16_t</td>
+<td style="text-align: left;">int16</td>
+<td style="text-align: left;">int16</td>
+<td style="text-align: left;">C.short</td>
+<td style="text-align: left;">C.int16_t</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">int32</td>
+<td style="text-align: left;">int</td>
+<td style="text-align: left;">int32_t</td>
+<td style="text-align: left;">int32</td>
+<td style="text-align: left;">int32</td>
+<td style="text-align: left;">C.int</td>
+<td style="text-align: left;">C.int32_t</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">int64</td>
+<td style="text-align: left;">long long</td>
+<td style="text-align: left;">int64_t</td>
+<td style="text-align: left;">int64</td>
+<td style="text-align: left;">int64</td>
+<td style="text-align: left;">C.longlong</td>
+<td style="text-align: left;">C.int64_t</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">uint8</td>
+<td style="text-align: left;">unsigned char</td>
+<td style="text-align: left;">uint8_t</td>
+<td style="text-align: left;">uint8</td>
+<td style="text-align: left;">uint8</td>
+<td style="text-align: left;">C.uchar</td>
+<td style="text-align: left;">C.uint8_t</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">uint16</td>
+<td style="text-align: left;">unsigned short</td>
+<td style="text-align: left;">uint16_t</td>
+<td style="text-align: left;">uint16</td>
+<td style="text-align: left;">uint16</td>
+<td style="text-align: left;">C.ushort</td>
+<td style="text-align: left;">C.uint16_t</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">uint32</td>
+<td style="text-align: left;">unsigned int</td>
+<td style="text-align: left;">uint32_t</td>
+<td style="text-align: left;">uint32</td>
+<td style="text-align: left;">uint32</td>
+<td style="text-align: left;">C.uint</td>
+<td style="text-align: left;">C.uint32_t</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">uint64</td>
+<td style="text-align: left;">unsigned long long</td>
+<td style="text-align: left;">uint64_t</td>
+<td style="text-align: left;">uint64</td>
+<td style="text-align: left;">uint64</td>
+<td style="text-align: left;">C.ulonglong</td>
+<td style="text-align: left;">C.uint64_t</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">float32</td>
+<td style="text-align: left;">float</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">float32</td>
+<td style="text-align: left;">float32</td>
+<td style="text-align: left;">C.float</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">float64</td>
+<td style="text-align: left;">double</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">float64</td>
+<td style="text-align: left;">float64</td>
+<td style="text-align: left;">C.double</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">pointer</td>
+<td style="text-align: left;">DType *</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">unsafe.Pointer</td>
+<td style="text-align: left;">unsafe.Pointer</td>
+<td style="text-align: left;">* C.DType</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">char</td>
+<td style="text-align: left;">char</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">byte</td>
+<td style="text-align: left;">byte</td>
+<td style="text-align: left;">C.char</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">char *</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">C.GoString</td>
+<td style="text-align: left;">C.CString</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<h4 id="数值">数值</h4>
+<p>按照字节的数目，整型一般占用1/2/4/8字节，另外包含有无符号，整型就有8种类型。对应的就是int8/int16/int32/int64四种有符号整型和uint8/uint16/uint32/uint64无符号整型。</p>
+<p>在C中，通过<code>char/short/int/long long</code>等表示不同长度的有符号整型。如果<code>include &lt;stdint.h&gt;</code>，则可以用<code>int8/int16/int32/int64</code>等来表示。</p>
+<p>浮点数则按照4/8字节，定义为float32/float64。</p>
+<p>以下是一个例子，比较简单，就不具体介绍了。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+#include &lt;stdint.h>
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token string">"fmt"</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	data <span class="token operator">:=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">float64</span><span class="token punctuation">&#123;</span><span class="token operator">-</span><span class="token number">1000</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">50</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">5</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">50</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">,</span> <span class="token number">10000</span><span class="token punctuation">,</span> <span class="token number">3.14</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">3.14</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1.0</span><span class="token punctuation">,</span> <span class="token number">0.5</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">0.5</span><span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> d <span class="token operator">:=</span> <span class="token keyword">range</span> data <span class="token punctuation">&#123;</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"test number %v\n"</span><span class="token punctuation">,</span> d<span class="token punctuation">)</span>
+
+		<span class="token comment">// go</span>
+		int8_v <span class="token operator">:=</span> <span class="token function">int8</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		int16_v <span class="token operator">:=</span> <span class="token function">int16</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		int32_v <span class="token operator">:=</span> <span class="token function">int32</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		int64_v <span class="token operator">:=</span> <span class="token function">int64</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		uint8_v <span class="token operator">:=</span> <span class="token function">uint8</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		uint16_v <span class="token operator">:=</span> <span class="token function">uint16</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		uint32_v <span class="token operator">:=</span> <span class="token function">uint32</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		uint64_v <span class="token operator">:=</span> <span class="token function">uint64</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		float32_v <span class="token operator">:=</span> <span class="token function">float32</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+		float64_v <span class="token operator">:=</span> <span class="token function">float64</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span>
+
+		<span class="token comment">// go -> c</span>
+		c_int8_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">schar</span><span class="token punctuation">(</span>int8_v<span class="token punctuation">)</span>
+		c_int16_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">short</span><span class="token punctuation">(</span>int16_v<span class="token punctuation">)</span>
+		c_int32_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span>int32_v<span class="token punctuation">)</span>
+		c_int64_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">longlong</span><span class="token punctuation">(</span>int64_v<span class="token punctuation">)</span>
+		c_uint8_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uchar</span><span class="token punctuation">(</span>uint8_v<span class="token punctuation">)</span>
+		c_uint16_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">ushort</span><span class="token punctuation">(</span>uint16_v<span class="token punctuation">)</span>
+		c_uint32_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uint</span><span class="token punctuation">(</span>uint32_v<span class="token punctuation">)</span>
+		c_uint64_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">ulonglong</span><span class="token punctuation">(</span>uint64_v<span class="token punctuation">)</span>
+		c_float32_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">float</span><span class="token punctuation">(</span>float32_v<span class="token punctuation">)</span>
+		c_float64_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">double</span><span class="token punctuation">(</span>float64_v<span class="token punctuation">)</span>
+
+		<span class="token comment">// go -> c stdint</span>
+		stdint_int8_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int8_t</span><span class="token punctuation">(</span>int8_v<span class="token punctuation">)</span>
+		stdint_int16_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int16_t</span><span class="token punctuation">(</span>int16_v<span class="token punctuation">)</span>
+		stdint_int32_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int32_t</span><span class="token punctuation">(</span>int32_v<span class="token punctuation">)</span>
+		stdint_int64_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int64_t</span><span class="token punctuation">(</span>int64_v<span class="token punctuation">)</span>
+		stdint_uint8_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uint8_t</span><span class="token punctuation">(</span>uint8_v<span class="token punctuation">)</span>
+		stdint_uint16_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uint16_t</span><span class="token punctuation">(</span>uint16_v<span class="token punctuation">)</span>
+		stdint_uint32_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uint32_t</span><span class="token punctuation">(</span>uint32_v<span class="token punctuation">)</span>
+		stdint_uint64_v <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">uint64_t</span><span class="token punctuation">(</span>uint64_v<span class="token punctuation">)</span>
+
+		<span class="token comment">// c -> go</span>
+		go_int8_v <span class="token operator">:=</span> <span class="token function">int8</span><span class="token punctuation">(</span>c_int8_v<span class="token punctuation">)</span>
+		go_int16_v <span class="token operator">:=</span> <span class="token function">int16</span><span class="token punctuation">(</span>c_int16_v<span class="token punctuation">)</span>
+		go_int32_v <span class="token operator">:=</span> <span class="token function">int32</span><span class="token punctuation">(</span>c_int32_v<span class="token punctuation">)</span>
+		go_int64_v <span class="token operator">:=</span> <span class="token function">int64</span><span class="token punctuation">(</span>c_int64_v<span class="token punctuation">)</span>
+		go_uint8_v <span class="token operator">:=</span> <span class="token function">uint8</span><span class="token punctuation">(</span>c_uint8_v<span class="token punctuation">)</span>
+		go_uint16_v <span class="token operator">:=</span> <span class="token function">uint16</span><span class="token punctuation">(</span>c_uint16_v<span class="token punctuation">)</span>
+		go_uint32_v <span class="token operator">:=</span> <span class="token function">uint32</span><span class="token punctuation">(</span>c_uint32_v<span class="token punctuation">)</span>
+		go_uint64_v <span class="token operator">:=</span> <span class="token function">uint64</span><span class="token punctuation">(</span>c_uint64_v<span class="token punctuation">)</span>
+		go_float32_v <span class="token operator">:=</span> <span class="token function">float32</span><span class="token punctuation">(</span>c_float32_v<span class="token punctuation">)</span>
+		go_float64_v <span class="token operator">:=</span> <span class="token function">float64</span><span class="token punctuation">(</span>c_float64_v<span class="token punctuation">)</span>
+
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"int8    | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> int8_v<span class="token punctuation">,</span> c_int8_v<span class="token punctuation">,</span> stdint_int8_v<span class="token punctuation">,</span> go_int8_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"int16   | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> int16_v<span class="token punctuation">,</span> c_int16_v<span class="token punctuation">,</span> stdint_int16_v<span class="token punctuation">,</span> go_int16_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"int32   | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> int32_v<span class="token punctuation">,</span> c_int32_v<span class="token punctuation">,</span> stdint_int32_v<span class="token punctuation">,</span> go_int32_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"int64   | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> int64_v<span class="token punctuation">,</span> c_int64_v<span class="token punctuation">,</span> stdint_int64_v<span class="token punctuation">,</span> go_int64_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"uint8   | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> uint8_v<span class="token punctuation">,</span> c_uint8_v<span class="token punctuation">,</span> stdint_uint8_v<span class="token punctuation">,</span> go_uint8_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"uint16  | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> uint16_v<span class="token punctuation">,</span> c_uint16_v<span class="token punctuation">,</span> stdint_uint16_v<span class="token punctuation">,</span> go_uint16_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"uint32  | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> uint32_v<span class="token punctuation">,</span> c_uint32_v<span class="token punctuation">,</span> stdint_uint32_v<span class="token punctuation">,</span> go_uint32_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"uint64  | raw %-10v | c %-10v | stdint %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> uint64_v<span class="token punctuation">,</span> c_uint64_v<span class="token punctuation">,</span> stdint_uint64_v<span class="token punctuation">,</span> go_uint64_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"float32 | raw %-10v | c %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> float32_v<span class="token punctuation">,</span> c_float32_v<span class="token punctuation">,</span> go_float32_v<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"float64 | raw %-10v | c %-10v | c->go %-10v\n"</span><span class="token punctuation">,</span> float64_v<span class="token punctuation">,</span> c_float64_v<span class="token punctuation">,</span> go_float64_v<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h4 id="字符串">字符串</h4>
+<p>在C中，<code>char</code>表示单个字符（不考虑宽字符），而以<code>\0</code>结尾的字符数组就表示字符串。而Go中，单个字节用<code>byte</code>来表示，字符串用<code>string</code>来表示。因此Go中的<code>byte</code>/<code>[]byte</code>/<code>string</code>是三个不同的概念(<code>string</code>其实是包含<code>len</code>和<code>data</code>的一个结构体)。</p>
+<p>CGO中，使用<code>C.CString</code>可以将Go string转换为C string，这里的C string是深拷贝的，因此需要使用完之后调用<code>free</code>来释放内存。使用<code>C.GoString</code>可以将C string转换为Go String，这里也是深拷贝的，之后的内存由Go自己管理。</p>
+<p>深拷贝通常意味着需要内存的申请和复制，在极度在意性能的场景，我们需要用一些技巧来避免它。这部分后续会介绍到。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+void print_string(const char *s) &#123;
+	printf("%s\n", s);
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"unsafe"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	str <span class="token operator">:=</span> <span class="token string">"Hello World!"</span>
+	<span class="token comment">// byte</span>
+	<span class="token punctuation">&#123;</span>
+		b <span class="token operator">:=</span> str<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+		c_char <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">char</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span>
+		go_byte <span class="token operator">:=</span> <span class="token function">byte</span><span class="token punctuation">(</span>c_char<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v %v %v\n"</span><span class="token punctuation">,</span> b<span class="token punctuation">,</span> c_char<span class="token punctuation">,</span> go_byte<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token comment">// string</span>
+	<span class="token punctuation">&#123;</span>
+		c_str <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">CString</span><span class="token punctuation">(</span>str<span class="token punctuation">)</span>     <span class="token comment">// Go -> C</span>
+		go_str <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">GoString</span><span class="token punctuation">(</span>c_str<span class="token punctuation">)</span> <span class="token comment">// C -> Go</span>
+
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v %v %v\n"</span><span class="token punctuation">,</span> str<span class="token punctuation">,</span> c_str<span class="token punctuation">,</span> go_str<span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">print_string</span><span class="token punctuation">(</span>c_str<span class="token punctuation">)</span>
+
+		C<span class="token punctuation">.</span><span class="token function">free</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>c_str<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h4 id="指针">指针</h4>
+<p>在C和Go中都有指针的概念，使用上也是相同的。</p>
+<p>在两种指针做转换的时候，一般需要先转到中间的状态 <code>unsafe.Pointer</code>，以绕开编译检查。</p>
+<p>下面的例子是分别用C和Go编写<code>add</code>函数，完成两个<code>int</code>的求和。由于C的int和和Go的int32类型的内存布局一致，都是4字节(Go的int是随机器位数变化的)，因此C的<code>add</code>可以将结果直接写入Go的变量，反之亦可。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+void add(int a, int b, int *c) &#123;
+        *c = a + b;
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"unsafe"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">add</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> b <span class="token builtin">int32</span><span class="token punctuation">,</span> c <span class="token operator">*</span><span class="token builtin">int32</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token operator">*</span>c <span class="token operator">=</span> a <span class="token operator">+</span> b
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">var</span> a<span class="token punctuation">,</span> b <span class="token builtin">int32</span>
+	<span class="token keyword">var</span> go_sum <span class="token builtin">int32</span>
+	<span class="token keyword">var</span> c_sum C<span class="token punctuation">.</span><span class="token builtin">int</span>
+
+	<span class="token comment">// C add</span>
+	<span class="token punctuation">&#123;</span>
+		a <span class="token operator">=</span> <span class="token number">100</span>
+		b <span class="token operator">=</span> <span class="token number">200</span>
+		C<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>c_sum<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v + %v = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> c_sum<span class="token punctuation">)</span>
+
+		C<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>go_sum<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v + %v = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> go_sum<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token comment">// Go add</span>
+	<span class="token punctuation">&#123;</span>
+		a <span class="token operator">=</span> <span class="token number">300</span>
+		b <span class="token operator">=</span> <span class="token number">400</span>
+		<span class="token function">add</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> <span class="token operator">&amp;</span>go_sum<span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v + %v = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> go_sum<span class="token punctuation">)</span>
+
+		<span class="token function">add</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token builtin">int32</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>c_sum<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v + %v = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> c_sum<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>下面是两种调用下的数据转换的流程：</p>
+<table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 8%" />
+<col style="width: 9%" />
+<col style="width: 27%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;">数据</th>
+<th style="text-align: left;">地址</th>
+<th style="text-align: left;">unsafe.Pointer</th>
+<th style="text-align: left;">强转</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">C Add 变量</td>
+<td style="text-align: left;">go_sum</td>
+<td style="text-align: left;">&amp;go_sum</td>
+<td style="text-align: left;">unsafe.Pointer(&amp;go_sum)</td>
+<td style="text-align: left;">(*C.int)(unsafe.Pointer(&amp;go_sum))</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">C Add 类型</td>
+<td style="text-align: left;">int</td>
+<td style="text-align: left;">*int</td>
+<td style="text-align: left;">unsafe.Pointer</td>
+<td style="text-align: left;">*C.int</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Go Add 变量</td>
+<td style="text-align: left;">c_sum</td>
+<td style="text-align: left;">&amp;c_sum</td>
+<td style="text-align: left;">unsafe.Pointer(&amp;c_sum)</td>
+<td style="text-align: left;">(*int)(unsafe.Pointer(&amp;c_sum))</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Go Add 类型</td>
+<td style="text-align: left;">C.int</td>
+<td style="text-align: left;">*C.int</td>
+<td style="text-align: left;">unsafe.Pointer</td>
+<td style="text-align: left;">*int</td>
+</tr>
+</tbody>
+</table>
+<h3 id="结构体">结构体</h3>
+<p>C和Go中的结构体基本一致。CGO会将C中声明的结构体加上<code>struct_</code>前缀，用于区分。在使用上和Go struct的基本相同。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+#include &lt;stdio.h>
+#include &lt;string.h>
+#include &lt;stdlib.h>
+typedef struct CStruct &#123;
+	int int_val;
+	float float_val;
+	char *str_val;
+&#125; CStruct;
+
+CStruct *new_struct() &#123;
+	CStruct *c = (CStruct *)malloc(sizeof(CStruct));
+	memset(c, 0, sizeof(CStruct));
+	return c;
+&#125;
+
+void print_struct(CStruct* c) &#123;
+	printf("int: %d float: %f, str: %s\n", c->int_val, c->float_val, c->str_val);
+&#125;
+
+void free_struct(CStruct* c) &#123;
+	if (!c) return;
+	if (c->str_val) &#123;
+		free(c->str_val);
+	&#125;
+	free(c);
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token string">"unsafe"</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token punctuation">&#123;</span>
+		c <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">new_struct</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">print_struct</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">free_struct</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token punctuation">&#123;</span>
+		c <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">new_struct</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span>int_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span>float_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">float</span><span class="token punctuation">(</span><span class="token number">0.618</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span>str_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">CString</span><span class="token punctuation">(</span><span class="token string">"hello"</span><span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">print_struct</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">free_struct</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token punctuation">&#123;</span>
+		c <span class="token operator">:=</span> C<span class="token punctuation">.</span>struct_CStruct<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span> <span class="token comment">// or c := &amp;C.struct_CStruct&#123;&#125;</span>
+		c<span class="token punctuation">.</span>int_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span>float_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">float</span><span class="token punctuation">(</span><span class="token number">0.618</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span>str_val <span class="token operator">=</span> C<span class="token punctuation">.</span><span class="token function">CString</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">print_struct</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>c<span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">free</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>c<span class="token punctuation">.</span>str_val<span class="token punctuation">)</span><span class="token punctuation">)</span>
+		<span class="token comment">// C.free_struct(&amp;c) // crash</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output:</span>
+<span class="token comment">// int: 0 float: 0.000000, str: (null)</span>
+<span class="token comment">// int: 100 float: 0.618000, str: hello</span>
+<span class="token comment">// int: 100 float: 0.618000, str: world</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里有两个地方需要注意：</p>
+<ol type="1">
+<li>Go中结构体取值和指针取值都是使用 <code>.</code> 操作符。</li>
+<li>第三个例子，<code>CStruct</code>对象是在Go中创建的，因此不能调用C的<code>free_struct</code>接口。</li>
+</ol>
+<h3 id="数组">数组</h3>
+<p>我们知道，在C语言中，数组和指针大多数情况下是等价的，一般接口返回的也是指针类型。我们可以用 <code>arr[i]</code> 或者 <code>*(arr + i)</code>的方式访问数据中的某一项。</p>
+<p>在Go中，有Array和Slice两种类型。其中Array的长度是固定的，而Slice可变。一般使用上更多的会使用Slice。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+#include &lt;string.h>
+int* create_array(int size) &#123;
+	if (size &lt;= 0) return NULL;
+	int *arr = (int *)malloc(size * sizeof(int));
+	memset(arr, 0, size * sizeof(int));
+	return arr;
+&#125;
+void fill_array(int *arr, int size) &#123;
+	for (int idx = 0; idx &lt; size; ++ idx) &#123;
+		arr[idx] = idx;
+	&#125;
+&#125;
+void print_array(int *arr, int size) &#123;
+	for (int idx = 0; idx &lt; size; ++ idx) &#123;
+		printf("%d ", arr[idx]);
+	&#125;
+	printf("\n");
+&#125;
+void del_array(int *arr) &#123;
+	if (arr) &#123;
+		free(arr);
+	&#125;
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"unsafe"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token punctuation">&#123;</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"Read C array"</span><span class="token punctuation">)</span>
+		size <span class="token operator">:=</span> <span class="token number">5</span>
+		cSize <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">int</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span>
+		arr <span class="token operator">:=</span> C<span class="token punctuation">.</span><span class="token function">create_array</span><span class="token punctuation">(</span>cSize<span class="token punctuation">)</span> <span class="token comment">// [0 0 0 0 0]</span>
+		C<span class="token punctuation">.</span><span class="token function">print_array</span><span class="token punctuation">(</span>arr<span class="token punctuation">,</span> cSize<span class="token punctuation">)</span>
+		C<span class="token punctuation">.</span><span class="token function">fill_array</span><span class="token punctuation">(</span>arr<span class="token punctuation">,</span> cSize<span class="token punctuation">)</span> <span class="token comment">// [0 1 2 3 4]</span>
+		C<span class="token punctuation">.</span><span class="token function">print_array</span><span class="token punctuation">(</span>arr<span class="token punctuation">,</span> cSize<span class="token punctuation">)</span>
+
+		<span class="token punctuation">&#123;</span>
+			fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"Pointer + Offset"</span><span class="token punctuation">)</span>
+			p <span class="token operator">:=</span> <span class="token function">uintptr</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>arr<span class="token punctuation">)</span><span class="token punctuation">)</span>
+			<span class="token keyword">for</span> idx <span class="token operator">:=</span> <span class="token number">0</span><span class="token punctuation">;</span> idx <span class="token operator">&lt;</span> size<span class="token punctuation">;</span> idx<span class="token operator">++</span> <span class="token punctuation">&#123;</span>
+				fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"idx %v val %v\n"</span><span class="token punctuation">,</span> idx<span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+				p <span class="token operator">+=</span> <span class="token function">uintptr</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span>sizeof_int<span class="token punctuation">)</span>
+			<span class="token punctuation">&#125;</span>
+		<span class="token punctuation">&#125;</span>
+
+		<span class="token punctuation">&#123;</span>
+			fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"Map C Array to Go Slice"</span><span class="token punctuation">)</span>
+			int_slice <span class="token operator">:=</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">[</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> <span class="token number">31</span><span class="token punctuation">]</span>C<span class="token punctuation">.</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>arr<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+			<span class="token keyword">for</span> idx<span class="token punctuation">,</span> v <span class="token operator">:=</span> <span class="token keyword">range</span> int_slice <span class="token punctuation">&#123;</span>
+				fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"idx %v val %v\n"</span><span class="token punctuation">,</span> idx<span class="token punctuation">,</span> v<span class="token punctuation">)</span>
+			<span class="token punctuation">&#125;</span>
+		<span class="token punctuation">&#125;</span>
+		C<span class="token punctuation">.</span><span class="token function">del_array</span><span class="token punctuation">(</span>arr<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token punctuation">&#123;</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"Passthrough Go Array/Slice"</span><span class="token punctuation">)</span>
+		int_arr <span class="token operator">:=</span> <span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span>C<span class="token punctuation">.</span><span class="token builtin">int</span><span class="token punctuation">&#123;</span><span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">&#125;</span>
+		C<span class="token punctuation">.</span><span class="token function">print_array</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>int_arr<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span>
+
+		int_slice <span class="token operator">:=</span> int_arr<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+		C<span class="token punctuation">.</span><span class="token function">print_array</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>int_slice<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output</span>
+<span class="token comment">// Read C array</span>
+<span class="token comment">// 0 0 0 0 0</span>
+<span class="token comment">// 0 1 2 3 4</span>
+<span class="token comment">// Pointer + Offset</span>
+<span class="token comment">// idx 0 val 0</span>
+<span class="token comment">// idx 1 val 1</span>
+<span class="token comment">// idx 2 val 2</span>
+<span class="token comment">// idx 3 val 3</span>
+<span class="token comment">// idx 4 val 4</span>
+<span class="token comment">// Map C Array to Go Slice</span>
+<span class="token comment">// idx 0 val 0</span>
+<span class="token comment">// idx 1 val 1</span>
+<span class="token comment">// idx 2 val 2</span>
+<span class="token comment">// idx 3 val 3</span>
+<span class="token comment">// idx 4 val 4</span>
+<span class="token comment">// Passthrough Go Array/Slice</span>
+<span class="token comment">// 5 4 3 2 1</span>
+<span class="token comment">// 5 4 3 2 1</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>例子中的第一部分是，Go读取C的数组。第二部分是C读取Go的数组。</p>
+<p>Go读取C Array有两个方式：1. 裸操作指针, 2. 映射成Go Slice再操作。这里推荐第二种。</p>
+<h4 id="pointer-offset">Pointer + Offset</h4>
+<p>C的数组本质上只是一个指针。我们只需要计算好每个元素的地址，就可以读写对应的元素。</p>
+<p>Go有两个指针类型<code>unsafe.Pointer</code>和<code>uintptr</code>。二者可以互相转换，但是只有<code>uintptr</code>才支持指针的计算。因此，我们先将数组的首地址转成<code>uintptr</code>，再加上偏移量，最后强转回C指针。</p>
+<ol type="1">
+<li>首地址： <code>p := uintptr(unsafe.Pointer(arr))</code>。</li>
+<li>强转回C指针并取值：<code>*(*C.int)(unsafe.Pointer(p))</code></li>
+<li>移动到下一个元素的位置：<code>p += uintptr(C.sizeof_int)</code>，其中<code>C.sizeof_XXX</code> 可以获取 <code>XXX</code> 的sizeof的大小。</li>
+<li>重复 2-3，直到数组结束</li>
+</ol>
+<h4 id="map-c-array-to-go-slice">Map C Array to Go Slice</h4>
+<p>上述方法其实用起来还是有点麻烦的，需要自己控制指针，也容易出错。</p>
+<p>实际上，Go Array本质上也是连续的一块内存，其内存视图和C中完全一致（Go Slice不一样，Slice是个包含Len, Cap, Data的结构体，其中Data的部分和C一致）。我们只需要欺骗Go，让他认为这是一个Go Array即可。</p>
+<ol type="1">
+<li>转成中间指针：<code>unsafe.Pointer(arr)</code></li>
+<li>强转成Go Array的指针：<code>(*[1 &lt;&lt; 31]C.int)(unsafe.Pointer(arr))</code>。这里的<code>*[1 &lt;&lt; 31]C.int</code>的含义是指向 <code>[1 &lt;&lt; 31]C.int</code>的指针，其中<code>1 &lt;&lt; 31</code> 只是用位运算表达一个很大的数而已，避免下一步的切面操作越界。</li>
+<li>对数组做切片得到Go Slice：<code>(*[1 &lt;&lt; 31]C.int)(unsafe.Pointer(arr))[0:5:5]</code>，切面的参数<code>[0:5:5]</code>表示取<code>[0, 5)</code>对应的数据，且<code>capacity</code>为5。</li>
+</ol>
+<p>这里的内存是C程序来维护的，Go Array/Slice只是C Array的View，并不维护C的内存。因此需要开发者自己维护好C数据的生命周期。如果不在乎性能的话，最简单的方法就是Deep Copy整个Slice。或者将析构的函数返回给接口的调用方，让其自行处理。</p>
+<p>有聪明的小伙伴可能会想到通过 <code>runtime.SetFinalizer</code> 在Go Slice对象析构时，调用C的析构函数。这是有问题的，看下面的例子：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"runtime"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">var</span> b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span>
+	<span class="token punctuation">&#123;</span>
+		a <span class="token operator">:=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">&#123;</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">&#125;</span>
+		runtime<span class="token punctuation">.</span><span class="token function">SetFinalizer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>a<span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token keyword">interface</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"free a"</span><span class="token punctuation">)</span>
+		<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+		b <span class="token operator">=</span> a
+	<span class="token punctuation">&#125;</span>
+
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"111"</span><span class="token punctuation">)</span>
+	runtime<span class="token punctuation">.</span><span class="token function">GC</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v\n"</span><span class="token punctuation">,</span> b<span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"222"</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output</span>
+<span class="token comment">// 111</span>
+<span class="token comment">// free a</span>
+<span class="token comment">// [1 2 3]</span>
+<span class="token comment">// 222</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在第一次调用 <code>runtime.GC()</code> 的时候，<code>a</code> 就已经被释放了，此时如果 <code>SetFinalizer</code> 中调用了C的析构函数，会导致 <code>b</code> 访问异常的数据。原因是在Go中，Map和Slice都只是很小的Header结构体，<code>b = a</code> 语句其实是Copy了这个Header（并不是引用），后续析构的是 <code>a</code> 这个Header。</p>
+<h4 id="passthrough-go-slice-to-c">Passthrough Go Slice to C</h4>
+<p>将Go的Array/Slice透传给C就十分简单了。由于Go Array/Slice底层的数据都是连续的，获取第0个元素的地址即可。</p>
+<ul>
+<li>easy: <code>&amp;arr[0]</code></li>
+</ul>
+<h3 id="union-enum">Union / Enum</h3>
+<p>CGO通过 <code>C.union_XXX</code> 来使用<code>union</code> 类型，通过 <code>C.enum_XXX</code> 使用 <code>enum</code> 的类型，这点和<code>struct</code>相同。</p>
+<p>对于定义好的<code>enum</code>类型，可以直接 <code>C.XXX</code>的方式直接访问枚举值。</p>
+<p>由于Go中没有C Union的结构，Go会将C Union的数据转换为对应大小的字节数组。我们在使用的时候需要自行转换成对应的类型来读写。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+#include &lt;stdio.h>
+enum Type &#123;CHAR, INT, DOUBLE&#125;;
+typedef union Value &#123;
+	char char_v;
+	int int_v;
+	double double_v;
+&#125; Value;
+
+typedef struct Number &#123;
+	enum Type type;
+	Value v;
+&#125; Number;
+
+void print_number(struct Number *n) &#123;
+	switch (n->type) &#123;
+	case CHAR:
+		printf("char %c\n", n->v.char_v);
+		break;
+	case INT:
+		printf("int %d\n", n->v.int_v);
+		break;
+	case DOUBLE:
+		printf("double %f\n", n->v.double_v);
+		break;
+	&#125;
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"reflect"</span>
+	<span class="token string">"unsafe"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	n <span class="token operator">:=</span> <span class="token operator">&amp;</span>C<span class="token punctuation">.</span>struct_Number<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+	<span class="token comment">// n.v.int_v = 100 // unsupported</span>
+
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"%v %v %v %v\n"</span><span class="token punctuation">,</span> reflect<span class="token punctuation">.</span><span class="token function">TypeOf</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span><span class="token punctuation">,</span> reflect<span class="token punctuation">.</span><span class="token function">TypeOf</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">)</span><span class="token punctuation">,</span> reflect<span class="token punctuation">.</span><span class="token function">TypeOf</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+	n<span class="token punctuation">.</span>_type <span class="token operator">=</span> C<span class="token punctuation">.</span>CHAR
+	<span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span>char<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token char">'Z'</span>
+	C<span class="token punctuation">.</span><span class="token function">print_number</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span>
+
+	n<span class="token punctuation">.</span>_type <span class="token operator">=</span> C<span class="token punctuation">.</span>INT
+	<span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">100</span>
+	C<span class="token punctuation">.</span><span class="token function">print_number</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span>
+
+	n<span class="token punctuation">.</span>_type <span class="token operator">=</span> C<span class="token punctuation">.</span>DOUBLE
+	<span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span>double<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token punctuation">(</span>n<span class="token punctuation">.</span>v<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">3.14</span>
+	C<span class="token punctuation">.</span><span class="token function">print_number</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output</span>
+<span class="token comment">//  *main._Ctype_struct_Number main._Ctype_Value uint8 8</span>
+<span class="token comment">//  char Z</span>
+<span class="token comment">//  int 100</span>
+<span class="token comment">//  double 3.140000</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里需要注意：</p>
+<ol type="1">
+<li>名字为<code>type</code>的成员变量，需要用<code>_type</code>来访问。</li>
+<li><code>union Value</code>类型，根据 <code>reflect.TypeOf</code> 的结果可以看出，它本质上是<code>[8]uint8</code>。这里的<code>8</code>是<code>C.sizeof_double</code>的大小。</li>
+<li>将<code>[8]uint8</code> 取地址之后，得到内存的首地址，再强转为我们期望的类型的指针，才可以使用。</li>
+</ol>
+<h3 id="zero-copy">Zero Copy</h3>
+<p>前面的数组的章节。我们访问C Array的时候，其实并没有做拷贝，而是直接访问的内存。但是对于string的操作，调用<code>C.GoString</code>和<code>C.CString</code>都做了深拷贝。</p>
+<p>在Go中，<code>string</code>和<code>[]byte</code>的转换，其实存在拷贝。如果我们可以让这两者之间的转换不存在拷贝的话。那么Go <code>[]byte</code>和C <code>char *</code>也可以无拷贝的转换了。</p>
+<p>这里需要注意的是，这里的<code>[]byte</code>对象的最后一个 <code>byte</code> 并没有规定必须是<code>\0</code>。因此如果直接将指针传给C程序的话，建议再传一个长度，否则很容易出现越界的错误（下面的例子CGO的部分可能会crash）。</p>
+<p>例子：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"reflect"</span>
+	<span class="token string">"unsafe"</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment">/*
+#include &lt;stdio.h>
+void print(char *s) &#123;
+	printf("%s\n", s);
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+
+<span class="token keyword">func</span> <span class="token function">String2BytesUnsafe</span><span class="token punctuation">(</span>s <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token boolean">nil</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">[</span><span class="token number">0x7fff0000</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span>
+		<span class="token punctuation">(</span><span class="token operator">*</span>reflect<span class="token punctuation">.</span>StringHeader<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Data<span class="token punctuation">)</span><span class="token punctuation">,</span>
+	<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token function">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span><span class="token function">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">]</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">Bytes2StringUnsafe</span><span class="token punctuation">(</span>bytes <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>out <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> <span class="token function">len</span><span class="token punctuation">(</span>bytes<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	sliceHeader <span class="token operator">:=</span> <span class="token punctuation">(</span><span class="token operator">*</span>reflect<span class="token punctuation">.</span>SliceHeader<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bytes<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	header <span class="token operator">:=</span> <span class="token punctuation">(</span><span class="token operator">*</span>reflect<span class="token punctuation">.</span>StringHeader<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>out<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	header<span class="token punctuation">.</span>Data <span class="token operator">=</span> sliceHeader<span class="token punctuation">.</span>Data
+	header<span class="token punctuation">.</span>Len <span class="token operator">=</span> sliceHeader<span class="token punctuation">.</span>Len
+	<span class="token keyword">return</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">testString2BytesUnsafe</span><span class="token punctuation">(</span>s <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	bytes <span class="token operator">:=</span> <span class="token function">String2BytesUnsafe</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"String2Bytes Before: %v\n"</span><span class="token punctuation">,</span> s<span class="token punctuation">)</span>
+	bytes<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token char">'Q'</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"String2Bytes After: %v\n"</span><span class="token punctuation">,</span> s<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">testBytes2StringUnsafe</span><span class="token punctuation">(</span>bytes <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	s <span class="token operator">:=</span> <span class="token function">Bytes2StringUnsafe</span><span class="token punctuation">(</span>bytes<span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"Bytes2String Before: %v\n"</span><span class="token punctuation">,</span> s<span class="token punctuation">)</span>
+	bytes<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token char">'Q'</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"Bytes2String After: %v\n"</span><span class="token punctuation">,</span> s<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	raw <span class="token operator">:=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span><span class="token string">"Hello World!"</span><span class="token punctuation">)</span>
+	<span class="token function">testString2BytesUnsafe</span><span class="token punctuation">(</span><span class="token function">string</span><span class="token punctuation">(</span>raw<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	<span class="token function">testBytes2StringUnsafe</span><span class="token punctuation">(</span>raw<span class="token punctuation">)</span>
+	s1 <span class="token operator">:=</span> <span class="token function">string</span><span class="token punctuation">(</span>raw<span class="token punctuation">)</span>
+	C<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">*</span>C<span class="token punctuation">.</span>char<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">*</span>reflect<span class="token punctuation">.</span>StringHeader<span class="token punctuation">)</span><span class="token punctuation">(</span>unsafe<span class="token punctuation">.</span><span class="token function">Pointer</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>s1<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// may crash</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output</span>
+<span class="token comment">// String2Bytes Before: Hello World!</span>
+<span class="token comment">// String2Bytes After: Qello World!</span>
+<span class="token comment">// Bytes2String Before: Hello World!</span>
+<span class="token comment">// Bytes2String After: Qello World!</span>
+<span class="token comment">// Qello World!</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h4 id="string---bytes">String -&gt; Bytes</h4>
+<p>Go中的string其实是一个小对象。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> StringHeader <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	Data <span class="token builtin">uintptr</span>
+	Len  <span class="token builtin">int</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>将<code>string</code>强转为<code>reflect.StringHeader</code>的结构，即可拿到<code>Data</code>的数据，再构造为<code>[]byte</code>即可（当然如果在CGO的话，直接用这个<code>Data</code>数据也行）。</p>
+<h4 id="bytes---string">Bytes -&gt; String</h4>
+<p>和前面类似，构造<code>reflect.StringHeader</code>结构，再强转为<code>string</code>类型。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2023/01/29/cgo/" target="_blank" title="CGO函数调用与数据转换">
+        https://www.miaoerduo.com/2023/01/29/cgo/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2024/01/05/lambda-recursive-call/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      C++和Go关于闭包递归调用的趣事
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2023/01/19/cpp-object-model/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">C++对象模型</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

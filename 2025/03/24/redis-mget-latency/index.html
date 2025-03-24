@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    Redis MGET延时排查 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-redis-mget-latency" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  Redis MGET延时排查
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2025/03/24/redis-mget-latency/" class="article-date">
+  <time datetime="2025-03-24T16:19:14.000Z" itemprop="datePublished">2025-03-24</time>
+</a>
+      
+      <div class="wordcount wordcount-num">1.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这是最近一个同事在开发中遇到的问题，觉得很有意思。记录了下来。</p>
+<p>问题如下：</p>
+<p>线上的服务，每个请求需要从Redis中 mget 300个key。发现P99延时高达20ms。不满足上线要求。</p>
+<p>最后我们从集群负载，大Key问题，Proxy任务数以及分片的角度进行的分析。</p>
+<span id="more"></span>
+<p>以下是我们的排查过程：</p>
+<h3 id="redis和redis-proxy的负载">Redis和Redis Proxy的负载</h3>
+<p>由于数据量比较大，使用了Redis Cluster + Proxy 的方式来部署。目前负载较低。</p>
+<h3 id="大key问题">大Key问题</h3>
+<p>如果Redis中的Key、Val比较大，则容易出现大Key问题。该使用场景，key是比较短的字符串，val是浮点数（字符串），应该不存在大Key问题。</p>
+<h3 id="redis-proxy的单个任务过大">Redis Proxy的单个任务过大</h3>
+<p>不知道这是否是所在公司特有的问题，之前在使用zset存储数据的时候，在线使用pipeline + zrange的方式获取数据，pipeline中的command过多（100个）的时候，延时会很高。但是如果拆分成多个pipeline并发调用，每个仅包含几十个command的时候，延时就十分正常。推测这里的proxy的实现应该有问题（虽然但是，有问题也没用，中间件团队并不会真的优化和支持）。</p>
+<p>鉴于上述反例，我们将300个key拆分为2-10组，然后并发访问，每组都是一个mget。进行了测试。在2组的时候，似乎延时有点改善，但不大。10的时候甚至出现的劣化。</p>
+<p>显然分组越多的话，对Redis Proxy的扇出数就会越多，也会影响P99。但是从上述的表现可以发现，单组的key的数目对整体延时影响不大。</p>
+<h3 id="redis分片过多">Redis分片过多</h3>
+<p>随后，我们使用<code>CLUSTER INFO</code>命令查看了集群的分片数。发现高达50个！如果300个key分布均匀的话，那么一次请求会在Redis Proxy中被拆分成50个请求，然后每个请求包含6个key。</p>
+<p>验证分片数对延时的影响：</p>
+<p>我们离线编写的单测的代码。运行前，在redis中写入300个key，其中key的格式为<code>sprintf("test_&#123;%d&#125;_xxx_%d", id % shard, id)</code>。在Redis中，通过<code>&#123;&#125;</code>指定计算hash的seed。这样我们就能通过控制shard的值，来模拟分片数。最终发现（这里的测试的key数目很少，结果只能简单看看）：</p>
+<pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">shard 1 avg: 683.379µs p99: 2.385465ms
+shard 2 avg: 723.663µs p99: 4.276358ms
+shard 4 avg: 829.423µs p99: 5.022665ms
+shard 8 avg: 951.461µs p99: 6.656493ms
+shard 16 avg: 1.249993ms p99: 8.688271ms
+shard 32 avg: 1.510463ms p99: 9.577033ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>显然分片数会直接影响到mget的性能。</p>
+<p>那么下一步优化的核心就是如何减少分片数。假定我们最终的分片数是10.</p>
+<p>可行的方案：</p>
+<ol type="1">
+<li>在读写redis的时候都在key中的hash的部分手动取模，模取10。
+<ol type="1">
+<li>优点：
+<ol type="1">
+<li>修改简单</li>
+<li>可以直接复用Redis，不需要重新申请资源</li>
+</ol></li>
+<li>缺点：
+<ol type="1">
+<li>该集群会有10个节点（假定slot不同）的实例负载会比其他的高，埋了个坑。</li>
+<li>如果将来将模修改为20的话，需要写入端先双写，然后服务端再修改代码，发版</li>
+</ol></li>
+</ol></li>
+<li>缩容到10个分片，为了应对高QPS，每个分片多几个副本。
+<ol type="1">
+<li>优点：
+<ol type="1">
+<li>不需要给redis key特殊处理</li>
+<li>如果分片数增加，可以依赖redis自身的机制，无缝迁移</li>
+</ol></li>
+<li>缺点：
+<ol type="1">
+<li>通过master-slave模式，会限制写入的吞吐</li>
+<li>SRE在扩容时，可能会直接扩了shard，而不是新增副本，导致延时上涨</li>
+</ol></li>
+</ol></li>
+<li>独立一个Redis集群，控制分片数
+<ol type="1">
+<li>该Redis仅给我们当前的服务使用，这样整体的写QPS就不大。但是还是需要和SRE进行约定。</li>
+</ol></li>
+</ol>
+<p>最终，我们选择了方案3，离线任务使用自己的Redis，仅在最终写入数据的时候才双写到新集群。在线侧仅读取新集群。</p>
+<p>注意，这里由于我们的key的总规模是千万级别，但是QPS和KPS很高，所以才适合该方式。对于其他的应用场景不一定能直接参考。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2025/03/24/redis-mget-latency/" target="_blank" title="Redis MGET延时排查">
+        https://www.miaoerduo.com/2025/03/24/redis-mget-latency/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  
+  <a href="/2024/01/26/free-serverless-provider/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">免费的云服务搜集</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

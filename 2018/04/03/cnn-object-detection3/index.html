@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    CNN的目标检测概述（三） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cnn-object-detection3" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  CNN的目标检测概述（三）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/04/03/cnn-object-detection3/" class="article-date">
+  <time datetime="2018-04-03T20:30:28.000Z" itemprop="datePublished">2018-04-03</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.7k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>本次介绍的是Fast R-CNN，与之前的RCNN和SPPNet不同，Fast R-CNN是一个清晰和快速的目标检测的框架。在训练和测试的速度上都远超过上述两种方法。同时，Fast R-CNN的训练是一次性的端到端的训练，同时训练的分类和回归两个任务。极大的简化的训练的流程。</p>
+<p>项目代码：<a target="_blank" rel="noopener" href="https://github.com/rbgirshick/fast-rcnn">https://github.com/rbgirshick/fast-rcnn</a></p>
+<span id="more"></span>
+<h2 id="三fast-r-cnn">三、Fast R-CNN</h2>
+<h3 id="r-cnn与sppnet的不足">1）R-CNN与SPPNet的不足</h3>
+<p>R-CNN在目标检测中有很好的准确率，但是这个方法本身仍有很多的问题。</p>
+<ol type="1">
+<li><strong>训练过程是多级的。</strong> R-CNN的训练分成三个部分，首先是 <code>finetune</code> 一个网络（目标检测的类别和ImageNet不一样）。之后是使用SVM进行目标的分类的训练。最后是使用 <code>feature map</code> 来进行目标的 <code>bounding-box</code> 的回归训练。</li>
+<li><strong>训练过程费时费空间。</strong> SVM和回归两个任务，需要存储目标的特征，需要很多空间。网络的训练过程很慢。</li>
+<li><strong>测试速度太慢。</strong> 需要对每个 <code>proposal</code> 进行前馈，耗时太长。速度只有47s / image。</li>
+</ol>
+<p><code>SPPNet</code> 可以加速 <code>R-CNN</code>，在 <code>SPPNet</code> 中，在卷积的部分直接前馈整张图片，之后对于每个 <code>proposal</code>，计算出它在 <code>feature map</code> 上的位置，然后使用 <code>SPP Pooling</code> 的方式，得到定长的特征向量。使得测试时间大大缩短。但 <code>SPPNet</code> 也有很多的问题。首先，<code>SPPNet</code> 在训练的过程和 <code>R-CNN</code> 几乎相同，因此有上面所有的问题，其次，<code>SPPNet</code> 只训练的网络最后的FC层，这样，前面的卷积的部分就没有参与训练。</p>
+<h3 id="fast-r-cnn的主要贡献">2）Fast R-CNN的主要贡献</h3>
+<ol type="1">
+<li>更好的检测效果（mAP）</li>
+<li>训练是单步的，使用多任务loss</li>
+<li>所有的网络的参数都可以训练和更新</li>
+<li>不需要存储特征</li>
+</ol>
+<h3 id="fast-r-cnn的训练">3）Fast R-CNN的训练</h3>
+<p><code>Fast R-CNN</code> 的结构如下：</p>
+<p><img src="fastrcnn.jpg" /></p>
+<p>首先按照惯例，使用一个在ImageNet预训练好的模型。保留网络的卷积的部分，在卷积的后面接上 <code>RoI Pooling</code> 层，<code>RoI Pooing</code> 层可以将 <code>feature map</code> 上任意大小的特征区域 <code>Pooling</code> 到指定的大小。直接接入若干个全连接，最终再接上两组输出的分支。一个用于输出分类的结果，假设有K个类别的目标，则输出K+1个类别，其中多出的一个类别是背景类。另一个分支用来输出回归的结果，每个目标都有自己的回归的结果，因此总的输出数为4K（K个类别的 <code>x,y,w,h</code>）。</p>
+<p>这里就有一个问题：我们为什么不直接输出4个数值直接表示目标的位置，而是这么费劲的得到4K个输出呢？其实回归出4个值，讲道理也是可行的。通常给每个类都进行回归，可以理解为每个类别都是用自己这个类别自己的信息进行位置的预测，而不是使用统一的信息进行预测。比如一张图是人骑自行车，那么我们应该回归出人还是自行车呢？而这里的策略就是两个都分别回归出两个目标的位置。</p>
+<h4 id="roi-pooling层">1 RoI Pooling层</h4>
+<p><code>RoI Pooling</code> 层是一种简化版本的 <code>SPP Pooling</code> 层。他的计算方式如下：</p>
+<p>对于 <code>feature map</code> 上的一个感兴趣的区域（<code>Region of Interest</code>），即 <code>RoI</code>，其大小为 <code>W × H</code>。我们需要把它 <code>pooling</code> 到 <code>W x H</code> 的大小。那么我们就使用 <span class="math inline">\(\frac{W}{w}*\frac{H}{h}\)</span> 的 <code>pooling</code> 核，<code>stride_w</code> 设成 <span class="math inline">\(\frac{W}{w}\)</span> ，<code>stride_h</code> 设成 <span class="math inline">\(\frac{H}{h}\)</span> 。这样经过 <code>pooling</code> 就可以到的我们需要的 <code>W x H</code> 的输出了，且通道数不变。当然这里要考虑取整的问题，细节上可以看一下 <code>FastR-CNN</code> 的源码。</p>
+<h4 id="使用预训练的网络">2 使用预训练的网络</h4>
+<p>本文中，使用了3个在ImageNet预训练好的模型。他们都有5个 <code>max pooling</code> 层，卷积层数在5-13之间。对于这些用于初始化的模型，需要做三点改变：</p>
+<ol type="1">
+<li>将最后一个 <code>max pooling</code> 层替换成 <code>RoI Pooling</code> 层。输出固定的大小，并且这个大小和网络的全连接的输入要相匹配。（看样子，这里还想复用之前的FC层的参数）</li>
+<li>网络的最后的FC层，替换成两并列的FC。一个用于输出新的类别（K+1），另一个用来输出回归的结果（4K）。</li>
+<li>网络的输入变成两个，一个是图像数据（N个），另一个是 <code>RoI</code>（R个）。</li>
+</ol>
+<h4 id="fine-tuning-for-detection">3 Fine-tuning for detection</h4>
+<p>在 <code>Fast R-CNN</code> 中，训练的样本是整张图像，网络的卷积部分可以处理任意尺度的输入，因此可以一次性得到整张图像的 <code>feature map</code>。之后，根据输入的 <code>RoI</code> 的位置（也就是之前的 <code>Proposal</code>），对每个区域在 <code>feature map</code> 上进行 <code>RoI Pooling</code>，得到固定大小的输出。最终经过若干个全连接，得到分类和回归的输出，监督训练。从而使得检测任务可以做到 <code>one stage</code>。整个过程包括：<code>Loss</code>，<code>mini-batch</code> 采样策略，<code>RoI Pooling</code> 层的后馈以及 <code>SGD</code> 的超参数。下面专门依次介绍。</p>
+<h3 id="fine-tuning-for-detection-1">4）Fine-tuning for detection</h3>
+<h4 id="multi-task-loss">1 Multi-Task loss</h4>
+<p>网络共有两个输出，一个是每个RoI的分类的概率，使用 <code>Softmax</code> 之后得到概率分布 <span class="math inline">\(p=(p_{0},p_{1},p_{2},...,p_{K})\)</span>。</p>
+<p>另一个输出是回归的结果，每个类别的结果用 <span class="math inline">\(t^{k}=(t^{k}_{x},t^{k}_{y},t^{k}_{w},t^{k}_{h}), k \in [0,K)\)</span> 表示。</p>
+<p>这里使用多任务Loss的监督学习：</p>
+<p><span class="math display">\[L(p,k^{*},t,t^{*})=L_{cls}(p,k^{*})+\lambda[k^{*}\ge1]L_{loc}(t,t^{*})\]</span></p>
+<p>其中，<span class="math inline">\(k^{*}\)</span> 表示正确类别的 <code>label</code>，<span class="math inline">\(L_{cls}(p,k^{*})=-log(p_{k^{*}})\)</span> 是标准的交叉熵Loss。</p>
+<p>对于回归的部分，对于一个类别 <span class="math inline">\(k^{*}\)</span> ，正确的回归值为 <span class="math inline">\(t^{*} = (t^{*}_{x},t^{*}_{y},t^{*}_{w},t^{*}_{h})\)</span> ，预测的回归值 <span class="math inline">\(t = (t_{x},t_{y},t_{w},t_{h})\)</span> ，对于 <span class="math inline">\([k^{*}\ge1]\)</span> 的值，当 <span class="math inline">\(k^{*}\ge1\)</span> 时为1，否则为0（0的时候表示背景类，不需要回归）。</p>
+<p>对于回归，使用如下的Loss：</p>
+<p><span class="math display">\[L_{loc}(t, t^{*}) = \sum_{i \in {x,y,w,h}} smooth_{L1}(t_{i}, t^{*}_{i})\]</span></p>
+<p>其中：</p>
+<p><span class="math display">\[smooth_{L1}(x) = \left\{\begin{matrix} 0.5x^{2} &amp; if |x| &lt; 1 \\ |x|-0.5 &amp; otherwise \end{matrix}\right.\]</span></p>
+<p>使用 <code>smoothL1 Loss</code> 的好处是，在 <code>x</code>比较大的时候，他的梯度为固定的1，而使用 <code>L2 Loss</code> 的时候，其梯度为 <code>2x</code>，会变得很大，不利于训练。</p>
+<p>等式中的 <code>lambda</code> 用来平衡两种 <code>Loss</code> 之间的关系，这里的对于 <code>groundtruth</code> 进行了归一化，使得他的均值为0，方差为单位方差。在这种情况下，<code>lambda</code> 取1，在各种实验中均取得了不错的结果。</p>
+<p>这里的归一化的操作，在之前的 <code>RCNN</code> 和之后的 <code>Faster R-CNN</code> 等都没有再出现。让我仔细看了一下源码才大致知道他是怎么计算的。至于效果，论文中并没有提到。这里感兴趣的同学可以看看源码。</p>
+<p>对于回归值的计算。使用如下的公式：</p>
+<p><span class="math display">\[G=\{G_{x},G_{y},G_{w},G_{h}\}\]</span></p>
+<p>表示 <code>groundtruth</code> 的位置，<span class="math inline">\(P=\{P_{x},P_{y},P_{w},P_{h}\}\)</span> 表示 <code>proposal</code> 的位置。<code>x</code> 和 <code>y</code> 表示目标中心的坐标，<code>w</code> 和 <code>h</code> 表示宽和高。对于每个 <code>proposal</code>，其回归的目标为：</p>
+<p><span class="math display">\[\begin{matrix} t_{x} = \frac{G_{x} - P_{x}}{P_{w}} \\ t_{y} = \frac{G_{y} - P_{y}}{P_{h}} \\ t_{w} = \log{\frac{G_{w}}{P_{w}}} \\ t_{h} = \log{\frac{G_{h}}{P_{h}}} \end{matrix}\]</span></p>
+<p>这里的 <code>tw</code> 和 <code>th</code> 用了一个 <code>log</code> 函数，为什么不直接使用类似于 <code>Gw/Pw - 1</code> 这样的形式呢？我想了很久，才恍然大悟。如果 <code>Gw/Pw</code> 的值分别为0.5和2的时候，二者都是两倍的关系，取log之后正好互为相反数。</p>
+<h4 id="mini-batch的样本选择">2 Mini-batch的样本选择</h4>
+<p>对于每一个 <code>mini-batch</code>，选择2张图片，每个图片选择64个 <code>RoI</code>，得到总计128个 <code>RoI</code>。其中25%的 <code>RoI</code> 与目标的 <code>IOU</code> 大于0.5，即25%的正样本，75%的负样本。在训练中，所有的样本按照50%的几率翻转。没有其他的额外的数据增强的策略。</p>
+<h4 id="roi-pooling层的后馈">3 RoI Pooling层的后馈</h4>
+<p>这部分没什么好说的，和 <code>Max Pooling</code> 一样，<code>RoI Pooling</code> 前馈的时候保存的最大值的索引信息，直接后馈就行。</p>
+<h4 id="sgd-超参数">4 SGD 超参数</h4>
+<blockquote>
+<p>The fully-connected layers used for softmax classification and bounding-box regression are initialized randomly from a zero-mean Gaussian distribution with standard deviations 0.01 and 0.001, respectively. All layers use a per-layer learning rate of 1 for weights and 2 for biases (following standard practice) and a global learning rate of 0.001. When training on VOC07 or VOC12 trainval we run SGD for 30k mini-batch iterations, and then lower the learning rate to 0.0001 and train for another 10k iterations. When we train on larger datasets, we run SGD for more iterations, as described later. A momentum term with weight 0.9 and weight decay factor of 0.0005 are used in all experiments.</p>
+</blockquote>
+<h3 id="尺度变化">5）尺度变化</h3>
+<p>由于目标的尺度跨度很大，这里有两种处理的办法：</p>
+<h4 id="暴力学习">1 暴力学习</h4>
+<p>使用整张图片训练，一次性处理所有尺度的目标。这样依赖网络学习出不同尺度的目标。</p>
+<h4 id="图像金字塔">2 图像金字塔</h4>
+<p>将图像进行不同尺度的缩放，每种尺度的图像，网络都只学习最适合学习的尺度的目标。在测试的时候，也是，输入不同尺度的图像，得到不同尺度的目标。在实验中，这种方法的mAP更高，但是更加的耗时。</p>
+<h3 id="svd分解压缩检测">6）SVD分解，压缩检测</h3>
+<p>在一般的分类的网络中，计算量主要在前面的卷积的部分。但是对于检测来说，由于有大量的RoI，对于每个RoI都需要经过一次全连接，最终卷积和全连接的计算量差不多。</p>
+<p>对于一个全连接，它的权重是一个 <code>u × v</code> 的矩阵 <code>W</code>。可以使用 <code>SVD</code> 近似的分解成：</p>
+<p><span class="math display">\[W \approx U\Sigma _{t}V^{T}\]</span></p>
+<p>这样分解之后，<code>U</code> 是个 <code>u × t</code> 的矩阵，<span class="math inline">\(\Sigma_{t}\)</span> 是个 <code>t × t</code> 的对角阵，<code>V</code> 是个 <code>v × t</code> 的矩阵。当 <code>t</code> 远小于 <code>min(u,v)</code> 的时候，参数量就可以从 <code>uv</code> 缩减到 <code>t(u+v)</code>。同时计算量也大大减少了。</p>
+<h3 id="个人总结">7）个人总结</h3>
+<p><code>Fast R-CNN</code> 中，将目标检测的任务集成为一个清晰的框架，极大的简化了目标检测的训练过程，同时在速度和精度上均得到的很好的保证。其思想影响了之后的各种改进版本的目标检测算法。真的十分值得仔细的阅读。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/04/03/cnn-object-detection3/" target="_blank" title="CNN的目标检测概述（三）">
+        https://www.miaoerduo.com/2018/04/03/cnn-object-detection3/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/04/30/cpp-concurrent/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      C++ 并发队列的原理简介与开源库concurrentqueue安利
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/03/01/cnn-object-detection2/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">CNN的目标检测概述（二）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

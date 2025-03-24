@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    基于Caffe的Large Margin Softmax Loss的实现（二） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-caffe-large-margin-softmax-2" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  基于Caffe的Large Margin Softmax Loss的实现（二）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/10/08/caffe-large-margin-softmax-2/" class="article-date">
+  <time datetime="2016-10-08T17:16:17.000Z" itemprop="datePublished">2016-10-08</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：前一篇博客，我们做完了L-Softmax的准备工作。而这一章，我们开始进行前馈的研究。</p>
+</blockquote>
+<span id="more"></span>
+<h2 id="四前馈">四、前馈</h2>
+<p>还记得上一篇博客，小喵给出的三个公式吗？不记得也没关系。</p>
+<p>这次，我们要一点一点的通过代码来实现这些公式。小喵主要是GPU上实现前后馈的代码，因为这个层只是用来训练，GPU速度应该会快一点。</p>
+<p>我们首先要进行一般的FC层的前馈，因为LM_FC的前馈只是修改了一般的FC中的若干个值，而大部分的值都是没有修改过的。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">const</span> Dtype<span class="token operator">*</span> bottom_data <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> Dtype<span class="token operator">*</span> label_data <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Dtype<span class="token operator">*</span> top_data <span class="token operator">=</span> top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> Dtype<span class="token operator">*</span> weight <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 普通fc层的计算</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>M_ <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_gemv</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>CblasNoTrans<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> K_<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">1.</span><span class="token punctuation">,</span>
+                       weight<span class="token punctuation">,</span> bottom_data<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">0.</span><span class="token punctuation">,</span> top_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_gemm</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>CblasNoTrans<span class="token punctuation">,</span>
+                        transpose_ <span class="token operator">?</span> CblasNoTrans <span class="token operator">:</span> CblasTrans<span class="token punctuation">,</span>
+                        M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> K_<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">1.</span><span class="token punctuation">,</span>
+                        bottom_data<span class="token punctuation">,</span> weight<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">0.</span><span class="token punctuation">,</span> top_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这样就计算完了一个普通的FC的前馈。 之后是一些具体的实现。</p>
+<h3 id="余弦">1，余弦</h3>
+<p><span class="math display">\[
+\cos(\theta_j)=\frac{W_j^Tx_i}{\|W_j\|\|x_i\|}
+\]</span></p>
+<p>这是要求出label为 <span class="math inline">\(j\)</span> 的weight的权值和feature之间的余弦值。公式大家在高中应该就学过了。这样需要出三部分：<span class="math inline">\(W_j^Tx_i\)</span>，<span class="math inline">\(\|W_j\|\)</span> 和 <span class="math inline">\(\|x_i\|\)</span>。这里 <span class="math inline">\(i\)</span> 表示feature的序号，因为一个mini batch中有很多张图片。<span class="math inline">\(j\)</span> 表示正确的label值。</p>
+<p><span class="math inline">\(W_j^Tx_i\)</span> 的计算非常简单，因为FC层的前馈计算出来的就是这个值。因此我们可以直接从FC的前馈结果中直接复制对应位置的结果。<span class="math inline">\(\|W_j\|\)</span> 和 <span class="math inline">\(\|x_i\|\)</span> 是比较简单的模值的计算，使用 <code>caffe_cpu_dot</code> 很容易就可以求得（为什么不使用 <code>caffe_gpu_dot</code> 呢？因为小喵在使用 <code>caffe_gpu_dot</code> 的时候，caffe会报一个奇怪的错误，不知道是不是因为GPU的显存不能随意访问的）。</p>
+<p>最后的余弦值带入到上面的式子，就一下子搞定~</p>
+<p>这里用到了几个变量：</p>
+<ul>
+<li>M: batch size</li>
+<li>N: class num</li>
+<li>K: feature length</li>
+</ul>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// w * x</span>
+<span class="token comment">// 直接从前馈的结果中复制</span>
+Dtype <span class="token operator">*</span>wx_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>wx_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+copy_label_score<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> label_data<span class="token punctuation">,</span> top_data<span class="token punctuation">,</span> wx_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// w * w</span>
+Dtype <span class="token operator">*</span>abs_w_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  abs_w_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token generic-function"><span class="token function">caffe_cpu_dot</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>
+    K_<span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">*</span> K_<span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">*</span> K_
+    <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// x * x</span>
+Dtype <span class="token operator">*</span>abs_x_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  abs_x_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token generic-function"><span class="token function">caffe_cpu_dot</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>
+    K_<span class="token punctuation">,</span> 
+    bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> m <span class="token operator">*</span> K_<span class="token punctuation">,</span>
+    bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> m <span class="token operator">*</span> K_
+    <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token comment">// abs_w, abs_x</span>
+<span class="token generic-function"><span class="token function">caffe_gpu_powx</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0.5</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token generic-function"><span class="token function">caffe_gpu_powx</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0.5</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// cos_t = wx / (|x| * |w|)</span>
+Dtype <span class="token operator">*</span>cos_t_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token generic-function"><span class="token function">caffe_gpu_div</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> wx_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cos_t_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token generic-function"><span class="token function">caffe_gpu_div</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> cos_t_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cos_t_data<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中 <code>copy_label_score</code> 是我们自己编写的用来复制结果的核函数（如何编写Cuda程序就是另一门学科了）：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">copy_label_score</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> M<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> N<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>label_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>top_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>wx_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> M<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    wx_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span> <span class="token operator">=</span> top_data<span class="token punctuation">[</span>index <span class="token operator">*</span> N <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>相信机智如你的喵粉，看到这几行代码，一定可以轻松理解。</p>
+<p>这里，小喵想多介绍一点东西。</p>
+<p>我们知道Caffe里面的数据都是通过Blob结构来存储的，比如这里的bottom_data，其实就是一个blob，默认形状是(n, c, h, w)，n表示的就是batch size，c是channel数，h，w分贝表示高和宽。而且blob中的内存的存储顺序，也和一般的C语言中的数组一样。因此我们这里计算feature的模的时候，是直接每K_个数值计算一次点乘。</p>
+<p>同理，weight是存储在 <code>this-&gt;blobs[0]</code> 中的，那么weight的形状又是什么样子的呢？这里非常碰巧的是，如果我们在prototxt中设置的transpose为false的话，weight的形状是 <code>N * K</code>，也就是说，我们可以将weight看成一个矩阵，它的每一行都与feature直接点乘，得到输出，也就是说weight的每一行都是我们需要计算模值的 <span class="math inline">\(W_j\)</span>，所以我们计算weight的模的时候，用的计算方法和计算feature模时很相似。我们这里强制设置transpose为false，因为这样计算会比较简单。如果你设成了true，那就必须自己写个求模的函数了。</p>
+<h3 id="m倍余弦">2，m倍余弦</h3>
+<p><span class="math display">\[
+\cos(m\theta_i)=\sum_n(-1)^n{C_m^{2n}\cos^{m-2n}(\theta_i)\cdot(1-\cos(\theta_i)^2)^n}, (2n\leq m)
+\]</span></p>
+<p>我们在(1)中求出了 <span class="math inline">\(\cos(\theta)\)</span>，对于给定的margin，只需要代入公式就可以求出<span class="math inline">\(\cos(m\theta)\)</span>的值了。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">cal_cos_mt</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> count<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> margin<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> <span class="token operator">*</span>C_M_N<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_t_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>cos_mt_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    Dtype cos_t <span class="token operator">=</span> cos_t_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    Dtype sin_t_2 <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">-</span> cos_t <span class="token operator">*</span> cos_t<span class="token punctuation">;</span>
+    Dtype cos_mt <span class="token operator">=</span> <span class="token number">0.</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> flag <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> n <span class="token operator">&lt;=</span> <span class="token punctuation">(</span>margin <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      flag <span class="token operator">*=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+      cos_mt <span class="token operator">+=</span> flag <span class="token operator">*</span> C_M_N<span class="token punctuation">[</span><span class="token number">2</span> <span class="token operator">*</span> n<span class="token punctuation">]</span> <span class="token operator">*</span> <span class="token function">powf</span><span class="token punctuation">(</span>cos_t<span class="token punctuation">,</span> <span class="token punctuation">(</span>margin <span class="token operator">-</span> <span class="token number">2</span> <span class="token operator">*</span> n<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token function">powf</span><span class="token punctuation">(</span>sin_t_2<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    cos_mt_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span> <span class="token operator">=</span> cos_mt<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面是用来计算 <span class="math inline">\(\cos(m\theta)\)</span> 的cuda函数，调用也十分的简单：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// cos(mt)</span>
+cal_cos_mt<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>
+  M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>margin<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>C_M_N_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_mt_<span class="token operator">-></span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<h3 id="前馈">3，前馈</h3>
+<p><span class="math display">\[
+f_{y_{i}}=(-1)^k\cdot\|W_{y_{i}}\|\|x_{i}\|\cos(m\theta_i)-2k\cdot\|W_{y_i}\|\|x_i\|
+\]</span></p>
+<p>严格上来说，我们需要求的并不是这个式子，而是：</p>
+<p><span class="math display">\[
+f_{y_i}=\frac{\lambda\|W_{y_i}\|\|x_i\|\cos(\theta_{y_i})+\|W_{y_i}\|\|x_i\|\varphi(\theta_{y_i})}{1+\lambda}
+\]</span></p>
+<p><span class="math display">\[
+\varphi(\theta)=(-1)^k\cos(m\theta)-2k, \theta\in[\frac{k\pi}{m}, \frac{(k+1)\pi}{m}]
+\]</span></p>
+<p>可以看出，当 <span class="math inline">\(\lambda\)</span> 为0的时候，这两个式子就退化成前面的一个式子了。</p>
+<p>k的求法十分简单，只需要将 <span class="math inline">\(\cos(\theta)\)</span> 与各个区间进行比较就可以得到。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// k</span>
+<span class="token keyword">int</span> <span class="token operator">*</span>k_cpu_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>k_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_t_cpu_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> _k <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> _k <span class="token operator">&lt;</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_theta_bound_<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> _k<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>cos_theta_bound_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>_k<span class="token punctuation">]</span> <span class="token operator">&lt;</span> cos_t_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      k_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> _k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最后一步就是计算出真正的前馈值了！按照公式容易编写程序：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">LMForward</span><span class="token punctuation">(</span>
+  <span class="token keyword">const</span> <span class="token keyword">int</span> M<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> N<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">float</span> lambda<span class="token punctuation">,</span>
+  <span class="token keyword">const</span> Dtype <span class="token operator">*</span>label_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_mt_data<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> <span class="token operator">*</span>k_data<span class="token punctuation">,</span>
+  <span class="token keyword">const</span> Dtype <span class="token operator">*</span>abs_w_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>abs_x_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>top_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> M<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    Dtype cos_mt <span class="token operator">=</span> cos_mt_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> k <span class="token operator">=</span> k_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> label <span class="token operator">=</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Dtype abs_w <span class="token operator">=</span> abs_w_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    Dtype abs_x <span class="token operator">=</span> abs_x_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    top_data<span class="token punctuation">[</span>N <span class="token operator">*</span> index <span class="token operator">+</span> label<span class="token punctuation">]</span> <span class="token operator">=</span>  <span class="token punctuation">(</span>lambda <span class="token operator">*</span> top_data<span class="token punctuation">[</span>N <span class="token operator">*</span> index <span class="token operator">+</span> label<span class="token punctuation">]</span> <span class="token operator">+</span> abs_w <span class="token operator">*</span> abs_x <span class="token operator">*</span> <span class="token punctuation">(</span> <span class="token function">powf</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> k<span class="token punctuation">)</span> <span class="token operator">*</span> cos_mt <span class="token operator">-</span> <span class="token number">2</span> <span class="token operator">*</span> k <span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">+</span> lambda<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>调用也十分简单：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// y</span>
+LMForward<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>
+  M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>lambda<span class="token punctuation">,</span>
+  label_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_mt_<span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>k_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最后附上，完整的前馈代码（省略头文件和caffe的名字空间）：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">copy_label_score</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> M<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> N<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>label_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>top_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>wx_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> M<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    wx_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span> <span class="token operator">=</span> top_data<span class="token punctuation">[</span>index <span class="token operator">*</span> N <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">cal_cos_mt</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> count<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> margin<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> <span class="token operator">*</span>C_M_N<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_t_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>cos_mt_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    Dtype cos_t <span class="token operator">=</span> cos_t_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    Dtype sin_t_2 <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">-</span> cos_t <span class="token operator">*</span> cos_t<span class="token punctuation">;</span>
+    Dtype cos_mt <span class="token operator">=</span> <span class="token number">0.</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> flag <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> n <span class="token operator">&lt;=</span> <span class="token punctuation">(</span>margin <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      flag <span class="token operator">*=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+      cos_mt <span class="token operator">+=</span> flag <span class="token operator">*</span> C_M_N<span class="token punctuation">[</span><span class="token number">2</span> <span class="token operator">*</span> n<span class="token punctuation">]</span> <span class="token operator">*</span> <span class="token function">powf</span><span class="token punctuation">(</span>cos_t<span class="token punctuation">,</span> <span class="token punctuation">(</span>margin <span class="token operator">-</span> <span class="token number">2</span> <span class="token operator">*</span> n<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token function">powf</span><span class="token punctuation">(</span>sin_t_2<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    cos_mt_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span> <span class="token operator">=</span> cos_mt<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">LMForward</span><span class="token punctuation">(</span>
+  <span class="token keyword">const</span> <span class="token keyword">int</span> M<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> N<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">float</span> lambda<span class="token punctuation">,</span>
+  <span class="token keyword">const</span> Dtype <span class="token operator">*</span>label_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_mt_data<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> <span class="token operator">*</span>k_data<span class="token punctuation">,</span>
+  <span class="token keyword">const</span> Dtype <span class="token operator">*</span>abs_w_data<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype <span class="token operator">*</span>abs_x_data<span class="token punctuation">,</span> Dtype <span class="token operator">*</span>top_data<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> M<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    Dtype cos_mt <span class="token operator">=</span> cos_mt_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> k <span class="token operator">=</span> k_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> label <span class="token operator">=</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Dtype abs_w <span class="token operator">=</span> abs_w_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    Dtype abs_x <span class="token operator">=</span> abs_x_data<span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    top_data<span class="token punctuation">[</span>N <span class="token operator">*</span> index <span class="token operator">+</span> label<span class="token punctuation">]</span> <span class="token operator">=</span>  <span class="token punctuation">(</span>lambda <span class="token operator">*</span> top_data<span class="token punctuation">[</span>N <span class="token operator">*</span> index <span class="token operator">+</span> label<span class="token punctuation">]</span> <span class="token operator">+</span> abs_w <span class="token operator">*</span> abs_x <span class="token operator">*</span> <span class="token punctuation">(</span> <span class="token function">powf</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> k<span class="token punctuation">)</span> <span class="token operator">*</span> cos_mt <span class="token operator">-</span> <span class="token number">2</span> <span class="token operator">*</span> k <span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">+</span> lambda<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">LargeMarginInnerProductLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Forward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+    <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">const</span> Dtype<span class="token operator">*</span> bottom_data <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> Dtype<span class="token operator">*</span> label_data <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Dtype<span class="token operator">*</span> top_data <span class="token operator">=</span> top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> Dtype<span class="token operator">*</span> weight <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// 普通fc层的计算</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>M_ <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token generic-function"><span class="token function">caffe_gpu_gemv</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>CblasNoTrans<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> K_<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">1.</span><span class="token punctuation">,</span>
+                         weight<span class="token punctuation">,</span> bottom_data<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">0.</span><span class="token punctuation">,</span> top_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+    <span class="token generic-function"><span class="token function">caffe_gpu_gemm</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>CblasNoTrans<span class="token punctuation">,</span>
+                          transpose_ <span class="token operator">?</span> CblasNoTrans <span class="token operator">:</span> CblasTrans<span class="token punctuation">,</span>
+                          M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> K_<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">1.</span><span class="token punctuation">,</span>
+                          bottom_data<span class="token punctuation">,</span> weight<span class="token punctuation">,</span> <span class="token punctuation">(</span>Dtype<span class="token punctuation">)</span><span class="token number">0.</span><span class="token punctuation">,</span> top_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+
+  <span class="token keyword">const</span> Dtype<span class="token operator">*</span> label_cpu_data <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// w * x</span>
+  <span class="token comment">// 直接从前馈的结果中复制</span>
+  Dtype <span class="token operator">*</span>wx_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>wx_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  copy_label_score<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> label_data<span class="token punctuation">,</span> top_data<span class="token punctuation">,</span> wx_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// w * w</span>
+  Dtype <span class="token operator">*</span>abs_w_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    abs_w_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token generic-function"><span class="token function">caffe_cpu_dot</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>
+      K_<span class="token punctuation">,</span>
+      <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">*</span> K_<span class="token punctuation">,</span>
+      <span class="token keyword">this</span><span class="token operator">-></span>blobs_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>label_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">*</span> K_
+      <span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  
+  <span class="token comment">// x * x</span>
+  Dtype <span class="token operator">*</span>abs_x_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    abs_x_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token generic-function"><span class="token function">caffe_cpu_dot</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>
+      K_<span class="token punctuation">,</span>
+      bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> m <span class="token operator">*</span> K_<span class="token punctuation">,</span>
+      bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> m <span class="token operator">*</span> K_
+      <span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+
+  <span class="token comment">// abs_w, abs_x</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_powx</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0.5</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_powx</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0.5</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// cos_t = wx / (|x| * |w|)</span>
+  Dtype <span class="token operator">*</span>cos_t_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_div</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> wx_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cos_t_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token generic-function"><span class="token function">caffe_gpu_div</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>M_<span class="token punctuation">,</span> cos_t_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cos_t_data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// cos(mt)</span>
+  cal_cos_mt<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>
+    M_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>margin<span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>C_M_N_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>cos_mt_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// k</span>
+  <span class="token keyword">int</span> <span class="token operator">*</span>k_cpu_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>k_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> Dtype <span class="token operator">*</span>cos_t_cpu_data <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_t_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> m <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> m <span class="token operator">&lt;</span> M_<span class="token punctuation">;</span> <span class="token operator">++</span> m<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> _k <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> _k <span class="token operator">&lt;</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_theta_bound_<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> _k<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>cos_theta_bound_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>_k<span class="token punctuation">]</span> <span class="token operator">&lt;</span> cos_t_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        k_cpu_data<span class="token punctuation">[</span>m<span class="token punctuation">]</span> <span class="token operator">=</span> _k <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+
+  <span class="token comment">// y</span>
+  LMForward<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>M_<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>
+    M_<span class="token punctuation">,</span> N_<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>lambda<span class="token punctuation">,</span>
+    label_data<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>cos_mt_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>k_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>abs_w_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>abs_x_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>那么，这样关于large margin softmax loss的前馈我们就轻松的实现了。下一篇，我们要讲最复杂的后馈的实现了。</p>
+<p>如果您觉得本文对您有帮助，那请小喵喝杯茶吧~~O(∩_∩)O~~ 再次感慨 <span class="math inline">\(\LaTeX\)</span> 大法好。</p>
+<p><strong>转载</strong> 请注明出处~</p>
+<p>关于Large margin softmax loss的后馈的部分，小喵一直实现的有问题，现在作者也把代码开源出来了，建议还是直接看作者的代码吧。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/10/08/caffe-large-margin-softmax-2/" target="_blank" title="基于Caffe的Large Margin Softmax Loss的实现（二）">
+        https://www.miaoerduo.com/2016/10/08/caffe-large-margin-softmax-2/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/11/15/openmp-tutorial/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      应用OpenMP的一个简单的设计模式
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/10/01/caffe-large-margin-softmax-1/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">基于Caffe的Large Margin Softmax Loss的实现（一）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

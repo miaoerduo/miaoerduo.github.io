@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    C++ 并发队列的原理简介与开源库concurrentqueue安利 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cpp-concurrent" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  C++ 并发队列的原理简介与开源库concurrentqueue安利
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/04/30/cpp-concurrent/" class="article-date">
+  <time datetime="2018-04-30T12:46:59.000Z" itemprop="datePublished">2018-04-30</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 8 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>由于最近在做一个项目，但是框架本身有个不合理的设计。其中的代码是单线程的，数据的读取和计算都在一个线程里面完成。也就是说，我们的程序有很大的一部分时间在读取文件数据，导致最终的运行速度很慢。这里就可以使用多线程来优化。</p>
+<p>这里需要使用最基本的<strong>生产者消费者模式</strong>。使用若干个线程作为生产者，负责数据的读取和预处理，这部分任务是IO密集型的，也就是不太占CPU，但是比较占带宽，而且有延时。在处理完数据之后，将数据放到一个队列中。</p>
+<p>同时，使用若干个线程充当消费者，从这个队列里面获取数据，然后进行计算。计算的部分是CPU密集型的（其实我这里计算是GPU做的，就只有一个消费者），计算完成之后输出结果。</p>
+<p>那么贯穿这一整套方案的，就是我们的队列。</p>
+<p>在并发任务中，通常都需要一个队列机制，将并行的任务转化成串行的任务，或者将串行的任务提供给并行工作的线程。这个队列会同时被多个线程读写，因此也必须是线程安全的。</p>
+</blockquote>
+<span id="more"></span>
+<h2 id="一线程安全的实现策略">一、线程安全的实现策略</h2>
+<p>对于线程安全的队列的实现，似乎经常成为企业的面试题，常见的实现方法就是互斥量和条件变量，本质上就是锁的机制。同一时间只有一个线程具有读写的权限。锁的机制在并发量不大情况下，十分的清晰有效。在并发量较大的时候，会因为对锁的竞争而越发不高效。同时，锁本身也需要维护一定的资源，也需要消耗性能。</p>
+<p>这时候，大家肯定会想问，不使用锁机制，还可以处理这种并发的情况吗？</p>
+<p>答案是肯定的，首先我们知道锁主要有两种，悲观锁和乐观锁。</p>
+<p>对于悲观锁，它永远会假定最糟糕的情况，就像我们上面说到的互斥机制，每次我们都假定会有其他的线程和我们竞争资源，因此必须要先拿到锁，之后才放心的进行我们的操作，这就使得争夺锁成为了我们每次操作的第一步。乐观锁则不同，乐观锁假定在很多情况下，资源都不需要竞争，因此可以直接进行读写，但是如果碰巧出现了多线程同时操控数据的情况，那么就多试几次，直到成功（也可以设置重试的次数）。</p>
+<p>我们生活的时候，总会碰到很多的不顺心的事情，比如模型训练崩了，被某些库搞得头大，或者女票又生气了什么的，不妨学习一下乐观锁的精神，再训一次？再编译一次？大不了再哄一次。一次不行就两次。</p>
+<p>回到乐观锁上，乐观锁中，每次读写都不考虑锁的存在，那么他是如何知道自己这次操作和其他线程是冲突的呢？这就是Lock-free队列的关键——原子操作。原子操作可以保证一次操作在执行的过程中不会被其他线程打断，因此在多线程程序中也不需要同步操作。在C++的STL中其实也提供了atomic这个库，可以保证多线程在操控同一个变量的时候，即使不加锁也能保证起最终结果的正确性。而我们乐观锁需要的一个原子操作就是CAS（Compare And Swap），绝大多数的CPU都支持这个操作。</p>
+<p>CAS操作的定义如下(STL中的一个)：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">bool</span> <span class="token function">atomic_compare_exchange_weak</span> <span class="token punctuation">(</span>atomic<span class="token operator">*</span> obj<span class="token punctuation">,</span> T<span class="token operator">*</span> expected<span class="token punctuation">,</span> T val<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>首先函数会将 <code>obj</code> 与 <code>expected</code> 的内容作比较：</p>
+<ol type="1">
+<li>如果相等，那么将交换 <code>obj</code> 和 <code>val</code> 的值，并返回 <code>true</code>。</li>
+<li>如果不相等，则什么也不做，之后返回 <code>false</code>。</li>
+</ol>
+<p>那么使用这个奇怪的操作，为什么就可以实现乐观锁了呢？这里我们看一个例子。这也是我学习的时候看的例子。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">struct</span> <span class="token class-name">list</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>atomic<span class="token operator">&lt;</span>node<span class="token operator">*</span><span class="token operator">></span> head<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">void</span> <span class="token function">append</span><span class="token punctuation">(</span>list<span class="token operator">*</span> s<span class="token punctuation">,</span> node<span class="token operator">*</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    node<span class="token operator">*</span> head<span class="token punctuation">;</span>
+    <span class="token keyword">do</span> <span class="token punctuation">&#123;</span>
+        head <span class="token operator">=</span> s<span class="token operator">-></span>head<span class="token punctuation">;</span>
+        n<span class="token operator">-></span>next <span class="token operator">=</span> head<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span>std<span class="token double-colon punctuation">::</span><span class="token function">atomic_compare_exchange_weak</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token punctuation">(</span>s<span class="token operator">-></span>head<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>head<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// or while (!s->head.compare_exchange_weak(head, n));</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在我们向list中插入元素的时候，首先获取到当前的头指针的值head，然后我们在写数据的时候，首先和此刻的头指针值作对比，如果相同，那么就把新的节点插入。如果不相同，说明有线程先我们一步成功了，那么我们就多尝试一次，直到写入成功。</p>
+<p>以上就是使用CAS操作实现的乐观锁。上面的这个append就是最简单的Lock-free且线程安全的操作。</p>
+<h2 id="二concurrentqueue">二、concurrentqueue</h2>
+<p>最近在做这个项目的时候，就被安利了一个header only的C++并发队列库 <a target="_blank" rel="noopener" href="https://github.com/cameron314/concurrentqueue">concurrentqueue</a>。本着不重复造轮子的原则，我在项目中用了这个库，由于它只是两个头文件，特别方便的就加入到了项目中。关于这个库的特点，项目的github上写了很多。这里直接照搬下来，不做解释。</p>
+<blockquote>
+<ul>
+<li>Knock-your-socks-off <a target="_blank" rel="noopener" href="http://moodycamel.com/blog/2014/a-fast-general-purpose-lock-free-queue-for-c++#benchmarks">blazing fast performance</a>.</li>
+<li>Single-header implementation. Just drop it in your project.</li>
+<li>Fully thread-safe lock-free queue. Use concurrently from any number of threads.</li>
+<li>C++11 implementation -- elements are moved (instead of copied) where possible.</li>
+<li>Templated, obviating the need to deal exclusively with pointers -- memory is managed for you.</li>
+<li>No artificial limitations on element types or maximum count.</li>
+<li>Memory can be allocated once up-front, or dynamically as needed.</li>
+<li>Fully portable (no assembly; all is done through standard C++11 primitives).</li>
+<li>Supports super-fast bulk operations.</li>
+<li>Includes a low-overhead blocking version (BlockingConcurrentQueue).</li>
+<li>Exception safe.</li>
+</ul>
+</blockquote>
+<p>我体验了一下，感觉最舒服的有以下几点：</p>
+<ol type="1">
+<li>这个库确实可以很好的实现线程安全队列，而且速度很快。接口也比较简单。很容易上手。</li>
+<li>整个库就是两个头文件，而且没有其他的依赖，使用C++11实现，兼容各大平台，很容易融入项目。</li>
+<li>这个并发队列支持阻塞和非阻塞两种。(只在获取元素的时候可以阻塞)</li>
+</ol>
+<p>因为这个队列的用法十分简单，这里就直接贴上官网的介绍，然后针对一些细节，补充说明一下，下面是<strong>非阻塞队列</strong>的常用接口：</p>
+<blockquote>
+<ul>
+<li><code>ConcurrentQueue(size_t initialSizeEstimate)</code> Constructor which optionally accepts an estimate of the number of elements the queue will hold</li>
+<li><code>enqueue(T&amp;&amp; item)</code> Enqueues one item, allocating extra space if necessary</li>
+<li><code>try_enqueue(T&amp;&amp; item)</code> Enqueues one item, but only if enough memory is already allocated</li>
+<li><code>try_dequeue(T&amp; item)</code> Dequeues one item, returning true if an item was found or false if the queue appeared empty</li>
+</ul>
+</blockquote>
+<ul>
+<li><code>ConcurrentQueue(size_t initialSizeEstimate)</code> 这个没什么好说的，一个构造函数，可以指定队列的容量。</li>
+<li><code>enqueue(T&amp;&amp; item)</code> 入队操作。比较有意思的是，如果我们的队列已经满了的话，那么这个还是会把数据放到队列里，使得队列的容量变大。所以，如果希望队列的长度不变的话，尽量还是不要使用这个函数。</li>
+<li><code>try_enqueue(T&amp;&amp; item)</code> 这个也是入队操作，与上一个不同，这个函数当队列已经满了的时候，并不会进行入队操作，而是返回一个bool类型的值，表示是否入队成功。我在使用的时候，会判断这个bool值，如果是false，就让线程等待10ms之后重试。</li>
+<li><code>try_dequeue(T&amp; item)</code> 这个是出队操作，如果队列有值的话，则得到数据（放到参数item里面）。他也会返回一个bool类型的值，表示时候出队成功。</li>
+</ul>
+<p>在<strong>阻塞版本的队列</strong>中，主要多了如下两个函数： <code>wait_dequeue(T&amp;&amp; item)</code>和 <code>wait_dequeue_timed(T&amp;&amp; item, std::int64_t timeout_usecs)</code>。这两个函数的功能类似，都是进行出队操作，如果队列为空，则等待。唯一的区别是，前者永久等待，而后者可以指定等待的时间，如果超时，则会停止等待并返回false。</p>
+<p>最后是块操作，两种模式的队列都支持批量插入的操作。这里，我没有用过这些接口，所以大家自行看文档就好。 完整的API：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span> <span class="token expression">Allocates more memory <span class="token keyword">if</span> necessary</span></span>
+<span class="token function">enqueue</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">enqueue</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">enqueue_bulk</span><span class="token punctuation">(</span>item_first<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">enqueue_bulk</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item_first<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span> <span class="token expression">Fails <span class="token keyword">if</span> <span class="token operator">not</span> enough memory to enqueue</span></span>
+<span class="token function">try_enqueue</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_enqueue</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_enqueue_bulk</span><span class="token punctuation">(</span>item_first<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_enqueue_bulk</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item_first<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span> <span class="token expression">Attempts to dequeue from the <span class="token function">queue</span> <span class="token punctuation">(</span>never allocates<span class="token punctuation">)</span></span></span>
+<span class="token function">try_dequeue</span><span class="token punctuation">(</span>item<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_dequeue</span><span class="token punctuation">(</span>cons_token<span class="token punctuation">,</span> item<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_dequeue_bulk</span><span class="token punctuation">(</span>item_first<span class="token punctuation">,</span> max<span class="token punctuation">)</span> <span class="token operator">:</span> size_t
+<span class="token function">try_dequeue_bulk</span><span class="token punctuation">(</span>cons_token<span class="token punctuation">,</span> item_first<span class="token punctuation">,</span> max<span class="token punctuation">)</span> <span class="token operator">:</span> size_t
+
+<span class="token macro property"><span class="token directive-hash">#</span> <span class="token expression">If you happen to know which producer you want to dequeue from</span></span>
+<span class="token function">try_dequeue_from_producer</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token keyword">bool</span>
+<span class="token function">try_dequeue_bulk_from_producer</span><span class="token punctuation">(</span>prod_token<span class="token punctuation">,</span> item_first<span class="token punctuation">,</span> max<span class="token punctuation">)</span> <span class="token operator">:</span> size_t
+
+<span class="token macro property"><span class="token directive-hash">#</span> <span class="token expression">A <span class="token operator">not</span><span class="token operator">-</span>necessarily<span class="token operator">-</span>accurate count of the total number of elements</span></span>
+<span class="token function">size_approx</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">:</span> size_t<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/04/30/cpp-concurrent/" target="_blank" title="C++ 并发队列的原理简介与开源库concurrentqueue安利">
+        https://www.miaoerduo.com/2018/04/30/cpp-concurrent/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/06/22/the-usage-of-cpp-boost-json/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      C++ Boost JSON解析库的使用
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/04/03/cnn-object-detection3/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">CNN的目标检测概述（三）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

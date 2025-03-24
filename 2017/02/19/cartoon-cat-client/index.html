@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    爬虫-漫画喵的100行逆袭 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cartoon-cat-client" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  爬虫-漫画喵的100行逆袭
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/02/19/cartoon-cat-client/" class="article-date">
+  <time datetime="2017-02-19T19:15:28.000Z" itemprop="datePublished">2017-02-19</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Python/">Python</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 12 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：这次的博客，讲的是使用python编写一个爬虫工具。为什么要写这个爬虫呢？原因是小喵在看完《极黑的布伦希尔特》这个动画之后，又想看看漫画，结果发现各大APP都没有资源，最终好不容易找到一个网站可以看，但是由于网速太渣，看起来额外的费劲。这时候如果能提前下载下来就好了。</p>
+</blockquote>
+<p>先上项目地址（github）：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat">https://github.com/miaoerduo/cartoon-cat</a> 。欢迎大家随时<strong>fork</strong>、<strong>star</strong>和指教。</p>
+<span id="more"></span>
+<p>原因就是这样，作为技术喵，任何问题都不能阻碍一颗爱漫画的心。所以问题就来了，挖掘机技修哪家强？ 在bing上搜索Python、爬虫框架。找到大家常用的框架。</p>
+<p>Scrapy似乎是个很不错的选择。至于相对于其他框架的优点，小喵没有细查，至少这个框架是之前听过的。但是在实现的时候发现有一些问题，scrapy不能直接抓取动态的页面。小喵需要抓取的网站的漫画都是使用Ajax生成的。需要自己分析各种数据，这个有点麻烦。</p>
+<p>那么有没有可以渲染页面的工具呢？像浏览器一样的？有。</p>
+<p>这里介绍两个工具：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://phantomjs.org">PhantomJs</a>，可以理解是一个浏览器。不过它没有界面，我们可以通过js的代码模拟用户的行为。这就要求了解它的api并有js基础了。</li>
+<li><a target="_blank" rel="noopener" href="https://selenium-python.readthedocs.io">Selenium</a>，这是个浏览器自动化测试框架。它依赖于浏览器（这个浏览器也可以是PhantomJs），通过Selenium可以模拟用户的行为。而且有Python接口，所以相对简单一些。</li>
+</ul>
+<p>我们这个爬虫使用 <code>selenium + phantomjs</code> 来实现。哟，这个爬虫软件应该有个响当当的名字。。。就叫 <strong>漫画喵</strong> 吧，英文名 <strong>Cartoon Cat</strong>。</p>
+<p>下面我们一点点的介绍这个爬虫的实现过程吧。</p>
+<h2 id="一初生-环境搭建">一、初生-环境搭建</h2>
+<p>小喵这里选用 <code>Python</code> 作为开发语言，框架是 <code>selenium</code>。原因是 <code>python</code> 经常用来写爬虫，<code>selenium</code> 可以用来模拟用户行为，<code>PhantomJs</code> 是可选的，不过小喵最终会在一个服务器上运行，所以也是需要的。</p>
+<p>为了不影响本机上的 <code>python</code>，我们还需要使用 <code>virtualenv</code> 来创建一个独立的 <code>python</code> 环境。具体步骤如下：</p>
+<h3 id="安装virtualenv">1、安装virtualenv</h3>
+<p><code>virtualenv</code> 是一个常用的用来创建 <code>python</code> 环境的工具。小喵用这个有两个原因，一是为了不污染本机的环境，二是在本机直接安装库的时候出了一个权限的问题。<code>virtualenv</code> 的安装十分简单，使用 <code>pip</code> 工具就可以安装。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> virtualenv<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>待程序执行结束，你就会开心的发现自己已经有了 <code>virtualenv</code> 这个工具了。</p>
+<h3 id="创建python环境">2、创建python环境</h3>
+<p><code>virtualenv</code> 的使用非常的方便。建立新的运行环境：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">virtualenv <span class="token operator">&lt;</span>env-name<span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>进入相应的独立环境：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">source</span> <span class="token operator">&lt;</span>env-path<span class="token operator">></span>/bin/activate<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>执行完第一个指令后，就会创建成功一个 <code>python</code> 环境，执行第二个指令后，就会发现命令行的起始位置有变化。这时候 <code>python</code>、<code>pip</code> 等工具就变成使用这个新环境的了，当然也可以使用 <code>which python</code> 来查看。</p>
+<h3 id="安装selenium">3、安装selenium</h3>
+<p>进入新环境后，pip安装的依赖库都会在新环境中安装，不会影响主机自身的 <code>python</code>。使用 <code>pip</code> 安装 <code>selenium</code>：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pip <span class="token function">install</span> selenium<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>至此，我们的基本环境就搭建完了。</p>
+<h3 id="安装phantomjs">4、安装PhantomJs</h3>
+<p>这个只在从官网上下载就可以：<a target="_blank" rel="noopener" href="http://phantomjs.org/download.html">http://phantomjs.org/download.html</a> 小喵的本地实验环境是Mac，所以下载了Mac版本。解压之后就可以使用。</p>
+<h2 id="二寻觅-搜资源">二、寻觅-搜资源</h2>
+<p>小喵想看的这个漫画貌似各大网站都没有资源，在费了九牛二虎之力后，终于找到了一个网站！<a target="_blank" rel="noopener" href="http://www.tazhe.com/mh/9170/">http://www.tazhe.com/mh/9170/</a>。每个网站的结构都不相同，因此都需要定制一套爬虫程序。本文的爬虫就只能针对这个漫画网站使用，喵粉们需要爬其他网站的话，需要自己做相应的修改。</p>
+<h2 id="三分析-资源解析">三、分析-资源解析</h2>
+<p>这里需要解析两个页面，一个是漫画的首页，比如前面的：<a target="_blank" rel="noopener" href="http://www.tazhe.com/mh/9170/">http://www.tazhe.com/mh/9170/</a> 另一个就是具体章节的页面。</p>
+<h3 id="首页">1，首页</h3>
+<p>为了减小图片的大小，小喵把窗口做了缩放。首页大致是这个样子。</p>
+<img src="tazhe-index.png" alt="首页" />
+<center>
+图1 漫画首页
+</center>
+<p>各类信息十分的明了。我们关注的就是下面的漫画列表。通过Chrome强大的<strong>审查元素</strong>的功能，我们立刻就能定位到章节的位置。（<strong>对着感兴趣的位置-&gt;右键-&gt;审查</strong> 就能找到）</p>
+<p><img src="tazhe-inspect-element.png" alt="审查" /></p>
+<center>
+图2 章节的节点
+</center>
+<p>可以看到，章节所在的区域的 <code>id</code> 是 <code>play_0</code>，学过前端的童鞋都应该知道，一个页面中 <code>id</code> 通常唯一标示一个节点。因此如果我们能够获取这个页面的话，查找 <code>id</code> 为 <code>play_0</code> 的节点就能一下子缩小搜索范围。 而每个章节的信息都是一个 <code>a</code> 标签，标签的 <code>href</code> 是对应章节的具体网址，标签的文本部分是章节名。这样相对关系就得出了：<code>div#play_0 &gt; ul &gt; li &gt; a</code>。首页的分析就到此结束。</p>
+<h3 id="章节页面">2、章节页面</h3>
+<p>我们随意打开一个具体章节的页面。比如：<a target="_blank" rel="noopener" href="http://www.tazhe.com/mh/9170/1187086.html">http://www.tazhe.com/mh/9170/1187086.html</a></p>
+<p>映入眼帘的是一个很干净的页面（简直是漫画界的清流，好多漫画网站上全部是广告）。我们把<strong>鼠标放在图片这个区域-&gt;右键-&gt;审查</strong>。咦，我们的右键怎么按不了？</p>
+<p>其实呢，这个现象在小说网站上遇到的机会会更多。当我们看到比较优美的文字或是炫酷的图片，都会下意识的选中-&gt;右键-&gt;保存。而很多时候，这些资源都是有版权的。并不应该随意的传播（狠狠的打了自己的脸/(ㄒoㄒ)/~~）。因此限制鼠标右键会是一个很简单却有效的办法。那么我们如何绕过这个陷阱呢？</p>
+<p>很简单，我们不用右键即可。打开浏览器的开发者工具选项，找到 <code>elements</code> 这个选项。可以看到一个复杂的结构（其实和上面审查元素之后的结果一样）。之后不断的选中标签，当标签被选中时，左侧页面中对应的位置会有蓝色。多试几次，最终就能找到对应的位置。</p>
+<p><img src="tazhe-find-element.png" alt="tazhe-find-element" /></p>
+<center>
+图3 漫画图片
+</center>
+<p>这是一个 <code>img</code> 标签，对应的 <code>id</code> 是 <code>qTcms_pic</code>。这样找到这个 <code>id</code>，就能找到这个 <code>img</code> 标签，根据 <code>src</code> 就能找到图片的具体URI地址。</p>
+<p>接下来是找到下一张图片的地址。这时候需要查看下一页这个按钮的内容。用相同的方法，很容易定位成功。</p>
+<p><img src="tazhe-next-uri.png" alt="next" /></p>
+<center>
+图4 下一页
+</center>
+<p>小喵本来是用scrapy来做爬虫的，看到这里的时候就果断放弃了。我们分析一下，选中的<code>a</code>标签的代码如下：</p>
+<pre class="line-numbers language-html" data-language="html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>a</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>next<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>javascript:a_f_qTcms_Pic_nextUrl_Href();<span class="token punctuation">"</span></span> <span class="token attr-name">title</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>下一页<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>span</span><span class="token punctuation">></span></span>下一页<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>span</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>a</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>比较简单的网站，“下一页”可以用真的 <code>a</code> 标签和 <code>href</code> 属性来做。这样的好处是实现比较简单，坏处是一旦得到网页源码就能很容易的解析。而像 <code>scrapy</code> 这样的爬虫工具只能抓取静态的代码（动态的需要自己分析ajax，有点麻烦）。而显然这里的页面是动态的，使用了ajax来实现。所以光是得到网页源码并不能真的得到图片，而是必须让其中的js代码运行才可以。所以我们才需要使用浏览器或者PhantomJs这样的可以执行js代码的工具。</p>
+<p>上面的 <code>a</code> 标签的代码告诉了我们很多信息。首先是告诉了我们，这个节点的位置，通过 <code>next</code> 这个类名可以方便的找到该节点（其实有两个类名为 <code>next</code> 的按钮，另一个在下面，但是功能都一样）。其次，当这个按钮被点击时会调用：<code>a_f_qTcms_Pic_nextUrl_Href()</code> 这个js函数。难道我们需要再研究这个函数？</p>
+<p>不用。因为 <code>PhantomJs</code> 的角色就是一个浏览器。我们只需要向真正的用户一样点击一下这个 <code>next</code> 按钮，就会进入下一个页面。<span style="color: green">/* 感受到这个工具的强大了吗？*/</span></p>
+<h3 id="判断章节的末尾">3、判断章节的末尾</h3>
+<p>最后一个问题就是，如何判断这个章节结束了？</p>
+<p>我们跳到章节的最后一页，然后再次点击“下一页”，这时候会出现一个弹窗。</p>
+<p><img src="tazhe-the-last-page.png" alt="tazhe-the-last-page" /></p>
+<center>
+图5 最后一页
+</center>
+<p>多次试验之后，我们会发现，只有在最后一页的时候才会弹出这个弹窗，这样的话，我们每抓取完一页，点击一次“下一页”，判断有无弹窗就知道是不是最后一页了。在右侧的开发者工具中我们能够看到，这个弹窗是一个 <code>id</code> 为 <code>msgDiv</code> 的 <code>div</code>（而且它的出现和消失是通过增减节点来实现的，另一种实现方法是将 <code>display</code> 设成 <code>none</code> 和 <code>block</code>，这种情况可以根据 <code>display</code> 的属性来判断）。所以我们判断这个节点存不存在就行了。</p>
+<p>至此，两种页面的解析都完成了。下一步就开始我们的代码实现吧。</p>
+<h2 id="四逆袭代码实现">四、逆袭——代码实现</h2>
+<h3 id="selenium的简单用法">1，selenium的简单用法</h3>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> selenium <span class="token keyword">import</span> webdriver
+
+browser <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>Firefox<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># browser = webdriver.Safari()</span>
+<span class="token comment"># browser = webdriver.Chrome()</span>
+<span class="token comment"># browser = webdriver.Ie()</span>
+<span class="token comment"># browser = webdriver.PhantomJs()</span>
+
+browser<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'http://baidu.com'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span> browser<span class="token punctuation">.</span>title
+<span class="token comment"># do anything you want</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面是一个简单的例子，第一步import依赖的库。</p>
+<p>第二步，获得一个浏览器实例。selenium支持多种浏览器。使用firefox之外的浏览器都需要下载驱动（selenium本身自带了firefox的驱动）。驱动下载地址：<a target="_blank" rel="noopener" href="https://pypi.python.org/pypi/selenium">https://pypi.python.org/pypi/selenium</a> 。驱动下载完之后将它的路径加入到 <code>PATH</code> 里，确保驱动程序能够被访问到。或者显式的把驱动程序的地址当参数传入。像下面一样调用：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">browser <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>PhantomJs<span class="token punctuation">(</span><span class="token string">'path/to/phantomjs'</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>第三步，用 <code>get</code> 的方式打开网页。</p>
+<p>最后，通过 <code>browser</code> 对象来解析和处理页面。</p>
+<h3 id="获取章节的链接信息">2，获取章节的链接信息</h3>
+<p>在上面的解析页面的时候，我们知道了章节信息的位置：<code>div#play_0 &gt; ul &gt; li &gt; a</code>。这样就可以解析出章节信息。browser支持一大堆的选择器。大大简化我们查找节点的工作。</p>
+<pre class="line-numbers language-none"><code class="language-none">from selenium import webdriver
+
+if __name__ &#x3D;&#x3D; &quot;__main__&quot;:
+    driver &#x3D; &quot;path&#x2F;to&#x2F;driver&quot; # 驱动地址
+    browser &#x3D; webdriver.PhantomJS(driver) # 浏览器实例
+
+    main_page &#x3D; &quot;http:&#x2F;&#x2F;www.tazhe.com&#x2F;mh&#x2F;9170&#x2F;&quot;
+    browser.get(main_page) # 加载页面
+
+    # 解析出章节的元素节点
+    chapter_elem_list &#x3D; browser.find_elements_by_css_selector(&#39;#play_0 ul li a&#39;) # 通过css选择器找出章节节点
+    chapter_elem_list.reverse()  # 原本的章节是倒叙的
+
+    chapter_list &#x3D; []
+    for chapter_elem in chapter_elem_list:
+        # 元素的text和href属性分别就是章节的名称和地址
+        chapter_list.append((chapter_elem.text, chapter_elem.get_attribute(&#39;href&#39;)))
+
+    # chapter_list 就是章节的信息<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="给定一个章节的地址章节中的图片">3，给定一个章节的地址，章节中的图片</h3>
+<p>这一步涉及到节点的获取、模拟鼠标的点击以及资源的下载。<code>selenium</code> 的点击实现特别的人性化。只需要获取节点然后调用 <code>click()</code> 方法就搞定。资源的下载网上有许多教程，主要有两个方法，通过模拟 <strong>右键另存为</strong>，和 <strong>获取url用其他工具下载</strong>。考虑到这里的右键不一定可用，而且操作有一点点复杂。小喵选用了第二种方案。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> selenium <span class="token keyword">import</span> webdriver
+<span class="token keyword">from</span> selenium<span class="token punctuation">.</span>common<span class="token punctuation">.</span>exceptions <span class="token keyword">import</span> NoSuchElementException
+<span class="token keyword">import</span> os
+<span class="token keyword">from</span> os <span class="token keyword">import</span> path <span class="token keyword">as</span> osp
+<span class="token keyword">import</span> urllib
+
+<span class="token comment"># 一个简单的下载器</span>
+download<span class="token punctuation">(</span>url<span class="token punctuation">,</span> save_path<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>save_path<span class="token punctuation">,</span> <span class="token string">'wb'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            fp<span class="token punctuation">.</span>write<span class="token punctuation">(</span>urllib<span class="token punctuation">.</span>urlopen<span class="token punctuation">(</span>url<span class="token punctuation">)</span><span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">except</span> Exception<span class="token punctuation">,</span> et<span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span>et<span class="token punctuation">)</span>
+
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    
+    driver <span class="token operator">=</span> <span class="token string">"path/to/driver"</span> <span class="token comment"># 驱动地址</span>
+    browser <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>PhantomJS<span class="token punctuation">(</span>driver<span class="token punctuation">)</span> <span class="token comment"># 浏览器实例</span>
+
+    chapter_url <span class="token operator">=</span> <span class="token string">"http://www.tazhe.com/mh/9170/1187061.html"</span>
+    save_folder <span class="token operator">=</span> <span class="token string">"./download"</span>
+
+    <span class="token keyword">if</span> <span class="token keyword">not</span> osp<span class="token punctuation">.</span>exists<span class="token punctuation">(</span>save_folder<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        os<span class="token punctuation">.</span>mkdir<span class="token punctuation">(</span>save_folder<span class="token punctuation">)</span>
+
+    image_idx <span class="token operator">=</span> <span class="token number">1</span>
+
+    browser<span class="token punctuation">.</span>get<span class="token punctuation">(</span>chapter_url<span class="token punctuation">)</span> <span class="token comment"># 加载第一个页面</span>
+
+    <span class="token keyword">while</span> <span class="token boolean">True</span><span class="token punctuation">:</span>
+        <span class="token comment"># 根据前文的分析，找到图片的URI地址</span>
+        image_url <span class="token operator">=</span> browser<span class="token punctuation">.</span>find_element_by_css_selector<span class="token punctuation">(</span><span class="token string">'#qTcms_pic'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>get_attribute<span class="token punctuation">(</span><span class="token string">'src'</span><span class="token punctuation">)</span>
+        save_image_name <span class="token operator">=</span> osp<span class="token punctuation">.</span>join<span class="token punctuation">(</span>save_folder<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token string">'%05d'</span> <span class="token operator">%</span> image_idx<span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'.'</span> <span class="token operator">+</span> osp<span class="token punctuation">.</span>basename<span class="token punctuation">(</span>image_url<span class="token punctuation">)</span><span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        download<span class="token punctuation">(</span>image_url<span class="token punctuation">,</span> save_image_name<span class="token punctuation">)</span> <span class="token comment"># 下载图片</span>
+
+        <span class="token comment"># 通过模拟点击加载下一页，注意如果是最后一页，会出现弹窗提示</span>
+        browser<span class="token punctuation">.</span>find_element_by_css_selector<span class="token punctuation">(</span><span class="token string">'a.next'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>click<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">try</span><span class="token punctuation">:</span>
+            <span class="token comment"># 找寻弹窗，如果弹窗存在，说明这个章节下载完毕，这个大循环也就结束了</span>
+            browser<span class="token punctuation">.</span>find_element_by_css_selector<span class="token punctuation">(</span><span class="token string">'#bgDiv'</span><span class="token punctuation">)</span>
+            <span class="token keyword">break</span>
+        <span class="token keyword">except</span> NoSuchElementException<span class="token punctuation">:</span>
+            <span class="token comment"># 没有结束弹窗，继续下载</span>
+            image_idx <span class="token operator">+=</span> <span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="五终焉-写在后面">五、终焉-写在后面</h2>
+<p>至此，漫画喵的设计思路和主要的代码实现都介绍完了。上面的代码只是用来示意，小喵自己下载漫画用的代码是另一套。</p>
+<p>github的地址是：<a target="_blank" rel="noopener" href="https://github.com/miaoerduo/cartoon-cat">https://github.com/miaoerduo/cartoon-cat</a> 。项目只有100多行。不过也用了小喵不少的一段时间。</p>
+<p>博客写完了~ 小喵的漫画也下完了~</p>
+<p><img src="tazhe-downloaded-content.png" alt="tazhe-downloaded-content" /></p>
+<center>
+图6 下载好的漫画
+</center>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2017/02/19/cartoon-cat-client/" target="_blank" title="爬虫-漫画喵的100行逆袭">
+        https://www.miaoerduo.com/2017/02/19/cartoon-cat-client/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2017/03/14/cartoon-cat-server/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      简易漫画网站搭建-漫画喵Server版
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2017/02/03/c-lambda-tutorial/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">C++ Lambda表达式</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

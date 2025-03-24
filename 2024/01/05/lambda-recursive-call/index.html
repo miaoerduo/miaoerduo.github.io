@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    C++和Go关于闭包递归调用的趣事 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-lambda-recursive-call" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  C++和Go关于闭包递归调用的趣事
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2024/01/05/lambda-recursive-call/" class="article-date">
+  <time datetime="2024-01-05T06:17:15.000Z" itemprop="datePublished">2024-01-05</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/go/">go</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="一次codereview引发的讨论">一次CodeReview引发的讨论</h2>
+<p>起因是这样的，Code Review的时候看到了下面这段Golang的代码：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"fmt"</span>
+
+<span class="token keyword">func</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"download"</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"download error"</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	times <span class="token operator">:=</span> <span class="token number">3</span>
+	<span class="token keyword">var</span> tryDownload <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
+	tryDownload <span class="token operator">=</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">if</span> times <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"exceed max times"</span><span class="token punctuation">)</span>
+		<span class="token punctuation">&#125;</span>
+		err <span class="token operator">:=</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> <span class="token boolean">nil</span>
+		<span class="token punctuation">&#125;</span>
+		times<span class="token operator">--</span>
+		<span class="token keyword">return</span> <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"last times"</span><span class="token punctuation">,</span> times<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>大致意思是尝试下载三次。</p>
+<p>由于被Golang的闭包坑过，所以当时给的Code Review的意见是改成<code>for loop</code>的方式，避免闭包捕获可能导致的问题。</p>
+<span id="more"></span>
+<p>当然在Golang中，这段代码是正确的。最终输出结果为：</p>
+<pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">download
+download
+download
+last times 0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出这里的<code>times</code>最终值是<code>0</code>，说明了Golang中的闭包使用的是<code>引用捕获</code>。</p>
+<blockquote>
+<p>进一步思考一下，如果Golang使用的是值捕获，每次<code>tryDownload</code>中的<code>times</code>都被重置为3，会有问题吗？</p>
+</blockquote>
+<p>总之，写成<code>for loop</code>的方式既简单又直观。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	times <span class="token operator">:=</span> <span class="token number">3</span>
+	tryDownload <span class="token operator">:=</span> <span class="token keyword">func</span><span class="token punctuation">(</span>times <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">for</span> times <span class="token operator">></span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+			err <span class="token operator">:=</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+			<span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+				<span class="token keyword">return</span> <span class="token boolean">nil</span>
+			<span class="token punctuation">&#125;</span>
+			times<span class="token operator">--</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"exceed max times"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token function">tryDownload</span><span class="token punctuation">(</span>times<span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"last times"</span><span class="token punctuation">,</span> times<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最终输出为：</p>
+<pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">download
+download
+download
+last times 3<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="可是偏偏我复现不了">可是偏偏我复现不了</h2>
+<p>现在回到之前的问题，如果使用值捕获的方式，是否真的会有问题？这里我们用C++重写一下类似的逻辑。这里我尝试在MacOS和Docker中均做了测试，结果一致。</p>
+<p>首先先编写相同的<code>引用捕获</code>的情况:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">bool</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"download"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> times <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> tryDownload <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">&amp;</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>times <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+		times<span class="token operator">--</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"last times "</span> <span class="token operator">&lt;&lt;</span> times <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译和执行，和Golang完全一致： <pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">g++ a.cpp -std=c++11
+./a.out 
+download
+download
+download
+last times 0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></p>
+<p>之后我们将<code>引用捕获</code>改为<code>值捕获</code>:</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp">```cpp
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> times <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> tryDownload <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span> <span class="token comment">// change the `&amp;` to `=`</span>
+        <span class="token comment">// ...</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"last times "</span> <span class="token operator">&lt;&lt;</span> times <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译和执行：</p>
+<pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">g++ a.cpp -std=c++11
+a.cpp:11:42: warning: variable 'tryDownload' is uninitialized when used within its own initialization [-Wuninitialized]
+    std::function&lt;bool()> tryDownload = [=]() mutable &#123;
+                          ~~~~~~~~~~~    ^
+1 warning generated.
+
+./a.out
+[1]    38581 segmentation fault  ./a.out<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在编译时，编译器智能的给出了警告，用值捕获的<code>tryDownload</code>对象没有初始化。在运行期果然出现了错误。</p>
+<p>但是这个段错误其实并不是由于该对象未初始化导致的，这里我们直接注释掉对<code>tryDownload</code>的调用。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> times <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> tryDownload <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span> <span class="token comment">// change the `&amp;` to `=`</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>times <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+		times<span class="token operator">--</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token comment">// tryDownload();</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"last times "</span> <span class="token operator">&lt;&lt;</span> times <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译和执行，会得到和之前相同的段错误。</p>
+<p>有趣的事情发生了。</p>
+<h2 id="事情并不简单">事情并不简单</h2>
+<p>要解释这个问题，首先需要理解lambda表达式到底做了什么，以及如何存储捕获的数据的。这里有一个例子，测试环境为gcc <code>(Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0</code>：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression"><span class="token function">pack</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> p1 <span class="token operator">=</span> <span class="token function">rand</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> p2 <span class="token operator">=</span> <span class="token function">rand</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int64_t</span> q1 <span class="token operator">=</span> <span class="token function">rand</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int64_t</span> q2 <span class="token operator">=</span> <span class="token function">rand</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> no_cap <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> no_cap2 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">int64_t</span> k <span class="token operator">=</span> <span class="token function">rand</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> k<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v4 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v4v8 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">,</span> q1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v4v4v8v8 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">,</span> p2<span class="token punctuation">,</span> q1<span class="token punctuation">,</span> q2<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> r4 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">&amp;</span>p1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> r4r8 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">&amp;</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> r4r4r8r8 <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">&amp;</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>p2<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q2<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v4r4 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>p2<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v8r8 <span class="token operator">=</span> <span class="token punctuation">[</span>q1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q2<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v4r8 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token keyword">auto</span> v8r4 <span class="token operator">=</span> <span class="token punctuation">[</span>q1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>p2<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(no_cap)    = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>no_cap<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(no_cap2)   = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>no_cap2<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v4)        = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v4<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v4v8)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v4v8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v4v4v8v8)  = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v4v4v8v8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(r4)        = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>r4<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(r4r8)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>r4r8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(r4r4r8r8)  = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>r4r4r8r8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v4r4)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v4r4<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v8r8)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v8r8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v4r8)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v4r8<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"sizeof(v8r4)      = "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>v8r4<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>执行的输出为：</p>
+<pre class="line-numbers language-txt" data-language="txt"><code class="language-txt">sizeof(no_cap)    = 1
+sizeof(no_cap2)   = 1
+sizeof(v4)        = 4
+sizeof(v4v8)      = 12
+sizeof(v4v4v8v8)  = 24
+sizeof(r4)        = 8
+sizeof(r4r8)      = 16
+sizeof(r4r4r8r8)  = 32
+sizeof(v4r4)      = 12
+sizeof(v8r8)      = 16
+sizeof(v4r8)      = 12
+sizeof(v8r4)      = 16<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>说明一下：</p>
+<ol type="1">
+<li><code>#pragma pack(1)</code>: 这句是为了限制编译器做字节对齐的优化，不然不好分析结果。该参数在GCC上会生效，在MacOS Clang中似乎有问题。</li>
+<li><code>r4r4v8v8</code>: 其中<code>r4</code>表示用<code>引用(ref)捕获</code>的方式捕获4字节的对象，<code>v8</code>表示用<code>值(value)捕获</code>的方式捕获8字节的对象。</li>
+<li><code>no_cap</code>: 大小为1是因为编译器对于占用空间为0的对象，会按照大小为1来处理，比如<code>struct &#123;&#125;</code>类型的对象，其大小也是1。</li>
+</ol>
+<p>不难知道，lambda表达式的<code>sizeof</code>其实是值捕获的<code>大小</code>总和加上引用捕获的对象的<code>指针大小</code>总和。本质上，lambda对象其实是一个可调用(callable)的对象。正如下面的两种写法。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> p1<span class="token punctuation">;</span>
+<span class="token keyword">int64_t</span> q1<span class="token punctuation">;</span>
+
+<span class="token keyword">auto</span> v4r8 <span class="token operator">=</span> <span class="token punctuation">[</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q1<span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 等价于</span>
+
+<span class="token keyword">struct</span> <span class="token class-name">lambda_v4r8</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">int</span> p1<span class="token punctuation">;</span>
+  <span class="token keyword">int64_t</span> <span class="token operator">*</span>q1<span class="token punctuation">;</span>
+  <span class="token keyword">void</span> <span class="token keyword">operator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">struct</span> <span class="token class-name">lambda_v4r8</span> my_v4r8<span class="token punctuation">&#123;</span>p1<span class="token punctuation">,</span> <span class="token operator">&amp;</span>q1<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>所以lambda表达式其实相当于一个语法糖，简化了我们自己的很多工作。编译器需要解析lambda表达式，生成一个可调用的类型，完成赋值。最终我们直接进行调用。</p>
+<p>而<code>std::function</code>是另一个有意思的话题。他可以存放各类可调用的对象，包括函数指针，可调用的类，lambda表达式等。但是，他的size是固定的，在我的环境下，它的长度是32字节(不同编译器对其的实现并不相同。这里仅代表GCC)。</p>
+<p>这里<code>std::function</code>用了<code>small function optimization</code>的技术，和<code>std::string</code> 一样。如果可调用的对象的大小很小，那么直接将这个对象的内存存到<code>std::function</code>中，如果对象很大，就单独new一份空间，然后copy进去。下面是网上的例子(<a target="_blank" rel="noopener" href="https://shaharmike.com/cpp/lambdas-and-functions/">Link</a>)：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;array></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;cstdlib></span> <span class="token comment">// for malloc() and free()</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+
+<span class="token comment">// replace operator new and delete to log allocations</span>
+<span class="token keyword">void</span><span class="token operator">*</span> <span class="token keyword">operator</span> <span class="token keyword">new</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span>size_t n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Allocating "</span> <span class="token operator">&lt;&lt;</span> n <span class="token operator">&lt;&lt;</span> <span class="token string">" bytes"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token function">malloc</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">void</span> <span class="token keyword">operator</span> <span class="token keyword">delete</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span> p<span class="token punctuation">)</span> <span class="token keyword">throw</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	std<span class="token double-colon punctuation">::</span>array<span class="token operator">&lt;</span><span class="token keyword">char</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token operator">></span> arr1<span class="token punctuation">;</span>
+	<span class="token keyword">auto</span> lambda1 <span class="token operator">=</span> <span class="token punctuation">[</span>arr1<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span> 
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Assigning lambda1 of size "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>lambda1<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">void</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> f1 <span class="token operator">=</span> lambda1<span class="token punctuation">;</span>
+
+	std<span class="token double-colon punctuation">::</span>array<span class="token operator">&lt;</span><span class="token keyword">char</span><span class="token punctuation">,</span> <span class="token number">17</span><span class="token operator">></span> arr2<span class="token punctuation">;</span>
+	<span class="token keyword">auto</span> lambda2 <span class="token operator">=</span> <span class="token punctuation">[</span>arr2<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span> 
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Assigning lambda2 of size "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>lambda2<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">void</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> f2 <span class="token operator">=</span> lambda2<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output:</span>
+<span class="token comment">// Assigning lambda1 of size 16</span>
+<span class="token comment">// Assigning lambda2 of size 17</span>
+<span class="token comment">// Allocating 17 bytes</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，如果表达式对象大小在16字节以内(含)，会直接使用自身的内存，如果超过的，会调用<code>new</code>单独分配。</p>
+<p>剥离出<code>std::function</code>的源码可以看到。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">union</span> _Nocopy_types <span class="token punctuation">&#123;</span> <span class="token comment">// 16 bytes</span>
+    <span class="token keyword">void</span><span class="token operator">*</span>       _M_object<span class="token punctuation">;</span> <span class="token comment">// 8 bytes</span>
+    <span class="token keyword">const</span> <span class="token keyword">void</span><span class="token operator">*</span> _M_const_object<span class="token punctuation">;</span> <span class="token comment">// 8 bytes</span>
+    <span class="token keyword">void</span> <span class="token punctuation">(</span><span class="token operator">*</span>_M_function_pointer<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 8 bytes</span>
+    <span class="token keyword">void</span> <span class="token punctuation">(</span>_Undefined_class<span class="token double-colon punctuation">::</span><span class="token operator">*</span>_M_member_pointer<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 16 bytes</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">union</span> _Any_data <span class="token punctuation">&#123;</span> <span class="token comment">// 16 bytes</span>
+    _Nocopy_types _M_unused<span class="token punctuation">;</span> <span class="token comment">// 16 bytes</span>
+    <span class="token keyword">char</span> _M_pod_data<span class="token punctuation">[</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>_Nocopy_types<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">// 16 bytes</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">enum</span> <span class="token class-name">_Manager_operation</span>
+<span class="token punctuation">&#123;</span>
+    __get_type_info<span class="token punctuation">,</span>
+    __get_functor_ptr<span class="token punctuation">,</span>
+    __clone_functor<span class="token punctuation">,</span>
+    __destroy_functor
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">_Function_base</span> <span class="token punctuation">&#123;</span> <span class="token comment">// 32 bytes</span>
+    <span class="token keyword">typedef</span> <span class="token keyword">bool</span> <span class="token punctuation">(</span><span class="token operator">*</span>_Manager_type<span class="token punctuation">)</span><span class="token punctuation">(</span>_Any_data<span class="token operator">&amp;</span><span class="token punctuation">,</span> <span class="token keyword">const</span> _Any_data<span class="token operator">&amp;</span><span class="token punctuation">,</span>
+				  _Manager_operation<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    _Any_data     _M_functor<span class="token punctuation">;</span> <span class="token comment">// 16 bytes</span>
+    _Manager_type _M_manager<span class="token punctuation">;</span> <span class="token comment">// 8 bytes</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">function</span><span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">private</span> <span class="token class-name">_Function_base</span></span> <span class="token punctuation">&#123;</span> <span class="token comment">// 32 bytes</span>
+    <span class="token keyword">using</span> _Invoker_type <span class="token operator">=</span> <span class="token function">_Res</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">const</span> _Any_data<span class="token operator">&amp;</span><span class="token punctuation">,</span> _ArgTypes<span class="token operator">&amp;&amp;</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    _Invoker_type _M_invoker<span class="token punctuation">;</span> <span class="token comment">// 8 bytes</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出一个<code>std::function</code>中有三个部分:</p>
+<ol type="1">
+<li><code>_M_invoker</code>: <code>8 bytes</code> 实际调用的函数（指针）</li>
+<li><code>_M_functor</code>: <code>16 bytes</code> 用来存放函数对象的空间。该空间的读写由<code>_M_manager</code>来控制。</li>
+<li><code>_M_manager</code>: <code>8 bytes</code> 指向内存管理的工具类的指针，支持4种操作。</li>
+</ol>
+<p>最后，我们再回到之前的代码：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> times <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>function<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">></span> tryDownload <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">mutable</span> <span class="token punctuation">&#123;</span> <span class="token comment">// change the `&amp;` to `=`</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>times <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+		times<span class="token operator">--</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token comment">// tryDownload();</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"last times "</span> <span class="token operator">&lt;&lt;</span> times <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里，其实存在多个对象：</p>
+<ol type="1">
+<li><code>times</code>: 4字节</li>
+<li><code>tryDownload</code>: 32字节</li>
+<li><code>lambda表达式</code>: 这里值捕获了<code>times</code>和<code>tryDownload</code>（注意，不是捕获了自己，而是外面的<code>std::function</code>），因此是36字节。</li>
+</ol>
+<p>实际的执行顺序是:</p>
+<ol type="1">
+<li>定义了<code>tryDownload</code>对象，但未初始化。</li>
+<li>构造lambda表达式对象
+<ol type="1">
+<li>复制<code>times</code></li>
+<li>(Crash) 复制<code>tryDownload</code></li>
+</ol></li>
+<li>将lambda对象（36字节）赋值给<code>tryDownload</code>
+<ol type="1">
+<li>触发动态分配和函数拷贝机制</li>
+</ol></li>
+<li>调用<code>tryDownload</code></li>
+</ol>
+<p><img src="lambda-crash.png" /></p>
+<p>用GDB查看Core的位置，可以发现是在<code>std::function</code>的拷贝构造函数的时候挂掉了。看起来应该是构造lambda表达式的值捕获阶段出现的问题（没有再更深入研究了）。</p>
+<p>最后一个问题，为什么<code>引用捕获</code>不会有问题？由于<code>引用捕获</code>实际上只是保存了其指针，因此<code>std::function</code>是否初始化都不影响其地址，也不存在拷贝等问题。</p>
+<h2 id="最后简单说两句">最后简单说两句</h2>
+<p>工作之后，有意思的事情越来越少了，也没有足够的时间去思考和学习，真是一大憾事。希望看到这篇博客的你，不忘初心，指定你的新年的小目标吧。</p>
+<p>这里顺便Cue一下鹏哥，看完之后快留个言说说感想。😁</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2024/01/05/lambda-recursive-call/" target="_blank" title="C++和Go关于闭包递归调用的趣事">
+        https://www.miaoerduo.com/2024/01/05/lambda-recursive-call/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2024/01/26/free-serverless-provider/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      免费的云服务搜集
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2023/01/29/cgo/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">CGO函数调用与数据转换</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    Hello CUDA - CUDA程序简单入门 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-hello-cuda" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  Hello CUDA - CUDA程序简单入门
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/02/07/hello-cuda/" class="article-date">
+  <time datetime="2016-02-07T22:03:26.000Z" itemprop="datePublished">2016-02-07</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/CUDA/">CUDA</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 9 分钟</div>
+    </div>
+    
+
+    
+    
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：通过之前的对于GPU和CUDA的学习，我们应该简单的了解了什么是GPU，它能做什么，以及GPU的硬件结构。那么，大家是不是迫不及待的想要写出CUDA程序了呢？</p>
+</blockquote>
+<span id="more"></span>
+<p>本章就要通过最简单的几个理解，教会大家CUDA程序的写法，并理解其工作方式。 下面就是第一个程序：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h></span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Hello CUDA!\\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>将上述代码保存成文件<code>hello_cuda.cu</code>，使用nvcc进行编译。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">nvcc hello_cuda.cu <span class="token parameter variable">-o</span> hello_cuda.out<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>便可以得到可执行文件<code>hello_cuda.out</code>，运行该可执行文件，便可得到如下的结果（实验的环境为CentOS 7）:</p>
+<pre class="line-numbers language-none"><code class="language-none">Hello CUDA!<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>这就是第一个CUDA程序。</p>
+<div style="color: gray">
+旁观者小汪：这不就是C语言的Hello World程序嘛，和GPU有什么关系？
+</div>
+<p>是的，这个程序确实和一般的CPU程序没什么两样，写这个程序主要是告诉大家，其实CUDA的语法本身并不难，我们可以像写CPU程序一样编写GPU上的程序。</p>
+<p>现在我们简单分析一下这个程序，代码内容就不用分析了吧。首先，源码文件是以.cu结尾，这有别于C和C++的.c,.cc,.cpp等后缀。其次，编译的时候使用nvcc这个编译器，对于C/C++的程序，我们常用的编译器是gcc。NVIDIA公司通过提供额外的关键字（后面会说到）来拓展了C/C++语言，重写了gcc为nvcc，支持了整个CUDA程序的编译过程。nvcc的使用可以使用nvcc -h来查询。这不是本章的重点。 下面，我们看一个稍微复杂一点的程序。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">function_call3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+<span class="token punctuation">&#125;</span>
+
+__device__ <span class="token keyword">void</span> <span class="token function">function_call2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+<span class="token punctuation">&#125;</span>
+
+__global__ <span class="token keyword">void</span> <span class="token function">function_call1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">function_call2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment">// success</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    function_call1<span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// success</span>
+    <span class="token comment">// function_call2&lt;&lt;&lt;1, 1>>>();  // error: a __device__ function call cannot be configured</span>
+    <span class="token function">function_call3</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment">// success</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>很遗憾，这个程序既不会完成出色的算法，也不会有任何的输出，更不会为您煮出香喷喷的咖啡。</p>
+<p>但这里我们可以惊奇的发现两个特殊的关键字<code>__global__</code>和<code>__device__</code>，这就是我们之前提到过的对<code>C/C++</code>的拓展的关键字。</p>
+<p>CUDA程序主要有两个部分，CPU上运行的程序和GPU上的程序。这些特殊的关键字就是为了说明后面定义的函数（这些关键字也可以修饰变量）在何处运行。main函数作为入口函数，之前没有任何的修饰，是很正常的CPU程序。同理<code>function_call3</code>也是CPU的程序(CPU上的程序也可以用<code>__host__</code>来修饰)。<code>function_call1</code>被<code>__global__</code>修饰，意思是该程序可以被任何程序所调用（CPU或GPU），但是是在GPU上运行。<code>function_call2</code>被<code>__device__</code>修饰，表示该程序是GPU上的程序并且只能被GPU程序所调用。理解调用规则了吗？<code>&lt;&lt;&lt;1, 1&gt;&gt;&gt;</code>这个符号，这也是对C/C++的拓展，这两个数字分别表示<code>block_num</code>和<code>thread_num</code>，用来指示GPU程序的线程块和块内线程的数目。我们暂时不用理解。</p>
+<p>现在，整个程序是不是就变得很清晰？这其实就是一个验证CPU和GPU上的函数调用的例子。</p>
+<p>通过上面的这个例子，我们已经知道了CPU和GPU程序的调用规则。并编写出了两个_什么都不做的_CUDA程序。</p>
+<p>最后，我们看一个更为复杂的程序，一个向量的加法程序。程序中可能有一些我们没有介绍过的东西，只需意会即可。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;cuda_runtime.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;assert.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">CUDA_CALL</span><span class="token expression"><span class="token punctuation">(</span>x<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">const</span> cudaError_t a <span class="token operator">=</span> <span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>a<span class="token operator">!=</span> cudaSuccess<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token function">printf</span><span class="token punctuation">(</span></span><span class="token string">"\nCUDA Error: %s(err_num=%d)\n"</span><span class="token expression"><span class="token punctuation">,</span> <span class="token function">cudaGetErrorString</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">cudaDeviceReset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">assert</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">VECTOR_LENGTH</span> <span class="token expression"><span class="token number">1024</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">BLOCK_NUM</span> <span class="token expression"><span class="token number">2</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">THREAD_NUM</span> <span class="token expression"><span class="token number">256</span></span></span>
+
+__global__ <span class="token keyword">void</span> <span class="token function">vector_add</span><span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span>v1<span class="token punctuation">,</span> <span class="token keyword">int</span> <span class="token operator">*</span>v2<span class="token punctuation">,</span> <span class="token keyword">int</span> <span class="token operator">*</span>r<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 线程号</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> tid <span class="token operator">=</span> blockDim<span class="token punctuation">.</span>x <span class="token operator">*</span> blockIdx<span class="token punctuation">.</span>x <span class="token operator">+</span> threadIdx<span class="token punctuation">.</span>x<span class="token punctuation">;</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>tid <span class="token operator">&lt;</span> VECTOR_LENGTH<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        r<span class="token punctuation">[</span>tid<span class="token punctuation">]</span> <span class="token operator">=</span> v1<span class="token punctuation">[</span>tid<span class="token punctuation">]</span> <span class="token operator">+</span> v2<span class="token punctuation">[</span>tid<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        tid <span class="token operator">+=</span> BLOCK_NUM <span class="token operator">*</span> THREAD_NUM<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token comment">// CPU内存</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>host_v1 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token function">malloc</span><span class="token punctuation">(</span>VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>host_v2 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token function">malloc</span><span class="token punctuation">(</span>VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>host_result <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token function">malloc</span><span class="token punctuation">(</span>VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>gpu_result <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token function">malloc</span><span class="token punctuation">(</span>VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// GPU内存</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>device_v1<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>device_v2<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> <span class="token operator">*</span>device_result<span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMalloc</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>device_v1<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMalloc</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>device_v2<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMalloc</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>device_result<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 初始化CPU上的数据</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> idx <span class="token operator">&lt;</span> VECTOR_LENGTH<span class="token punctuation">;</span> <span class="token operator">++</span> idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        host_v1<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">=</span> idx<span class="token punctuation">;</span>
+        host_v2<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">=</span> idx<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// CPU计算结果</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> idx <span class="token operator">&lt;</span> VECTOR_LENGTH<span class="token punctuation">;</span> <span class="token operator">++</span> idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        host_result<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">=</span> host_v1<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">+</span> host_v2<span class="token punctuation">[</span>idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// 将CPU数据复制到GPU上</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMemcpy</span><span class="token punctuation">(</span>device_v1<span class="token punctuation">,</span> host_v1<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cudaMemcpyHostToDevice<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMemcpy</span><span class="token punctuation">(</span>device_v2<span class="token punctuation">,</span> host_v2<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cudaMemcpyHostToDevice<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 调用核函数,GPU计算结果</span>
+    vector_add<span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span>BLOCK_NUM<span class="token punctuation">,</span> THREAD_NUM<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>device_v1<span class="token punctuation">,</span> device_v2<span class="token punctuation">,</span> device_result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 将GPU计算结果复制到CPU上</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaMemcpy</span><span class="token punctuation">(</span>gpu_result<span class="token punctuation">,</span> device_result<span class="token punctuation">,</span> VECTOR_LENGTH <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cudaMemcpyDeviceToHost<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 检查计算结果</span>
+    <span class="token keyword">int</span> is_match <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> idx <span class="token operator">&lt;</span> VECTOR_LENGTH<span class="token punctuation">;</span> <span class="token operator">++</span> idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// printf("%d %d\\n", host_result[idx], gpu_result[idx]);</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>host_result<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">!=</span> gpu_result<span class="token punctuation">[</span>idx<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            is_match <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+            <span class="token keyword">break</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>is_match<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"match\\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"not match\\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// 释放资源</span>
+    <span class="token function">free</span><span class="token punctuation">(</span>host_v1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">free</span><span class="token punctuation">(</span>host_v2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">free</span><span class="token punctuation">(</span>host_result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">free</span><span class="token punctuation">(</span>gpu_result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaFree</span><span class="token punctuation">(</span>device_v1<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaFree</span><span class="token punctuation">(</span>device_v2<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">CUDA_CALL</span><span class="token punctuation">(</span><span class="token function">cudaFree</span><span class="token punctuation">(</span>device_result<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这个程序看起来稍微有点复杂。我们来一点点的分析和理解。<code>vector_add</code>被<code>__global__</code>修饰，看来是个GPU的程序。主函数里分别用CPU和GPU两种方式计算了两个向量的加法，最后也做了比较。还记得我们之前说过的显存的概念吗？其实，CPU和GPU的程序只能访问对应的内存，即CPU访问主存，GPU访问显存，不能互相访问，因此我们不能让<code>vector_add</code>这个函数直接对CPU上的数据进行计算(<code>malloc</code>得到的内存数据)，而是将CPU数据在GPU上做一次拷贝，之后再计算。</p>
+<p><img src="heterogeneous-programming.png" alt="heterogeneous-programming" /></p>
+<center>
+图1 Host和Device程序运行示意图
+</center>
+<p>*注：上图中顺序执行的代码（Series Code）是在Host上运行，（Parallel Code）是在Device上运行。</p>
+<p>参考上图，我们简单总结一下CUDA程序的运行方式：我们在下面使用<strong>主机(host)</strong>表示CPU，使用<strong>设备(device)</strong>表示GPU。因此对于一个计算问题，我们需要在主机上准备好数据，然后复制到设备上，之后调用设备上的核函数(kernel function)进行计算，最终将设备上的计算结果复制到主机上。从而完成一次计算功能。对于复杂的任务，可以多次进行CPU-&gt;GPU-&gt;CPU-&gt;GPU-&gt;...的操作。</p>
+<p>现在对于这个向量加法的程序是不是有点理解了？<code>cudaMalloc</code>的功能和<code>malloc</code>类似，但是是在GPU上申请显存，第一个参数是个指针的地址（不是一个指针），第二个参数是需要申请的内存的大小。申请完显存之后，会把显存的地址存入第一个参数指向的内存中，并返回一个状态码。但是，CPU上不能访问显存，因此这个指针在CPU上并没有什么实际意义，虽然我们可以把其中的地址打印出来，但是并不能访问其指向的存储空间。<code>cudaMemcpy</code>的功能与<code>memcpy</code>类似，参数分别表示：目的存储的地址，源存储地址，复制的数据大小，数据拷贝方向。数据拷贝方向有两种，<code>Host-&gt;Device</code>和<code>Device-&gt;Host</code>，分别用<code>cudaMemcpyHostToDevice</code>和<code>cudaMemcpyDeviceToHost</code>表示。 <code>cudaFree</code>的功能和<code>free</code>类似，用于释放GPU的显存。关于<code>vector_add</code>这个函数，它的参数是两个向量和结果的指针，这样就可以访问想要相加的向量的数据和结果的数据了。但是怎么知道当前需要计算向量的第几位的数值呢？参数中并没有给出。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">unsigned</span> <span class="token keyword">int</span> tid <span class="token operator">=</span> blockDim<span class="token punctuation">.</span>x <span class="token operator">*</span> blockIdx<span class="token punctuation">.</span>x <span class="token operator">+</span> threadIdx<span class="token punctuation">.</span>x<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>之前我们提到过<code>&lt;&lt;&lt;block_num, thread_num&gt;&gt;&gt;</code>表示指示核函数的工作方式，在这里<code>vector_add</code>这个函数实际上是被多个SP调用（实际上有<code>block_num * thread_num</code>这么多线程，GPU程序运行成千上万的线程都是很正常的，这和CPU程序有很大的不同），即同时被运行很多次。通过上述的代码是用来计算每个被运行的核函数的线程的id（具体的意思下一章会有介绍）。这样每个线程能够根据自己的线程id，读取自己应该处理的数据，计算并将结果写回显存。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">while</span> <span class="token punctuation">(</span>tid <span class="token operator">&lt;</span> VECTOR_LENGTH<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    r<span class="token punctuation">[</span>tid<span class="token punctuation">]</span> <span class="token operator">=</span> v1<span class="token punctuation">[</span>tid<span class="token punctuation">]</span> <span class="token operator">+</span> v2<span class="token punctuation">[</span>tid<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    tid <span class="token operator">+=</span> BLOCK_NUM <span class="token operator">*</span> THREAD_NUM<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这个循环使得这个程序对于任意长度的向量都可以做加法（可能需要把vector_length当成变量传入）。<code>tid &lt; VECTOR_LENGTH</code>这个判断是为了防止线程访问越界。</p>
+<p>最后需要介绍的是CUDA的状态码，<code>cudaMalloc</code>，<code>cudaMemcpy</code>，<code>cudaFree</code>都有返回函数执行的状态码，但如果每次都检查这些状态码，则会有太多的重复代码，所以这里写了一个<code>CUDA_CALL</code>的宏定义，用来对函数调用的返回值进行检查。</p>
+<p>至此，相信读者以及能够很清楚的理解这个向量加法的程序了，也能照这样子写出简单的CUDA程序了。现在我们唯一不了解的可能就是<code>&lt;&lt;&lt;block_num, thread_num&gt;&gt;&gt;</code>这种写法的具体意义和里面的参数的具体作用和设置。</p>
+<p>下一章，小喵为您深入浅出CUDA线程模型。定让客官们不虚此行！</p>
+<p><strong>转载请注明出处。</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/02/07/hello-cuda/" target="_blank" title="Hello CUDA - CUDA程序简单入门">
+        https://www.miaoerduo.com/2016/02/07/hello-cuda/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/04/25/redis-string-principles/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      一、Redis基本操作——String(原理篇)
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/02/05/gpu-hardware/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">GPU硬件结构</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

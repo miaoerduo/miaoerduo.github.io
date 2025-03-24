@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    一个简单粗暴的人脸认证标注工具的实现 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-face-verify-annotate-tool" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  一个简单粗暴的人脸认证标注工具的实现
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2017/01/01/face-verify-annotate-tool/" class="article-date">
+  <time datetime="2017-01-01T17:34:04.000Z" itemprop="datePublished">2017-01-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/QT/">QT</a>
+</div>
+
+      <div class="wordcount wordcount-num">4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 15 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：话说最近小喵也要开始写论文了，想了两周还是没有头绪，不知道该写些什么。恰好又被分配了一点标注数据的工作，于是乎想写点代码，休闲一下。结果也就是这篇博客。对了，小喵对GUI编程一窍不通，只知道Windows有MFC，Mac上的不知道。。。恰好听说过QT，而且知道这个界面库是跨平台的，也就选用了这个工具了。</p>
+</blockquote>
+<span id="more"></span>
+<p>那么现在开始和小喵一起瞎猫似的捯饬QT吧~ 先看一眼效果图： <img src="annotate-pro.png" alt="annotate pro" /></p>
+<p>是不是乍一看还挺炫酷。功能上也还好，至少简单的标注工作都能完成了。那么让我们来一步一步的完成这个工具吧。</p>
+<h2 id="一功能需求">一、功能需求</h2>
+<p>这个程序主要的功能是完成一个人脸认证的标注工具。 具体来说，就是给定很多对人脸的图片，要标注一下这一对是不是同一个人。同时，每一对的图片的人脸一张是生活照，一张是证件照，需要同时标注出哪张是证件照，那张是生活照。照片都是经过检测和对齐的，这个工具只需要完成简单的显示、标注、保存记录的工作就可以。 当然考虑到有时候需要标注的list可能很大，可以加入跳转的功能。标注结果都保存在内存，用户可以随时更改，点击保存，则写入硬盘。</p>
+<h2 id="二数据结构">二、数据结构</h2>
+<p>那么是不是现在就可以动手写代码了呢？当然不是！ 小喵写这个软件一共用了3天的时间，第一天完成了一个超简单demo程序，熟悉了一下QT的事件添加，路径选择和显示图片的几个功能。之后又仔细的思考了一下各种数据的结构，才动手做了这一版工具。没有一个清晰的数据的概念，会造成许多的无用功。所以，大家在写程序的时候，要在准备阶段多花一点时间来思考，毕竟写代码才是最简单的事情不是吗？</p>
+<ol type="1">
+<li>输入数据格式：因为小喵的工作环境下，大家都对linux有一些了解，所以可以自行生成好图片的路径的list，这里统一要求，list必须是偶数行（2n行），代表n对，相邻的图片为一对。</li>
+<li>标注数据存储：考虑到我们不仅需要标注是不是一对，还得标注哪张是证件照，所以不妨直接在读数据的时候就分成两份，这样就用两个 <code>std::vector&lt;std::string&gt;</code> 来存储就行了。</li>
+<li>标注过程的状态：我们需要知道标注过程中的那些信息呢？主要应该有：总数据量，当前已标注的对数。</li>
+<li>标注结果：每一对都有一组对应地 结果，考虑到有4中情况：未标注，不确定，不匹配，匹配这四种，我们定义一个枚举的状态表 <code>enum AnnoState</code> 就好。之后用一个 <code>std::vector&lt;enum AnnoState&gt;</code> 来存储标注结果。</li>
+</ol>
+<h2 id="三界面制作">三、界面制作</h2>
+<p>GUI程序的界面一直是个很让人头疼的问题，记得在本科学习Java的时候，需要自己手写一个控件，使用new JButton()类似的方式创建按钮，然后添加到主界面上，位置什么的都得调用这个对象来设置，十分的繁琐。那么QT能不能简化这个过程呢？答案是肯定的。</p>
+<p>创建项目-&gt;选择Application-&gt;Qt Widgets Application。然后项目名改成Anno Pro，其他全部默认设置，就创建好了一个项目了。这个初始的项目里面有3个文件夹：头文件，源文件和界面文件，以及一个.pro结尾的项目配置文件。</p>
+<p><img src="qt-create-project.png" alt="qt-create-project" /></p>
+<p>既然需要编辑界面，我们自然会想查看一下界面文件了，双击 <code>MainWindow.ui</code> (我这里全部都是默认的名字)。出现的是一个充满各种控件的可视化界面编辑器。</p>
+<p><img src="qt-main-window-ui.png" alt="qt-main-window-ui" /></p>
+<p>按照我们之前的界面样式，拖动左边的控件，就可以完成界面的编写了。小喵这里只用到了几种控件：</p>
+<ul>
+<li><code>QPushButton</code>：各种按钮</li>
+<li><code>QLabel</code>：所以显示文字和图像的区域都是这这个控件</li>
+<li><code>QFrame</code>：一个容器，小喵用它只是为了结构上更清晰</li>
+<li><code>QSlider</code>：滑动条，小喵用的是水平滑动条</li>
+<li><code>QStatusBar</code>：状态栏，这应该是自带的，如果删掉的话，在MainWindow控件点击右键就可以创建了</li>
+</ul>
+<p>拖动完成后，双击空间，就可以给空间设置文本，同时注意给每个控件起一个好听的名字（起名字很重要的！《代码大全》中甚至用一章，好几十页的篇幅介绍如何命名）。</p>
+<p>至于其他的控件，大家可以自行研究。反正小喵现在的道行应该才是筑基。 那么我们就愉快的完成了界面的编写了~点击左右下的运行图标（三角形的那个），就可以看到自己的运行程序了！</p>
+<h2 id="四数据定义与初始化">四、数据定义与初始化</h2>
+<p>我们先前已经分析了我们需要的数据了，这部分开始使用代码的定义这些结构。打开我们头文件<code>mianwindow.h</code>，添加需要的变量，小喵就直接把自己的头文件复制下来了：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifndef</span> <span class="token expression">MAINWINDOW_H</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">MAINWINDOW_H</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QMainWindow></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;string></span></span>
+<span class="token keyword">namespace</span> Ui <span class="token punctuation">&#123;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">MainWindow</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">MainWindow</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">QMainWindow</span></span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">enum</span> <span class="token class-name">AnnoState</span> <span class="token punctuation">&#123;</span>
+        UNKNOWN <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span>  <span class="token comment">// 未标注</span>
+        YES <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">,</span>      <span class="token comment">// 匹配</span>
+        NO <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">,</span>       <span class="token comment">// 不匹配</span>
+        UNSURE <span class="token operator">=</span> <span class="token number">3</span>    <span class="token comment">// 不确定</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">explicit</span> <span class="token function">MainWindow</span><span class="token punctuation">(</span>QWidget <span class="token operator">*</span>parent <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token operator">~</span><span class="token function">MainWindow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">private</span><span class="token operator">:</span>
+    Ui<span class="token double-colon punctuation">::</span>MainWindow <span class="token operator">*</span>ui<span class="token punctuation">;</span> <span class="token comment">// 自带的，ui界面的接口</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>std<span class="token double-colon punctuation">::</span>string<span class="token operator">></span> image_list_1<span class="token punctuation">;</span>  <span class="token comment">// 用来存放左边的图片的list</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>std<span class="token double-colon punctuation">::</span>string<span class="token operator">></span> image_list_2<span class="token punctuation">;</span>  <span class="token comment">// 用来存放右边的图片的list</span>
+    <span class="token keyword">int</span> current_idx<span class="token punctuation">;</span>                        <span class="token comment">// 当前图片对的id</span>
+    <span class="token keyword">int</span> total_pair_num<span class="token punctuation">;</span>                     <span class="token comment">// 总共的图片对的数目</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span> AnnoState <span class="token operator">></span> annotation_list<span class="token punctuation">;</span>  <span class="token comment">// 标注的结果</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span> <span class="token comment">// MAINWINDOW_H</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，小喵添加了一个 <code>enum</code> 的类型，用来表示标注结果的类型。虽然只有4个状态，我们甚至可以直接约定几个 <code>int</code> 值来表示，但相信我，为这么4个状态定义一个枚举类型是完全有必要的。之后我们所有的成员变量都是 <code>private</code> 的。具体含义，注释中也有写明。</p>
+<p>下一步就是初始化了。初始化的过程当然得写在构造函数里，这里，小喵在初始化的时候强迫用户选择一个标注的list，如果不这么做，会有很多的意外情况。请原谅小喵的怠惰。。。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">MainWindow</span><span class="token punctuation">(</span>QWidget <span class="token operator">*</span>parent<span class="token punctuation">)</span> <span class="token operator">:</span>
+    <span class="token function">QMainWindow</span><span class="token punctuation">(</span>parent<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">ui</span><span class="token punctuation">(</span><span class="token keyword">new</span> Ui<span class="token double-colon punctuation">::</span>MainWindow<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    ui<span class="token operator">-></span><span class="token function">setupUi</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 选择输入文件</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        QString file_name <span class="token operator">=</span> <span class="token class-name">QFileDialog</span><span class="token double-colon punctuation">::</span><span class="token function">getOpenFileName</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to annotate"</span><span class="token punctuation">,</span> <span class="token string">"."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>file_name<span class="token punctuation">.</span><span class="token function">isEmpty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">int</span> ok <span class="token operator">=</span> <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to annotate"</span><span class="token punctuation">,</span> <span class="token string">"Don't want to work now?"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok <span class="token operator">|</span> QMessageBox<span class="token double-colon punctuation">::</span>Cancel<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>ok <span class="token operator">==</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        std<span class="token double-colon punctuation">::</span>ifstream <span class="token function">is</span><span class="token punctuation">(</span>file_name<span class="token punctuation">.</span><span class="token function">toStdString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        std<span class="token double-colon punctuation">::</span>string image_name<span class="token punctuation">;</span>
+        <span class="token keyword">bool</span> is_odd <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token keyword">while</span> <span class="token punctuation">(</span>is <span class="token operator">>></span> image_name<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>is_odd<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">this</span><span class="token operator">-></span>image_list_1<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>image_name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">this</span><span class="token operator">-></span>image_list_2<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>image_name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            is_odd <span class="token operator">=</span> <span class="token operator">!</span>is_odd<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        is<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>image_list_1<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> image_list_2<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to annotate"</span><span class="token punctuation">,</span> <span class="token string">"this image list is not even"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token number">0</span> <span class="token operator">==</span> image_list_1<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to annotate"</span><span class="token punctuation">,</span> <span class="token string">"this image list is empty"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">assert</span><span class="token punctuation">(</span>image_list_1<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> image_list_2<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 初始化其他参数</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>total_pair_num <span class="token operator">=</span> image_list_1<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&lt;</span>AnnoState<span class="token operator">></span> <span class="token function">annotation_list</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>total_pair_num<span class="token punctuation">,</span> AnnoState<span class="token double-colon punctuation">::</span>UNKNOWN<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">.</span><span class="token function">swap</span><span class="token punctuation">(</span>annotation_list<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里用了两个QT的组件：</p>
+<ul>
+<li><code>QFileDialog</code>：这个组件是一个文件对话框，其中有两个十分有用的函数：
+<ul>
+<li><code>getOpenFileName</code> 用于选择一个文件，并返回文件名；</li>
+<li><code>getSaveFileName</code> 用于选择一个文件来保存数据，并返回一个文件名。</li>
+<li>这两个函数的参数很多，小喵只用到了前面的3个，用到的参数依次是：父组件，标题，初始目录。其他的参数的功能，喵粉可以去官网查一下。</li>
+</ul></li>
+<li>QMessageBox::information，这个函数的功能是显示一个消息窗口。四个参数分别表示：父组件，标题，内容，按钮样式。</li>
+</ul>
+<p>相信大家懂一点点C++的知识的话，很容易看懂这段代码。 这里就是使用了一个循环，让用户选择文件，如果选择成功了，则读取数据到我们的list中，最终初始化了其他的参数，在调用display函数来显示。这个display函数是我们自己编写的，后面会说到。另外，assert函数是断言，他保证了断言的数据的合法性，如果不合法，程序会退出。想使用这个函数，需要包含头文件 <code>assert.h</code>。</p>
+<h2 id="五添加事件响应">五，添加事件响应</h2>
+<p>小喵之前了解到，QT使用的是一种信号和槽的事件机制，是一种十分高级的机制。那么有没有什么简单的方法，为我们的每个控件绑定自己的的事件呢？</p>
+<p>在界面编辑界面下，<strong>右击</strong>需要添加事件的空间，然后选择<strong>转到槽</strong>。这时候会有很多选项，这里直接选择 <code>clicked</code> 就可以。然后你会发现我们的mainwindow类中，多了一个pivate slot的函数（也就是槽函数）。</p>
+<p><img src="qt-goto-slot.png" alt="qt-goto-slot" /></p>
+<p>我们可以给每一个需要添加事件的函数都用这种方式来绑定事件，最终头文件中会出现这样的声明（函数名称的规则是：<code>on_控件名_信号类型</code>）：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">private</span> slots<span class="token operator">:</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_save_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_ok_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_no_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_unsure_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_next_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_prev_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_pushButton_switch_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">on_horizontalSlider_progress_sliderReleased</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在源文件中，也会生成空的函数定义。我们只需要自己完成函数定义就大功告成！</p>
+<p>下面给出的是除了save的所有的函数的定义。主要工作是，给每个事件编写修改数据的代码，而不去负责任何界面相关的部分。各个控件可以通过 <code>this-&gt;ui</code> 来设置和获取。使用Qt Creator的时候，要充分利用智能提示。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">/**
+ * @brief MainWindow::on_pushButton_ok_clicked
+ * 标注为"匹配"
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_ok_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span> <span class="token operator">=</span> MainWindow<span class="token double-colon punctuation">::</span>AnnoState<span class="token double-colon punctuation">::</span>YES<span class="token punctuation">;</span>
+    <span class="token operator">++</span> <span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_pushButton_no_clicked
+ * 标注为"不匹配"
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_no_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span> <span class="token operator">=</span> MainWindow<span class="token double-colon punctuation">::</span>AnnoState<span class="token double-colon punctuation">::</span>NO<span class="token punctuation">;</span>
+    <span class="token operator">++</span> <span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_pushButton_unsure_clicked
+ * 标注为"不确定"
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_unsure_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span> <span class="token operator">=</span> MainWindow<span class="token double-colon punctuation">::</span>AnnoState<span class="token double-colon punctuation">::</span>UNSURE<span class="token punctuation">;</span>
+    <span class="token operator">++</span> <span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_pushButton_next_clicked
+ * 移动到下一组
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_next_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token operator">++</span> <span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_pushButton_prev_clicked
+ * 移动到上一组
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_prev_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token operator">--</span> <span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_pushButton_switch_clicked
+ * 交换两边的图片
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_switch_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>string tmp <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_1<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>image_list_1<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_2<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>image_list_2<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span> <span class="token operator">=</span> tmp<span class="token punctuation">;</span>
+    <span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::on_horizontalSlider_progress_sliderReleased
+ * 拖放进度条，控制进度
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_horizontalSlider_progress_sliderReleased</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> pos <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>horizontalSlider_progress<span class="token operator">-></span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">=</span> pos<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span><span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>至此，我们的大体的功能逻辑就编写完了。 那么怎么让界面上显示我们的系统状态呢？注意到了我们上面的每一个函数都调用了display这个函数了吗？这个函数正式负责绘制界面的功能。 部分主要介绍三个函数：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string UNSURE_FILE <span class="token operator">=</span> <span class="token string">":File/images/unsure.png"</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string YES_FILE <span class="token operator">=</span> <span class="token string">":File/images/yes.gif"</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string NO_FILE <span class="token operator">=</span> <span class="token string">":File/images/no.gif"</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string UNKNOWN_FILE <span class="token operator">=</span> <span class="token string">":File/images/unknown.png"</span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * @brief set_image 将图像设置到label上，图像自动根据label的大小来缩放
+ * @param label
+ * @param image
+ */</span>
+<span class="token keyword">void</span> <span class="token function">set_image</span><span class="token punctuation">(</span>QLabel <span class="token operator">*</span>label<span class="token punctuation">,</span> <span class="token keyword">const</span> QPixmap <span class="token operator">&amp;</span>image<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">float</span> <span class="token function">ratio</span><span class="token punctuation">(</span><span class="token number">0.</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    ratio <span class="token operator">=</span> <span class="token number">1.</span> <span class="token operator">*</span> label<span class="token operator">-></span><span class="token function">width</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> image<span class="token punctuation">.</span><span class="token function">width</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    ratio <span class="token operator">=</span> <span class="token function">fmin</span><span class="token punctuation">(</span> <span class="token number">1.</span> <span class="token operator">*</span> label<span class="token operator">-></span><span class="token function">height</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> image<span class="token punctuation">.</span><span class="token function">height</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> ratio <span class="token punctuation">)</span><span class="token punctuation">;</span>
+    QPixmap m <span class="token operator">=</span> image<span class="token punctuation">.</span><span class="token function">scaled</span><span class="token punctuation">(</span><span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>image<span class="token punctuation">.</span><span class="token function">width</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span> ratio<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>image<span class="token punctuation">.</span><span class="token function">height</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span> ratio<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    label<span class="token operator">-></span><span class="token function">setPixmap</span><span class="token punctuation">(</span>m<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">set_image</span><span class="token punctuation">(</span>QLabel <span class="token operator">*</span>label<span class="token punctuation">,</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>string image_path<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    QPixmap <span class="token function">image</span><span class="token punctuation">(</span>image_path<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">set_image</span><span class="token punctuation">(</span>label<span class="token punctuation">,</span> image<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/**
+ * @brief MainWindow::display
+ * 根据系统中的所有的变量来设置当前界面中的各个部分的内容
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">display</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">>=</span> <span class="token keyword">this</span><span class="token operator">-></span>total_pair_num<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"annotation over"</span><span class="token punctuation">,</span> <span class="token string">"Congratulations! You've finished all the job! Please save your work :)"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>total_pair_num <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"annotation warning"</span><span class="token punctuation">,</span> <span class="token string">"You must start at 0 (not a negative position, I konw you wanna challenge this app) :)"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// 进度条</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>horizontalSlider_progress<span class="token operator">-></span><span class="token function">setRange</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token operator">-></span>total_pair_num <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>horizontalSlider_progress<span class="token operator">-></span><span class="token function">setValue</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 状态栏</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>statusBar<span class="token operator">-></span><span class="token function">showMessage</span><span class="token punctuation">(</span><span class="token function">QString</span><span class="token punctuation">(</span><span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span><span class="token function">to_string</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">" / "</span> <span class="token operator">+</span> std<span class="token double-colon punctuation">::</span><span class="token function">to_string</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>total_pair_num<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 文件名</span>
+    std<span class="token double-colon punctuation">::</span>string image_name_1 <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_1<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string image_base_name_1 <span class="token operator">=</span> image_name_1<span class="token punctuation">.</span><span class="token function">substr</span><span class="token punctuation">(</span>image_name_1<span class="token punctuation">.</span><span class="token function">find_last_of</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string image_name_2 <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_2<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string image_base_name_2 <span class="token operator">=</span> image_name_2<span class="token punctuation">.</span><span class="token function">substr</span><span class="token punctuation">(</span>image_name_2<span class="token punctuation">.</span><span class="token function">find_last_of</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>label_image_name_1<span class="token operator">-></span><span class="token function">setText</span><span class="token punctuation">(</span>image_base_name_1<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>label_image_name_2<span class="token operator">-></span><span class="token function">setText</span><span class="token punctuation">(</span>image_base_name_2<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 显示图像</span>
+    <span class="token function">set_image</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>label_image_view_1<span class="token punctuation">,</span> image_name_1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">set_image</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>label_image_view_2<span class="token punctuation">,</span> image_name_2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 显示标注结果</span>
+    std<span class="token double-colon punctuation">::</span>string show_image_name <span class="token operator">=</span> UNKNOWN_FILE<span class="token punctuation">;</span>
+    <span class="token keyword">switch</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">[</span><span class="token keyword">this</span><span class="token operator">-></span>current_idx<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">case</span> AnnoState<span class="token double-colon punctuation">::</span>UNKNOWN<span class="token operator">:</span>
+        show_image_name <span class="token operator">=</span> UNKNOWN_FILE<span class="token punctuation">;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token keyword">case</span> AnnoState<span class="token double-colon punctuation">::</span>YES<span class="token operator">:</span>
+        show_image_name <span class="token operator">=</span> YES_FILE<span class="token punctuation">;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token keyword">case</span> AnnoState<span class="token double-colon punctuation">::</span>NO<span class="token operator">:</span>
+        show_image_name <span class="token operator">=</span> NO_FILE<span class="token punctuation">;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token keyword">case</span> AnnoState<span class="token double-colon punctuation">::</span>UNSURE<span class="token operator">:</span>
+        show_image_name <span class="token operator">=</span> UNSURE_FILE<span class="token punctuation">;</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">set_image</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>ui<span class="token operator">-></span>label_image_compare_status<span class="token punctuation">,</span> show_image_name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>最开始我们定义了4个图片的路径。这可以是绝对路径或者相对路径。我们这里的路径设置的比较奇怪，在下面我们会讲到。<code>set_image</code> 负责将给定的图片绘制到 <code>QLabel</code> 上，为了显示的好看，图像会按照 <code>QLabel</code> 的尺寸来动态的缩放。这样就不会出现有个图像太大或太小的情况了。<code>display</code> 则是负责各个区域的绘制。</p>
+<p>还差一步是保存结果：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">/*
+ * @brief MainWindow::on_pushButton_save_clicked
+ * 保存结果文件
+ */</span>
+<span class="token keyword">void</span> <span class="token class-name">MainWindow</span><span class="token double-colon punctuation">::</span><span class="token function">on_pushButton_save_clicked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    QString file_name <span class="token operator">=</span> <span class="token class-name">QFileDialog</span><span class="token double-colon punctuation">::</span><span class="token function">getSaveFileName</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to save"</span><span class="token punctuation">,</span> <span class="token string">"."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>file_name<span class="token punctuation">.</span><span class="token function">isEmpty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"choose a file to save"</span><span class="token punctuation">,</span> <span class="token string">"please enter a legal file name"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    std<span class="token double-colon punctuation">::</span>ofstream <span class="token function">os</span><span class="token punctuation">(</span>file_name<span class="token punctuation">.</span><span class="token function">toStdString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> idx <span class="token operator">&lt;</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        os <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_1<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span><span class="token operator">-></span>image_list_2<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span><span class="token operator">-></span>annotation_list<span class="token punctuation">[</span>idx<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"\n"</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    os<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">QMessageBox</span><span class="token double-colon punctuation">::</span><span class="token function">information</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token string">"save"</span><span class="token punctuation">,</span> <span class="token string">"save result success"</span><span class="token punctuation">,</span> QMessageBox<span class="token double-colon punctuation">::</span>Ok<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="六添加资源">六、添加资源</h2>
+<p>由于我们的程序是需要publish出去的，因此图片文件等资源，必须包含在程序中。那么Qt怎么添加文件资源呢？</p>
+<p>在项目视图下，右键项目-&gt;添加新文件-&gt;Qt-&gt;Qt Resource File。就可以创建一个qrc文件了。</p>
+<p><img src="qt-create-resource-file.png" alt="qt-create-resource-file" /></p>
+<p>我这里给这个文件取名为image。</p>
+<p>之后，建议在项目的根目录里面新建一个文件夹，用来存放资源。小喵的结构是这个样子的：</p>
+<p><img src="annotate-tool-files.png" alt="annotate-tool-files" /></p>
+<p>小喵的项目根目录新建了一个文件夹images，并将图像素材放入了这个文件夹。</p>
+<p>之后回到QT，我们刚建好的image.qrc文件-&gt;Open in Editor。</p>
+<p>先添加前缀，这里写上/File。之后点击新建的/File目录，再点击添加-&gt;添加文件，选择我们的素材文件。最终的效果图如下：</p>
+<p><img src="qt-resource-image-files.png" alt="qt-resource-image-files" /></p>
+<p>之后，我们就可以在程序中直接访问这些资源了。这也就是我们之前的那四个奇怪的路径的由来了。</p>
+<h2 id="七发布">七、发布</h2>
+<p>此时此刻，相信每一个喵粉的程序都能在自己的电脑上愉快的玩耍了。这么有意思的程序，怎么分享给其他人呢？</p>
+<p>和Windows上常用的VS类似，Qt Creator的左下角有个发布选项：</p>
+<p><img src="qt-project-publish.png" alt="qt-project-publish" /></p>
+<p>选择Release，然后构建整个项目就可以了。之后找到我们的程序，双击就可以运行。</p>
+<p>这时候你会愉快的把这个程序发给你的好伙伴，得到的反应一定是：这是啥！我打不开！ 为什么呢？ 虽然Qt是一个跨平台的界面库，但如果对方的电脑上没有安装Qt，那么就不能运行。不过不用失落，Qt中早已给出一个绝妙的解决办法。</p>
+<p>小喵的电脑是Mac的，所以找到的解决方案也是Mac的，Windows和Linux上也有类似的办法，大家可以自行查找。</p>
+<p><a target="_blank" rel="noopener" href="http://www.cnblogs.com/E7868A/archive/2012/12/02/2798225.html">http://www.cnblogs.com/E7868A/archive/2012/12/02/2798225.html</a></p>
+<p>参考上述博客，我们使用 <code>macdeployqt</code> 这个工具来处理一下release的程序就搞定。这时候你会发现原本100k的程序变成了22M。但是直接发给别人的时候，是可以直接运行的！</p>
+<p>至此，本次的博客结束了。 完整的项目在github上可以下载： <a target="_blank" rel="noopener" href="https://github.com/miaoerduo/Anno_pro">https://github.com/miaoerduo/Anno_pro</a></p>
+<p><strong>转载请注明出处~</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2017/01/01/face-verify-annotate-tool/" target="_blank" title="一个简单粗暴的人脸认证标注工具的实现">
+        https://www.miaoerduo.com/2017/01/01/face-verify-annotate-tool/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2017/02/03/c-lambda-tutorial/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      C++ Lambda表达式
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/11/15/openmp-tutorial/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">应用OpenMP的一个简单的设计模式</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

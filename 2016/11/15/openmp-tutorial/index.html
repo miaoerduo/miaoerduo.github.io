@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    应用OpenMP的一个简单的设计模式 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-openmp-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  应用OpenMP的一个简单的设计模式
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/11/15/openmp-tutorial/" class="article-date">
+  <time datetime="2016-11-15T21:13:59.000Z" itemprop="datePublished">2016-11-15</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/OpenMP/">OpenMP</a>
+</div>
+
+      <div class="wordcount wordcount-num">5.2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：最近很久没写博客了，一是因为之前写的LSoftmax后馈一直没有成功，所以在等作者的源码。二是最近没什么想写的东西。前两天，在预处理图片的时候，发现处理200w张图片，跑了一晚上也才处理完一半。早上的时候，出于无奈，花半小时改写了一个简单调用OpenMP的处理程序，用了30个核心，然后一小时不到就处理完了。感慨在多核的时代，即使是简单的程序，如果能支持多核，应该都能节省不少时间。</p>
+</blockquote>
+<span id="more"></span>
+<h2 id="一写在前面">一、写在前面</h2>
+<p>对于OpenMP，小喵其实并不是了解很多，而且小喵本身也只用到了OpenMP的最简单的功能。在这里主要是分享一个自己常用的写简单的并行程序的思路。希望能帮助到大家。</p>
+<p>这个设计模式的主要特点如下：</p>
+<ol type="1">
+<li>处理的任务是独立的；</li>
+<li>可以在运行中输出结果，而不是最终才输出；</li>
+<li>有限的资源占用；</li>
+<li>在每次任务的执行时间不同的情况下，也能很好的工作；</li>
+<li>在每次任务执行需要占用私有的数据时（依赖了线程不安全的库），也可以很好的工作；</li>
+<li>输出是有序的</li>
+</ol>
+<p>注意：本文中仅介绍小喵自己用到的几个OpenMP的功能。既不深入也不完善。仅适合初学者。 小喵学习OpenMP主要是看了周明伟的博客： <a target="_blank" rel="noopener" href="http://blog.csdn.net/drzhouweiming/article/details/4093624">OpenMP编程指南</a>。想要比较深入地学习的童鞋请看周老师的博客。对于什么是OpenMP，OpenMP有什么优点等的问题。周老师的博客也很详细的说明。这里小喵就不多废话了。直奔主题。</p>
+<h2 id="二如何使用openmp">二、如何使用OpenMP</h2>
+<p>小喵使用的开发环境是Linux，windows的童鞋可以看一下这个博客：<a target="_blank" rel="noopener" href="http://www.cnblogs.com/yangyangcv/archive/2012/03/23/2413335.html">http://www.cnblogs.com/yangyangcv/archive/2012/03/23/2413335.html</a>。MAC上的GCC实际上是Clang，想要使用OpenMP的话比较麻烦。要额外装一些东东，自己bing一下就有。</p>
+<p>本喵的编译环境是CentOS 7， GCC 4.8.5。大多数系统和编译器都支持OpenMP了。</p>
+<p>先举个小栗子： 不使用OpenMP：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">N</span> <span class="token expression"><span class="token number">100000000</span></span></span>
+
+<span class="token keyword">int</span> <span class="token function">fun</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> N<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        a <span class="token operator">+=</span> i<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> a<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">100</span><span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">fun</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"finish"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>之后使用g++编译，并计时：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">g++ sample_without_omp.cpp <span class="token parameter variable">-o</span> sample_without_omp.bin
+<span class="token function">time</span> ./sample_with_omp.bin<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>运行结果：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">./sample_without_omp.bin  24.42s user 0.00s system 100% cpu 24.417 total<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>这里可以看到用了100%的cpu，总时间是24.417 s。</p>
+<p>使用OpenMP，调用2个线程：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;omp.h></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">N</span> <span class="token expression"><span class="token number">100000000</span></span></span>
+
+<span class="token keyword">int</span> <span class="token function">fun</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> N<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        a <span class="token operator">+=</span> i<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> a<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span></span></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">100</span><span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">fun</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"finish"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里源码的差别是多了一个omp.h的头文件，和一个奇怪的语句： <code>#pragma omp parallel for num_threads(2) schedule(dynamic)</code></p>
+<p>编译的时候，也有点小修改：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">g++ sample_with_omp.cpp <span class="token parameter variable">-o</span> sample_with_omp.bin <span class="token parameter variable">-fopenmp</span>
+<span class="token function">time</span> ./sample_with_omp.bin<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>运行结果如下：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">./sample_with_omp.bin  24.32s user 0.01s system 199% cpu 12.182 total<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>可以看出，user的时间几乎没变，这表示CPU总的运行时间没有变化。但是cpu的使用变成了199%，total的时间变成了12.182 s。这就表明了我们使用了2个cpu，使得运行时间成功减半了！是不是很愉快，我们只添加了1行代码，就使得程序的速度翻倍。可见OpenMP是多么的简洁实用。</p>
+<p>那么，现在是不是不用小喵说，我们也知道怎么给程序加入OpenMP的支持了呢？</p>
+<p>归纳一下，主要有三点：</p>
+<ol type="1">
+<li>加入OpenMP的头文件 <code>omp.h</code></li>
+<li>使用合适的 <code>编译器指令</code> 修饰我们需要并行的部分（线程数、任务分配模式等等，后面会讲到）</li>
+<li>编译的时候加入 <code>openmp</code> 的支持，编译的时候加入参数 <code>-fopenmp</code></li>
+</ol>
+<h2 id="三forkjoin的并行执行模式">三、fork/join的并行执行模式</h2>
+<p>我们之前看到了一个简单的例子，可以看出，程序其实是有串行部分和并行部分两个部分组成的。</p>
+<p>在程序刚启动的时候，只有一个主线程，当执行到并行部分的时候（上面的例子中就是pragma之后的for循环），并行的代码会通过派生其他线程来执行。只有当并行的所有代码执行完之后，才会继续执行串行的部分。</p>
+<p>因此主要的运行流程是这个样子的：</p>
+<p><img src="openmp-pipeline.svg" alt="openmp pipeline" /></p>
+<p>理解这个流程是相当重要的，可以避免很多的不必要的错误。一个常见的错误就是资源访问的冲突。比如文件，流对象等，如果<strong>在并行的代码部分随意访问这些资源，就可能会导致不可预见的错误</strong>。这在多线程编程中也是最常出现的错误，我们在下面会具体说到。</p>
+<h2 id="四openmp的常用指令和库函数">四、OpenMP的常用指令和库函数</h2>
+<p>在C/C++中，OpenMP的指令使用的格式如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp 指令 <span class="token punctuation">[</span>子句 <span class="token punctuation">[</span>子句<span class="token punctuation">]</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>指令用来指示下面的代码的运行模式。子句是给出一些额外的信息。</p>
+<p>这里主要介绍两个指令：<code>parallel</code>，<code>for</code></p>
+<ul>
+<li><code>parallel</code>：用在代码段之前，表示下面的代码段使用多线程运行。</li>
+<li><code>for</code>：用于 <code>for</code> 循环之前，将循环分配到多个线程中并行执行，必须保证每次循环之间无相关性。</li>
+<li><code>parallel for</code>：<code>parallel</code> 和 <code>for</code> 语句的结合，也是用在一个 <code>for</code> 循环之前，表示 <code>for</code> 循环的代码将被多个线程并行执行。</li>
+</ul>
+<p>小喵使用的时候都是直接使用了 <code>parallel for</code> 这个组合指令。用来对紧接着的 <code>for</code> 循环的代码段进行并行。其他的指令请查阅之前提到的博客。</p>
+<p>子句中主要是给出一些额外的设置，这里也主要介绍2个：<code>num_threads</code>，<code>schedule</code>。</p>
+<ul>
+<li>num_threads：指定线程的数目（不设置该参数似乎会使用和cpu核心数相同的线程数）。</li>
+<li>schedule：指定如何调度for循环迭代。有4种模式：<code>static</code>、<code>dynamic</code>、<code>guided</code>、·，后面会专门讲到。</li>
+</ul>
+<p>这里，我们再回顾一下之前写的代码：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>是不是豁然开朗。这句话的意思是，使用OpenMP（<code>#pragma omp</code>），将下面的 <code>for</code> 循环使用多线程去执行（<code>parallel for</code>），线程数为2（<code>num_threads(2)</code>），任务调度方式使用 <code>dynamic</code> 模式（<code>schedule(dynamic)</code>）。 现在，让我们趁热打铁，学习for循环的写法。</p>
+<p>这里，小喵直接复制了周老师的说法（解释得实在太好了）：</p>
+<pre>
+for 循环语句中，书写是需要按照一定规范来写才可以的，即for循环小括号内的语句要按照一定的规范进行书写，for语句小括号里共有三条语句
+for( i = start; i < end; i++)
+
+i = start; 是for循环里的第一条语句，必须写成 “变量＝初值” 的方式。如 i＝0
+i < end; 是for循环里的第二条语句，这个语句里可以写成以下4种形式之一：
+变量 < 边界值
+变量 <= 边界值
+变量 > 边界值
+变量 >= 边界值
+如 i>10 i<10 i>=10 i<=10 等等
+最后一条语句i++可以有以下9种写法之一
+i++
+++i
+i–
+–i
+i += inc
+i -= inc
+i = i + inc
+i = inc + i
+i = i – inc
+例如i += 2; i -= 2；i = i + 2；i = i – 2；都是符合规范的写法。</pre>
+<p>可见一般来说，我们的for循环的写法OpenMP是支持的。那么有没有OpenMP不支持的for循环呢？小喵没试过，不过可以猜想，<code>for (auto &amp;v: arr)</code> 这种写法是不支持的。使用迭代器的话，不知道能不能使用，小喵没有验证过。喵粉如果好奇的话，可以自行验证一下。</p>
+<p>在介绍schedule之前，我们先学习几个常用的库函数，用来获取和设置OpenMP的各种运行时状态： - <code>omp_get_num_procs</code>, 返回运行本线程的多处理机的处理器个数。通常可以根据处理器的个数来合理设置并行的线程数。 - <code>omp_get_num_threads</code>, 返回当前并行区域中的活动线程个数。比如上面的例子，应该就会返回2。 - <code>omp_get_thread_num</code>, 返回线程号。并行区域的代码会被多个线程执行，而每个线程都有一个自己的ID，也就是线程号。如果我们设置使用N个线程，那么线程号会是0，1，2，...，N-1。 - <code>omp_set_num_threads</code>**`, 设置并行执行代码时的线程个数。和num_threads功能相同。</p>
+<h2 id="五openmp中的任务调度">五、OpenMP中的任务调度</h2>
+<p>那么接下来，我们开始学习任务调度的四种模式。使用的子句就是schedule。schedule的使用格式：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token function">schedule</span><span class="token punctuation">(</span>type<span class="token punctuation">[</span><span class="token punctuation">,</span> size<span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>type主要有4种：<code>static</code>，<code>dynamic</code>，<code>guilded</code>，<code>runtime</code>。</p>
+<h3 id="static静态调度">1、static（静态调度）</h3>
+<p>表示静态调度，当不设置schedule的时候，多数编译器就是使用这种调度方式。它十分的简单。给定N个任务，启用t个线程，那么直接给每个线程分配N/t个任务，考虑到N可能不能整除t，所以每个线程的任务数会有极小的不同。</p>
+<p>下面举个例子：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;omp.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">const</span> <span class="token keyword">int</span> task_num <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span><span class="token keyword">static</span><span class="token punctuation">)</span></span></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"i = "</span> <span class="token operator">&lt;&lt;</span> i <span class="token operator">&lt;&lt;</span> <span class="token string">" thread_id = "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">omp_get_thread_num</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出结果如下：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">i = 0 thread_id = 0
+i = 5 thread_id = 1
+i = 6 thread_id = 1
+i = 7 thread_id = 1
+i = 8 thread_id = 1
+i = 9 thread_id = 1
+i = 1 thread_id = 0
+i = 2 thread_id = 0
+i = 3 thread_id = 0
+i = 4 thread_id = 0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，0-4被分配给了0线程，5-9被分配给了1线程。由于是多线程，所以打印出来的顺序并不能保证。如果使用了<code>size</code>，则每次回分配给一个线程size次任务，依次迭代。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;omp.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">const</span> <span class="token keyword">int</span> task_num <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span><span class="token keyword">static</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span></span></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"i = "</span> <span class="token operator">&lt;&lt;</span> i <span class="token operator">&lt;&lt;</span> <span class="token string">" thread_id = "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">omp_get_thread_num</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>```
+
+运行结果和上面稍有不同：
+
+```text
+i <span class="token operator">=</span> <span class="token number">2</span> thread_id <span class="token operator">=</span> <span class="token number">1</span>
+i <span class="token operator">=</span> <span class="token number">0</span> thread_id <span class="token operator">=</span> <span class="token number">0</span>
+i <span class="token operator">=</span> <span class="token number">3</span> thread_id <span class="token operator">=</span> <span class="token number">1</span>
+i <span class="token operator">=</span> <span class="token number">6</span> thread_id <span class="token operator">=</span> <span class="token number">1</span>
+i <span class="token operator">=</span> <span class="token number">7</span> thread_id <span class="token operator">=</span> <span class="token number">1</span>
+i <span class="token operator">=</span> <span class="token number">1</span> thread_id <span class="token operator">=</span> <span class="token number">0</span>
+i <span class="token operator">=</span> <span class="token number">4</span> thread_id <span class="token operator">=</span> <span class="token number">0</span>
+i <span class="token operator">=</span> <span class="token number">5</span> thread_id <span class="token operator">=</span> <span class="token number">0</span>
+i <span class="token operator">=</span> <span class="token number">8</span> thread_id <span class="token operator">=</span> <span class="token number">0</span>
+i <span class="token operator">=</span> <span class="token number">9</span> thread_id <span class="token operator">=</span> <span class="token number">0</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出，连续的2个任务会被分配到同一个线程。0、1给线程0，2、3给线程1，4、5给线程0，6、7给线程1 ……</p>
+<p><code>static</code> 是一个十分简单的策略，但同时会带来一些问题。比如当任务的执行时间差异很大的时候，由于OpenMP的 <code>fork/join</code> 的机制，速度快的线程必须等待速度慢的线程，如果恰好分配的很不合理的话（耗时的任务集中在了某一个线程），其他的线程可能会等待较长的时间。这显然不利于我们充分利用多核资源。</p>
+<h3 id="dynamic动态调度">2、dynamic（动态调度）</h3>
+<p>动态调度会根据运行时的线程状态来决定下一次的迭代。当一个线程执行完自己的任务之后，会再去领取任务。不设置 <code>size</code> 的话，一个线程一次会分配一个任务，当执行完了，会再领取一个任务。如果设置了 <code>size</code> ，线程则一次领取 <code>size</code> 个任务。 <code>dynamic</code> 是小喵最爱的模式！是因为它和标准的生产者消费者模式很相似。这里生产者默认一次性生产所有的任务，然后每个线程都是一个消费者，当自己执行完了，会再次去领取任务。这样，任务的分配会更加的有弹性，更好的适应了任务时间不同的情况。</p>
+<p>下面也是一个小栗子，不使用<code>size</code>：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;omp.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">const</span> <span class="token keyword">int</span> task_num <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span></span></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"i = "</span> <span class="token operator">&lt;&lt;</span> i <span class="token operator">&lt;&lt;</span> <span class="token string">" thread_id = "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">omp_get_thread_num</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行结果：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">i = 0 thread_id = 0
+i = 1 thread_id = 1
+i = 2 thread_id = 0
+i = 3 thread_id = 0
+i = 4 thread_id = 1
+i = 5 thread_id = 1
+i = 6 thread_id = 1
+i = 7 thread_id = 1
+i = 8 thread_id = 1
+i = 9 thread_id = 1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>可以看出任务的分配是不均匀的。</p>
+<p>使用<code>size</code>之后：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;omp.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">const</span> <span class="token keyword">int</span> task_num <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span></span></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"i = "</span> <span class="token operator">&lt;&lt;</span> i <span class="token operator">&lt;&lt;</span> <span class="token string">" thread_id = "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">omp_get_thread_num</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行结果如下：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">i = 0 thread_id = 0
+i = 2 thread_id = 1
+i = 3 thread_id = 1
+i = 4 thread_id = 1
+i = 5 thread_id = 1
+i = 6 thread_id = 1
+i = 7 thread_id = 1
+i = 8 thread_id = 1
+i = 9 thread_id = 1
+i = 1 thread_id = 0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>线程0先领取了任务0、1。线程1领取了2、3。线程1做完之后，又领取了4、5 ……</p>
+<p>可以看出，每次的任务分配是以2个为单位的，分配的顺序视运行时状态动态调整。</p>
+<h3 id="guided启发式调度">3、guided（启发式调度）</h3>
+<p>采用启发式调度方法进行调度，每次分配给线程迭代次数不同，开始比较大，以后逐渐减小。 size表示每次分配的迭代次数的最小值，由于每次分配的迭代次数会逐渐减少，少到size时，将不再减少。如果不知道size的大小，那么默认size为1，即一直减少到1。具体采用哪一种启发式算法，需要参考具体的编译器和相关手册的信息。</p>
+<h3 id="runtime">4、runtime</h3>
+<p>runtime调用，并不是一个真的调度方式。它是根据环境变量的OMP_SCHEDULE来确定调度模式。最终仍然是上述三种方式之一。具体用法可以查看相关文档。</p>
+<h2 id="六一个常用的设计模式">六、一个常用的设计模式</h2>
+<p>在做了前5个部分的铺垫之后，相信喵粉们已经初步掌握了OpenMP的几个基本的知识。那么，现在就开始讲我们最重要的部分——小喵最常用的一个设计模式。 主要流程如下：</p>
+<ol type="1">
+<li>初始化
+<ol type="1">
+<li>定义线程数为<code>thread_num</code></li>
+<li>定义平均每个线程上的任务数为<code>task_per_thread</code></li>
+<li>初始化处理器对象（<code>handle_arr</code>）,大小为<code>thread_num</code></li>
+<li>初始化任务空间（<code>task_arr</code>），大小为 <code>thread_num * task_per_thread</code></li>
+<li>初始化结果空间（<code>result_arr</code>），大小为 <code>thread_num * task_per_thread</code></li>
+</ol></li>
+<li>读取任务（串行）
+<ol type="1">
+<li>读取 <code>thread_num * task_per_thread</code> 个任务，存入 <code>task_arr</code></li>
+<li>记录读取任务的数目 <code>task_num (task_num &lt;= thread_num * task_per_thread)</code></li>
+</ol></li>
+<li>任务处理（并行）
+<ol type="1">
+<li>任务的 <code>task_id</code> 就是for循环的下标</li>
+<li>通过 <code>omp_get_thread_num</code> 获取当前的线程id，根据线程id查找处理器对象。</li>
+<li>使用处理器处理定义的 <code>task_id</code> 对应的任务 <code>task_arr[task_id]</code></li>
+<li>将执行结果存入 <code>result_arr[task_id]</code> 的位置</li>
+</ol></li>
+<li>结果处理（串行）
+<ol type="1">
+<li>根据 <code>task_num</code>，处理完 <code>result_arr</code> 中的结果。</li>
+</ol></li>
+<li>程序状态判断
+<ol type="1">
+<li>判断 <code>task_num</code> 是否等于 <code>thread_num * task_per_thread</code>。
+<ul>
+<li>如果相等，说明任务队列没有执行完，继续 <code>&lt;2&gt;</code> 开始执行。</li>
+<li>如果不相等，则说明任务队列全部处理完，程序执行结束 <code>&lt;6&gt;</code>。</li>
+</ul></li>
+</ol></li>
+<li>enjoy your programming</li>
+</ol>
+<p>让我们来一步一步的理解这个模式。</p>
+<h3 id="初始化">&lt;1&gt;初始化</h3>
+<p>这里主要完成一些初始化的工作。</p>
+<h4 id="thread_num-和-task_per_thread">1. <code>thread_num</code> 和 <code>task_per_thread</code></h4>
+<p>可以看到，这里初始化了两个参数。那么为什么需要 <code>thread_num</code> 和 <code>task_per_thread</code> 这两个参数呢？</p>
+<p>为了更好的利用和控制资源。</p>
+<p>根据机器的不同，我们可以自己设置需要开启的线程数，这就是 <code>thread_num</code>。</p>
+<blockquote>
+<p>反派汪：我觉得你说的有问题。我们在程序中明明可以利用omp_get_num_procs获取机器的所有的处理器的数目，然后就启用这么多的线程的话，不就能最大限度的使用所有的计算能力了吗？</p>
+<p>喵座：其实不然。假如服务器的处理器数目为40，按照你的思路，则会启用40个线程。这样一是会造成其他人不能正常的工作，二是当服务器本来就有其他的程序在run的时候，你的40个线程亦不能很好的工作。不如自己在运行之前设置一下需要的计算资源数，会更方便一点。</p>
+</blockquote>
+<p>那么为什么我们需要设置这个 <code>task_per_thread</code> 呢？</p>
+<p>因为资源是有限的。</p>
+<p>考虑到最高效的工作方式，就是让所有的线程不间断的工作。比如一次性读完所有的任务列表，然后使用 <code>dynamic</code> 做完所有的任务。这样在任务做完之前，每个线程都会无间歇的工作。</p>
+<p>理想是完美的，现实是残酷的。如果任务非常多，比如小喵需要处理的200w条数据。很难一次性全部载入内存。而且，即使这么做了，也必须得任务全部做完，才能得到运行结果，时效性很差。</p>
+<p>那么我们不设置 <code>thask_per_thread</code> 不行吗？或者就把这个设置成1。每次就读取线程数相同的任务数，这样代码编写不应该更简单吗？</p>
+<p>这时候，让我们回顾一下OpenMP的调度机制。如果每次只读取 <code>thread_num</code> 这么多的个任务数，那么每次并行计算的时候，每个线程都会分配到一个任务。那么总的耗时将变成最慢的任务的执行时间。</p>
+<p>举个简单的例子，比如有12个任务，耗时为2，1，2，1，2，1，2，1，2，1，2，1。我们使用2个线程。那么每处理2个任务，耗时都是2。总时间是12。</p>
+<p>如果我们每6个一起执行，也是使用2个线程。需要的总时间会变成了10。执行过程看下图：</p>
+<p><img src="task-queue.svg" alt="任务队列" /></p>
+<p>可以使用 <code>task_per_task</code> 这个策略，每次处理 <code>thread_num * task_per_task</code> 个任务的话，可以更好了利用多核的资源。（<code>task_per_task</code>设得越大，讲道理效果应该越好。小喵自己喜欢设成10或20）</p>
+<p>另一个好处是，当我们处理完这些任务之后，可以立刻将结果写入结果文件。</p>
+<h4 id="处理器对象">2. 处理器对象</h4>
+<p>这是可选的。我们在实际处理任务的时候，有时候会使用到一些特殊的资源，而且必须保证这些资源是独占的（比如网络通信的套接字，文件对象，或是线程不安全的一些实例的对象）。最简单高效的方法就是为每个线程都初始化一个自己的处理器（或是资源）对象。这样在实际处理的时候，每个线程可以根据自己的线程id找到自己的处理器，从而避免了多线程中的各种问题。</p>
+<h4 id="task_arr-和-result_arr">3. <code>task_arr</code> 和 <code>result_arr</code></h4>
+<p>这两个空间是用来存放每次并行处理的任务和结果的。大小自然和每次并行的任务数（<code>thread_num * task_per_thread</code>）相等。考虑到每次并行都可以复用这些空间，所以提前申请好足够的空间可以提高运行效率。</p>
+<h3 id="读取任务">&lt;2&gt;读取任务</h3>
+<p>我们通常会将任务的内容保存在文件中。而文件的读取是不能并行的。因此我们需要提前按串行的方式将任务读取到任务队列 <code>task_arr</code> 中。每次读取 <code>thread_num * task_per_thread</code> 个。考虑到任务总数可能不是 <code>thread_num * task_per_thread</code> 的整数倍，因此最后一次读取的任务数会稍小一点。我们将每次读取的任务数记录下来，命名为 <code>task_num</code>。</p>
+<h3 id="任务处理">&lt;3&gt;任务处理</h3>
+<p>这里就是我们刚刚学习到的OpenMP的用武之地。</p>
+<p>通常的写法是：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span>thread_num<span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span></span></span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> task_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> task_idx <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> task_idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> thread_id <span class="token operator">=</span> <span class="token function">omp_get_thread_num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                      <span class="token comment">// 获取当前的线程id</span>
+    handle_type handle <span class="token operator">=</span> handle_arr<span class="token punctuation">[</span>thread_id<span class="token punctuation">]</span><span class="token punctuation">;</span>                <span class="token comment">// 根据线程id，获取处理器</span>
+    result_type result <span class="token operator">=</span> handle<span class="token operator">-></span><span class="token function">process</span><span class="token punctuation">(</span>task_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 处理指定的任务</span>
+    result_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span> <span class="token operator">=</span> result<span class="token punctuation">;</span>                             <span class="token comment">// 在指定位置写回执行的结果</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>获取当前的线程号，然后获取处理器，然后处理对应的任务，并将结果存放进对应的位置。</p>
+<p>注意，线程之间是独立的，不能读写同一个线程不安全的资源。而且在并行区域不保证任何的线程间的顺序。</p>
+<p>这样，我们就能安全且高效的执行完每次的任务了。</p>
+<h3 id="结果处理">&lt;4&gt;结果处理</h3>
+<p>这部分十分简单，因为任务的结果已经按顺序存进了 <code>result_arr</code> 中，有效的 <code>result</code> 是前 <code>task_num</code> 个，之后想怎么处理都是喵粉自己的事情了。</p>
+<h3 id="程序状态判断">&lt;5&gt;程序状态判断</h3>
+<p>正如我们在 <code>&lt;2&gt;</code> 中说到的，我们每次处理一批任务，最后的一批任务的个数将不是 <code>thread_num * task_per_thread</code> 这么多。因此需要与 <code>task_num</code> 比较一下。如果相等，就可能是我们还没有处理完，回到 <code>&lt;2&gt;</code> 继续执行。如果不相等，那就说明我们处理完了所有的任务了！你可以坐下来喝杯caffe，然后enjoy多线程带来的快感了。</p>
+<p>最后，附上一个简单的demo。使用多线程，从文本上读取图片的list，读取图片的大小，并将结果存入一个新的文本中。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;opencv2/opencv.hpp></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;fstream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;string></span></span>
+
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> width<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> height<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> Size<span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">int</span> argc<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>argv<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>argc <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"usage: get_size.bin input_list output_list"</span>
+            <span class="token string">" [thread_num] [task_per_thread]"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">const</span> <span class="token keyword">int</span> thread_num <span class="token operator">=</span> <span class="token punctuation">(</span>argc <span class="token operator">></span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token function">atoi</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">int</span> task_per_thread <span class="token operator">=</span> <span class="token punctuation">(</span>argc <span class="token operator">></span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token function">atoi</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">const</span> <span class="token keyword">int</span> total_task <span class="token operator">=</span> thread_num <span class="token operator">*</span> task_per_thread<span class="token punctuation">;</span>
+
+    std<span class="token double-colon punctuation">::</span>string image_name_arr<span class="token punctuation">[</span>total_task<span class="token punctuation">]</span><span class="token punctuation">;</span>    <span class="token comment">// task arr</span>
+    Size image_size_arr<span class="token punctuation">[</span>total_task<span class="token punctuation">]</span><span class="token punctuation">;</span>           <span class="token comment">// result arr</span>
+
+    std<span class="token double-colon punctuation">::</span>ifstream <span class="token function">is</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>ofstream <span class="token function">os</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">int</span> count <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+        <span class="token comment">// 读取任务</span>
+        <span class="token keyword">int</span> task_num <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> task_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> task_idx <span class="token operator">&lt;</span> total_task<span class="token punctuation">;</span> <span class="token operator">++</span> task_idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span>is <span class="token operator">>></span> image_name_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+            <span class="token operator">++</span> task_num<span class="token punctuation">;</span>
+            <span class="token operator">++</span> count<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        <span class="token comment">// 处理任务</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression">omp parallel <span class="token keyword">for</span> <span class="token function">num_threads</span><span class="token punctuation">(</span>thread_num<span class="token punctuation">)</span> <span class="token function">schedule</span><span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span></span></span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> task_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> task_idx <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> task_idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            cv<span class="token double-colon punctuation">::</span>Mat image <span class="token operator">=</span> cv<span class="token double-colon punctuation">::</span><span class="token function">imread</span><span class="token punctuation">(</span>image_name_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            image_size_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">.</span>width <span class="token operator">=</span> image<span class="token punctuation">.</span>cols<span class="token punctuation">;</span>
+            image_size_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">.</span>height <span class="token operator">=</span> image<span class="token punctuation">.</span>rows<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"process #"</span> <span class="token operator">&lt;&lt;</span> count <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+
+        <span class="token comment">// 处理结果</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> task_idx <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> task_idx <span class="token operator">&lt;</span> task_num<span class="token punctuation">;</span> <span class="token operator">++</span> task_idx<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            os <span class="token operator">&lt;&lt;</span> image_name_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span>
+                <span class="token operator">&lt;&lt;</span> image_size_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">.</span>width <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span>
+                <span class="token operator">&lt;&lt;</span> image_size_arr<span class="token punctuation">[</span>task_idx<span class="token punctuation">]</span><span class="token punctuation">.</span>height <span class="token operator">&lt;&lt;</span> <span class="token string">"\n"</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        <span class="token comment">// 状态判断</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>task_num <span class="token operator">!=</span> total_task<span class="token punctuation">)</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译和执行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">g++ get_image_size_with_omp.cpp <span class="token parameter variable">-o</span> get_image_size_with_omp <span class="token parameter variable">-fopenmp</span> -I/path/to/opencv/include -L/path/to/opencv/lib <span class="token parameter variable">-lopencv_core</span> <span class="token parameter variable">-lopencv_highgui</span>
+./get_image_size_with_omp /path/to/image_list /path/to/save/result <span class="token number">2</span> <span class="token number">20</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>怎么样，使用这种模式来实现简单的多线程程序是不是很简单？</p>
+<p><strong>转载请注明出处~</strong></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/11/15/openmp-tutorial/" target="_blank" title="应用OpenMP的一个简单的设计模式">
+        https://www.miaoerduo.com/2016/11/15/openmp-tutorial/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2017/01/01/face-verify-annotate-tool/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      一个简单粗暴的人脸认证标注工具的实现
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/10/08/caffe-large-margin-softmax-2/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">基于Caffe的Large Margin Softmax Loss的实现（二）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

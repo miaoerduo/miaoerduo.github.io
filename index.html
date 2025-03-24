@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="jumbotron">
+  <div class="video">
+    
+    <div class="video-frame">
+      <img src="/images/ocean/overlay-hero.png" alt="Decorative image frame">
+    </div>
+    
+    <div class="video-media">
+      <video playsinline="" autoplay="" loop="" muted="" data-autoplay="" poster="/images/ocean/ocean.png"
+        x5-video-player-type="h5">
+        <source src="/images/ocean/ocean.mp4" type="video/mp4">
+        <source src="/images/ocean/ocean.ogv" type="video/ogg">
+        <source src="/images/ocean/ocean.webm" type="video/webm">
+        <p>Your user agent does not support the HTML5 Video element.</p>
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+    <div class="video-inner text-center text-white">
+      <h1><a href="/">喵耳朵</a></h1>
+      <p>略懂算法 | 在学架构 | 梦想成为 | Top插画师</p>
+      <div><img src="/images/MED-logo-white.png" class="brand" alt="喵耳朵"></div>
+    </div>
+    <div class="video-learn-more">
+      <a class="anchor" href="#landingpage"><i class="fe fe-mouse"></i></a>
+    </div>
+  </div>
+</section>
+<div id="landingpage">
+  <section class="outer">
+  <article class="articles">
+    
+    <h1 class="page-type-title"></h1>
+    
+    
+    <article id="post-redis-mget-latency" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2025/03/24/redis-mget-latency/">Redis MGET延时排查</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2025/03/24/redis-mget-latency/" class="article-date">
+  <time datetime="2025-03-24T16:19:14.000Z" itemprop="datePublished">2025-03-24</time>
+</a>
+      
+      <div class="wordcount wordcount-num">1.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这是最近一个同事在开发中遇到的问题，觉得很有意思。记录了下来。</p>
+<p>问题如下：</p>
+<p>线上的服务，每个请求需要从Redis中 mget 300个key。发现P99延时高达20ms。不满足上线要求。</p>
+<p>最后我们从集群负载，大Key问题，Proxy任务数以及分片的角度进行的分析。</p>
+      
+      <a class="article-more-link" href="/2025/03/24/redis-mget-latency/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-free-serverless-provider" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2024/01/26/free-serverless-provider/">免费的云服务搜集</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2024/01/26/free-serverless-provider/" class="article-date">
+  <time datetime="2024-01-26T01:44:04.000Z" itemprop="datePublished">2024-01-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">726 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>注意，以下的信息仅截止于2024年11月25，后续可能会有变化。 以下顺序不代表排名。</p>
+</blockquote>
+<p>下面的内容主要是免费的一些云服务资源，具体有：</p>
+<ol type="1">
+<li>计算资源
+<ul>
+<li>Serverless函数</li>
+<li>容器</li>
+</ul></li>
+<li>数据
+<ul>
+<li>KV</li>
+<li>Redis</li>
+<li>MySQL</li>
+<li>MongoDB</li>
+<li>Kafka</li>
+</ul></li>
+</ol>
+      
+      <a class="article-more-link" href="/2024/01/26/free-serverless-provider/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-lambda-recursive-call" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2024/01/05/lambda-recursive-call/">C++和Go关于闭包递归调用的趣事</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2024/01/05/lambda-recursive-call/" class="article-date">
+  <time datetime="2024-01-05T06:17:15.000Z" itemprop="datePublished">2024-01-05</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/go/">go</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="一次codereview引发的讨论">一次CodeReview引发的讨论</h2>
+<p>起因是这样的，Code Review的时候看到了下面这段Golang的代码：</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"fmt"</span>
+
+<span class="token keyword">func</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"download"</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"download error"</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	times <span class="token operator">:=</span> <span class="token number">3</span>
+	<span class="token keyword">var</span> tryDownload <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
+	tryDownload <span class="token operator">=</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">if</span> times <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> fmt<span class="token punctuation">.</span><span class="token function">Errorf</span><span class="token punctuation">(</span><span class="token string">"exceed max times"</span><span class="token punctuation">)</span>
+		<span class="token punctuation">&#125;</span>
+		err <span class="token operator">:=</span> <span class="token function">download</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> <span class="token boolean">nil</span>
+		<span class="token punctuation">&#125;</span>
+		times<span class="token operator">--</span>
+		<span class="token keyword">return</span> <span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token function">tryDownload</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"last times"</span><span class="token punctuation">,</span> times<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>大致意思是尝试下载三次。</p>
+<p>由于被Golang的闭包坑过，所以当时给的Code Review的意见是改成<code>for loop</code>的方式，避免闭包捕获可能导致的问题。</p>
+      
+      <a class="article-more-link" href="/2024/01/05/lambda-recursive-call/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cgo" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2023/01/29/cgo/">CGO函数调用与数据转换</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2023/01/29/cgo/" class="article-date">
+  <time datetime="2023-01-29T22:03:24.000Z" itemprop="datePublished">2023-01-29</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/go/">go</a>
+</div>
+
+      <div class="wordcount wordcount-num">4.4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 20 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>CGO是Go程序调用C库的一套机制，可以使Go语言能够站在C/C++的肩膀上。比如Go调用Tensorflow，也就是使用了CGO来实现的。很多语言都支持对C库的调用，一般称为FFI（Foreign Function Interface）。这里需要注意一下，一般的Python、Lua等语言调用C函数的时候，是通过函数签名找到函数的地址，然后直接调用对应的函数。而CGO会先生成中间文件，然后再一起编译调用。这里不具体展开了，总之只需要知道CGO比一般的FFI多了一层中间的步骤。在程序出错的时候，能理解调用栈的关系即可。参考 <a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1650525">CGO 和 CGO 性能之谜</a>。</p>
+<h2 id="函数调用">函数调用</h2>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+
+<span class="token comment">/*
+CGO的标准写法：
+1. 先用注释的方式写入，单行注释和多行注释都支持
+  1.1 编译器环境变量
+	1.1.1 CFLAGS: C编译选项
+	1.1.2 CXXFLAGS: C++编译选项
+	1.1.3 CPPFLAGS: C和C++共有的编译选项
+	1.1.4 FFLAGS: Fortran编译选项
+	1.1.4 LDFLAGS: 链接选项（不区分C和C++）
+  1.2 C代码
+2. import "C"，相当于将所有的C函数放入虚拟的package C。之后通过`C.xxx`的方式来调用。需要紧跟注释之后。
+*/</span>
+
+<span class="token comment">/*
+#cgo LDFLAGS: -lm
+
+#include &lt;math.h>
+double my_sqrt(double x) &#123;
+	return sqrt(x);
+&#125;
+*/</span>
+<span class="token keyword">import</span> <span class="token string">"C"</span> <span class="token comment">// CGO的标准写法，相当于将C函数放入包`C`中</span>
+<span class="token keyword">import</span> <span class="token string">"fmt"</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	a <span class="token operator">:=</span> <span class="token number">100</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"sqrt(%v) = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">my_sqrt</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">double</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 调用上面自定义的函数</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Printf</span><span class="token punctuation">(</span><span class="token string">"sqrt(%v) = %v\n"</span><span class="token punctuation">,</span> a<span class="token punctuation">,</span> C<span class="token punctuation">.</span><span class="token function">sqrt</span><span class="token punctuation">(</span>C<span class="token punctuation">.</span><span class="token function">double</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">// 调用系统库函数（上述的m）</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output:</span>
+<span class="token comment">//  sqrt(100) = 10</span>
+<span class="token comment">//  sqrt(100) = 10</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>通过上述的例子，我们可以看出，CGO可以调用C的库函数，也可以执行注释中的C代码的函数。一般注释中的C代码都是比较简短的。</p>
+<p>接下来要介绍C和Go之间的数据是如何传递的。</p>
+      
+      <a class="article-more-link" href="/2023/01/29/cgo/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-cpp-object-model" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2023/01/19/cpp-object-model/">C++对象模型</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2023/01/19/cpp-object-model/" class="article-date">
+  <time datetime="2023-01-19T20:08:05.000Z" itemprop="datePublished">2023-01-19</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a>
+</div>
+
+      <div class="wordcount wordcount-num">7.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 40 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>本文主要是在看《Inside the C++ Object Model》的时候，想通过案例的方式加深一下理解。</p>
+<p>首先，由于编译器有内存对齐的优化，比如：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">class</span> <span class="token class-name">WithAlign</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> a<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> b<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression"><span class="token function">pack</span><span class="token punctuation">(</span>push<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span></span></span>
+<span class="token keyword">class</span> <span class="token class-name">WithoutAlign</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> a<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> b<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">pragma</span> <span class="token expression"><span class="token function">pack</span><span class="token punctuation">(</span>pop<span class="token punctuation">)</span></span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"WithAlign: "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>WithAlign<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"WithoutAlign: "</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>WithoutAlign<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// Output:</span>
+<span class="token comment">//  WithAlign: 8</span>
+<span class="token comment">//  WithoutAlign: 5</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>内存对齐的类大小为8（按int 4字节对齐），未对齐的为5（int + char）。这里为了更容易理解，全部默认使用1字节对齐。</p>
+<p>注意，本文中的内容均仅在自己的机器的Docker容器中做测试，环境为：64位 ubuntu 16.04， gcc 5.5。</p>
+<pre class="line-numbers language-none"><code class="language-none"># lsb_release -a
+Distributor ID: Ubuntu
+Description:    Ubuntu 16.04.7 LTS
+Release:        16.04
+Codename:       xenial
+
+# uname -a
+Linux 06f25c7abffd 5.15.49-linuxkit #1 SMP Tue Sep 13 07:51:46 UTC 2022 x86_64 x86_64 x86_64 GNU&#x2F;Linux
+
+# gcc --version
+gcc (Ubuntu 5.5.0-12ubuntu1~16.04) 5.5.0 20171010<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="何为c对象模型">何为C++对象模型?</h2>
+<p>引用《深度探索C++对象模型》这本书中的话：</p>
+<p>有两个概念可以解释C++对象模型：</p>
+<ol type="1">
+<li>语言中直接支持面向对象程序设计的部分。包括构造函数、析构函数、多态、虚函数等。</li>
+<li>对于各种支持的底层实现机制。这部分并没有标准化，因此不同的编译器可以有自己的实现。</li>
+</ol>
+      
+      <a class="article-more-link" href="/2023/01/19/cpp-object-model/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-architecture-terminology" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2021/12/16/architecture-terminology/">服务端基本概念和指标</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/12/16/architecture-terminology/" class="article-date">
+  <time datetime="2021-12-16T20:46:48.000Z" itemprop="datePublished">2021-12-16</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Architecture/">Architecture</a>
+</div>
+
+      <div class="wordcount wordcount-num">4.2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 14 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这里主要介绍服务端架构工作中的一些常见的概念和指标，在我们部署、上线等运维工作时，方便排查问题，以及交流时的语义一致。</p>
+<h2 id="上游和下游-upstream-and-downstream">上游和下游 upstream and downstream</h2>
+<p>一般在谈论服务和调用关系的时候，我们会使用上游和下游来表示服务间的相关依赖。但是对于上下游的定义，会视情况而定的。</p>
+<p>Stack Overflow上有个相同的问题：<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/32364579/upstream-downstream-terminology-used-backwards-e-g-nginx">definition - Upstream / downstream terminology used backwards? (E.g. nginx) - Stack Overflow</a></p>
+      
+      <a class="article-more-link" href="/2021/12/16/architecture-terminology/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-arch-idl" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2021/11/16/arch-idl/">架构小试之IDL</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/11/16/arch-idl/" class="article-date">
+  <time datetime="2021-11-16T16:24:07.000Z" itemprop="datePublished">2021-11-16</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Architecture/">Architecture</a>
+</div>
+
+      <div class="wordcount wordcount-num">4.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 17 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>为什么IDL的介绍也放在这里呢？一方面是我想不到放哪里，另一方面是之前说到，“架构”即“设计”，那么IDL、RPC框架也算是设计的一部分。不合理的选型在后续维护上会带来不小的麻烦。</p>
+<p>本文主要介绍我用过的一些IDL，并结合真实案例，分析他们的优劣。</p>
+      
+      <a class="article-more-link" href="/2021/11/16/arch-idl/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-how-I-understand-architecture" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2021/11/16/how-I-understand-architecture/">我所理解的架构</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2021/11/16/how-I-understand-architecture/" class="article-date">
+  <time datetime="2021-11-16T12:38:37.000Z" itemprop="datePublished">2021-11-16</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Architecture/">Architecture</a>
+</div>
+
+      <div class="wordcount wordcount-num">951 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>本来是打算写一篇介绍我目前工作中有意思的设计的博客，写着写着发现设计的知识点还是有点多的，因此这里单独增加一栏，用来不断的更新相关的内容。</p>
+</blockquote>
+<p>由于工作的变化，我从图像算法和框架，转向了服务端架构。做服务端架构，相较于算法和sdk框架，有着挺大的区别。而适应这一变化，确实需要花费挺长的时间，也学习到很多。</p>
+<p>服务端的概念很多，很难在一本书上找到所有的答案，平时也只能自己多问多摸索。</p>
+<p>这里总结了一下日常遇到的有意思的概念和技巧，希望耐心看完本文的你能够更快速的理解服务端的概念和开发过程。不至于在入职时每次讨论都一脸懵逼。</p>
+<p>另外，我会在各部分的章节中，插入一些工作中遇到的真实案例。事实上，由于这些案例太过有意思，让我忍不住分享出来，所以才有了本文。（本文的目录也是根据这些案例归纳出来的。）</p>
+      
+      <a class="article-more-link" href="/2021/11/16/how-I-understand-architecture/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+  </article>
+  
+
+  
+  <nav class="page-nav">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/2/">下一页</a>
+  </nav>
+  
+</section>
+</div>
+
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

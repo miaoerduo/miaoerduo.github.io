@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    博客服务器维护中的小技巧 |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-tricks-for-maintaining-blog-server" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  博客服务器维护中的小技巧
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/02/02/tricks-for-maintaining-blog-server/" class="article-date">
+  <time datetime="2018-02-02T23:59:17.000Z" itemprop="datePublished">2018-02-02</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Miscellanea/">Miscellanea</a>
+</div>
+
+      <div class="wordcount wordcount-num">597 字</div>
+      <div class="wordcount wordcount-time">大约需要 2 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>这里记录了小喵的博客的服务器的一些小的技巧，包括安装和各种参数的配置，便于以后查看。不定期更新。</p>
+<span id="more"></span>
+<h3 id="lnmp环境的配置oneinstack">1. LNMP环境的配置——oneinstack</h3>
+<p><code>LNMP</code> 环境就是 <code>Linux</code>、<code>Nginx</code>、<code>Mysql</code> 和 <code>Php</code> 这四个的组合，由于这四个都是免费的，因此在网站搭建的时候最常使用到，另一个名词是 <code>LAMP</code> ，其中 <code>A</code> 表示的是 <code>Apache</code>。但 <code>Apache</code> 比较占资源，所以我用的还是 <code>Nginx</code>。</p>
+<p>这里，网上应该有超多的教程，我当时配置的时候也是参考了各种教程，但最终还是放弃了，自己去配置这些东西真的好难。于是，我就把目标转向了各种集成好的环境了。</p>
+<p>如果使用的是阿里云或者腾讯云的服务器，那么直接在应用市场上中就有配置好环境的 <code>LNMP</code>。如果是自己的服务器，就可以使用 <a target="_blank" rel="noopener" href="https://oneinstack.com/">https://oneinstack.com/</a>。这里提供的一键安装的脚本。同时 <strong>oneinstack</strong> 中，还提供了新建虚拟主机，新建FTP服务器，一键升级软件等各种超实用的功能，十分建议使用。</p>
+<h3 id="优化php-fpm的内存占用问题">2. 优化php-fpm的内存占用问题</h3>
+<p>这里，我们如果使用htop命令查看各种资源占用，会发现，<code>php-fpm</code> 这个程序居然占用了10%的内存！明明网站是空闲的，但是内存还是被占用着。</p>
+<p>参考 <a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000010413463">https://segmentfault.com/a/1190000010413463</a> 中的解决方案。</p>
+<p>打开 <code>/usr/local/php/etc/php-fpm.conf</code> 这个文件，该文件是 <code>php-fpm</code> 的配置文件。不同的版本可能安装的地方不太一样。打开之后，有这么一段配置：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">pm = dynamic
+pm.max_children = 16
+pm.start_servers = 10
+pm.min_spare_servers = 8
+pm.max_spare_servers = 16
+pm.max_requests = 2048
+pm.process_idle_timeout = 10s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>其中 <code>pm = dynamic</code> 会使得内存中永远都有 <code>php-fpm</code> 的进程存在，这样会很大长度的浪费内存，所以把这句改成 <code>pm = ondemand</code>。变成：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">pm = ondemand
+pm.max_children = 16
+pm.start_servers = 10
+pm.min_spare_servers = 8
+pm.max_spare_servers = 16
+pm.max_requests = 2048
+pm.process_idle_timeout = 10s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这样，只有在系统需要的时候，才回产生 <code>php-fpm</code> 的子进程。子进程会在内存中保留 <code>pm.process_idle_timeout</code> 这么久的时间之后退出，这里就是10s的时间。</p>
+<p>之后重启我们的 <code>php-fpm</code>，就会发现内存占用变少了很多。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 重启php-fpm</span>
+<span class="token function">service</span> php-fpm restart<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/02/02/tricks-for-maintaining-blog-server/" target="_blank" title="博客服务器维护中的小技巧">
+        https://www.miaoerduo.com/2018/02/02/tricks-for-maintaining-blog-server/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/02/12/my-wordpress-plugins/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      本站的WordPress插件一览
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/01/25/shadowsocks-toturial/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">shadowsocks安装和配置</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

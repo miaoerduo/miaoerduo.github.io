@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    基于Caffe的DeepID2实现（下） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-deepid2-3" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  基于Caffe的DeepID2实现（下）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/07/15/deepid2-3/" class="article-date">
+  <time datetime="2016-07-15T22:24:18.000Z" itemprop="datePublished">2016-07-15</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：这次的博客，真心累伤了小喵的心。但考虑到知识需要巩固和分享，小喵决定这次把剩下的内容都写完。</p>
+</blockquote>
+<span id="more"></span>
+<h2 id="四数据的重整简单的划分">四、数据的重整，简单的划分</h2>
+<p>前面的Data层用于生成成对的输入数据，Normalization层，用于将feature归一化，那么之后是不是就可以使用ContrastiveLoss层进行训练了呢？</p>
+<p>且慢，还差一步。</p>
+<p>ContrastiveLoss层要求有3个bottom：feature1、feature2以及表示对位的feature是否为同一个identity的label。</p>
+<p>我们现在得到的feature却是所有的都在一起，data层直接得到的label也和这里要求的label不同。因此务必要对数据进行一次重整。</p>
+<p>一个简单的规则就是按照奇偶，将feature划分成两部分。这样得到的两部分正好就是相同位置为一对。对于label的重整，也可以用类似的方法。小喵这里只对feature进行重整，而label的处理则是通过改ContrastiveLoss层来实现。</p>
+<p>feature的重整本质上就是一个切片的操作，这里命名为id2_slice_layer，实现方法就是按照奇偶把bottom的数据复制到top。后馈的时候，也就是将两部分的feature的diff都直接复制到对应位置的bottom_diff中，具体实现如下：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// created by miao</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifndef</span> <span class="token expression">CAFFE_ID2_SLICE_LAYER_HPP_</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">CAFFE_ID2_SLICE_LAYER_HPP_</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/blob.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layer.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/proto/caffe.pb.h"</span></span>
+
+<span class="token keyword">namespace</span> caffe <span class="token punctuation">&#123;</span>
+
+<span class="token comment">/**
+ * @brief Takes a Blob and slices it along either the num or channel dimension,
+ *        outputting multiple sliced Blob results.
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */</span>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">Id2SliceLayer</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Layer</span><span class="token operator">&lt;</span><span class="token class-name">Dtype</span><span class="token operator">></span></span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">explicit</span> <span class="token function">Id2SliceLayer</span><span class="token punctuation">(</span><span class="token keyword">const</span> LayerParameter<span class="token operator">&amp;</span> param<span class="token punctuation">)</span>
+      <span class="token operator">:</span> <span class="token generic-function"><span class="token function">Layer</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>param<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">LayerSetUp</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Reshape</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> <span class="token function">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token string">"Id2Slice"</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">ExactNumBottomBlobs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">MinTopBlobs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+
+ <span class="token keyword">protected</span><span class="token operator">:</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Forward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Forward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Backward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Backward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>  <span class="token comment">// namespace caffe</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span>  <span class="token comment">// CAFFE_ID2_SLICE_LAYER_HPP_</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>头文件，巨简单。。。</p>
+<p>Cpp的代码，也非常简单，要注意id2_slice层的top有两个，每个的形状都是bottom的一半。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// created by miao</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;algorithm></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layers/id2_slice_layer.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/util/math_functions.hpp"</span></span>
+
+<span class="token keyword">namespace</span> caffe <span class="token punctuation">&#123;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">LayerSetUp</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Reshape</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    vector<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span> top_shape <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">shape</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    top_shape<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">/=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+    top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">Reshape</span><span class="token punctuation">(</span>top_shape<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    top<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">Reshape</span><span class="token punctuation">(</span>top_shape<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Forward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> <span class="token keyword">int</span> feature_size <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">count</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> n <span class="token operator">&lt;</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">caffe_copy</span><span class="token punctuation">(</span>
+                feature_size<span class="token punctuation">,</span> 
+                bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n <span class="token operator">*</span> feature_size<span class="token punctuation">,</span> 
+                top<span class="token punctuation">[</span>n <span class="token operator">&amp;</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>n <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> feature_size
+                <span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Backward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> <span class="token keyword">int</span> feature_size <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">count</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> n <span class="token operator">&lt;</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">caffe_copy</span><span class="token punctuation">(</span>
+                feature_size<span class="token punctuation">,</span>
+                top<span class="token punctuation">[</span>n <span class="token operator">&amp;</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_diff</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>n <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> feature_size<span class="token punctuation">,</span>
+                bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_cpu_diff</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n <span class="token operator">*</span> feature_size
+                <span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifdef</span> <span class="token expression">CPU_ONLY</span></span>
+<span class="token function">STUB_GPU</span><span class="token punctuation">(</span>Id2SliceLayer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span>
+
+<span class="token function">INSTANTIATE_CLASS</span><span class="token punctuation">(</span>Id2SliceLayer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">REGISTER_LAYER_CLASS</span><span class="token punctuation">(</span>Id2Slice<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>  <span class="token comment">// namespace caffe</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>GPU上的实现，为了简单起见，也是直接调用了CPU的前馈函数。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token comment">// created by miao</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layers/id2_slice_layer.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/util/math_functions.hpp"</span></span>
+
+<span class="token keyword">namespace</span> caffe <span class="token punctuation">&#123;</span>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Forward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span><span class="token function">Forward_cpu</span><span class="token punctuation">(</span>bottom<span class="token punctuation">,</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">Id2SliceLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Backward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token operator">-></span><span class="token function">Backward_cpu</span><span class="token punctuation">(</span>top<span class="token punctuation">,</span> propagate_down<span class="token punctuation">,</span> bottom<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token function">INSTANTIATE_LAYER_GPU_FUNCS</span><span class="token punctuation">(</span>Id2SliceLayer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>  <span class="token comment">// namespace caffe</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这样就完成了feature的重整。由于没有用到新的参数，因此也不需要修改caffe.proto。</p>
+<p>亲可以仿照这个方法对label来做类似的操作。鉴于小喵比较懒。。。这里就只是简单的改ContrastiveLoss层的代码了。</p>
+<p>第一步，在ContrastiveLossLayer中新增一个用于记录feature pair是否是同一个identity的成员变量，取代原本的第三个bottom的功能。这样只需要在前馈的时候提前算好，就可以代替之前的第三个bottom来使用，而不需要再修改别的地方的代码。</p>
+<p>为了大家使用的方便，小喵直接把修改之后的头文件粘贴出来（删掉注释）。新增的行，用“added by miao”这个注释标注出来。头文件只加了一行。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">ifndef</span> <span class="token expression">CAFFE_CONTRASTIVE_LOSS_LAYER_HPP_</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">CAFFE_CONTRASTIVE_LOSS_LAYER_HPP_</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/blob.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layer.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/proto/caffe.pb.h"</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layers/loss_layer.hpp"</span></span>
+
+<span class="token keyword">namespace</span> caffe <span class="token punctuation">&#123;</span>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">ContrastiveLossLayer</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">LossLayer</span><span class="token operator">&lt;</span><span class="token class-name">Dtype</span><span class="token operator">></span></span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">explicit</span> <span class="token function">ContrastiveLossLayer</span><span class="token punctuation">(</span><span class="token keyword">const</span> LayerParameter<span class="token operator">&amp;</span> param<span class="token punctuation">)</span>
+      <span class="token operator">:</span> <span class="token generic-function"><span class="token function">LossLayer</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>param<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">diff_</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">LayerSetUp</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">ExactNumBottomBlobs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token number">3</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> <span class="token function">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> <span class="token string">"ContrastiveLoss"</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">inline</span> <span class="token keyword">bool</span> <span class="token function">AllowForceBackward</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> bottom_index<span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> bottom_index <span class="token operator">!=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+ <span class="token keyword">protected</span><span class="token operator">:</span>
+  <span class="token comment">/// @copydoc ContrastiveLossLayer</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Forward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Forward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Backward_cpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Backward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+      <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span> diff_<span class="token punctuation">;</span>  <span class="token comment">// cached for backward pass</span>
+  Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span> dist_sq_<span class="token punctuation">;</span>  <span class="token comment">// cached for backward pass</span>
+  Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span> diff_sq_<span class="token punctuation">;</span>  <span class="token comment">// tmp storage for gpu forward pass</span>
+  Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span> summer_vec_<span class="token punctuation">;</span>  <span class="token comment">// tmp storage for gpu forward pass</span>
+  Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span> is_same_<span class="token punctuation">;</span> <span class="token comment">// added by miao</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>  <span class="token comment">// namespace caffe</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span>  <span class="token comment">// CAFFE_CONTRASTIVE_LOSS_LAYER_HPP_</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>源文件的修改也十分简单，这里只贴出来Cuda的部分。源文件，修改了与原来的bottom3相关的地方。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;algorithm></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/layers/contrastive_loss_layer.hpp"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"caffe/util/math_functions.hpp"</span></span>
+
+<span class="token keyword">namespace</span> caffe <span class="token punctuation">&#123;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">ContrastiveLossLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Forward_gpu</span><span class="token punctuation">(</span>
+    <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">const</span> <span class="token keyword">int</span> count <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">caffe_gpu_sub</span><span class="token punctuation">(</span>
+      count<span class="token punctuation">,</span>
+      bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// a</span>
+      bottom<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// b</span>
+      diff_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// a_i-b_i</span>
+  <span class="token function">caffe_gpu_powx</span><span class="token punctuation">(</span>
+      count<span class="token punctuation">,</span>
+      diff_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// a_i-b_i</span>
+      <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      diff_sq_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// (a_i-b_i)^2</span>
+  <span class="token function">caffe_gpu_gemv</span><span class="token punctuation">(</span>
+      CblasNoTrans<span class="token punctuation">,</span>
+      bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">channels</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      diff_sq_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// (a_i-b_i)^2</span>
+      summer_vec_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      dist_sq_<span class="token punctuation">.</span><span class="token function">mutable_gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Sum (a_i-b_i)^2</span>
+  Dtype margin <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>layer_param_<span class="token punctuation">.</span><span class="token function">contrastive_loss_param</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">margin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">bool</span> legacy_version <span class="token operator">=</span>
+      <span class="token keyword">this</span><span class="token operator">-></span>layer_param_<span class="token punctuation">.</span><span class="token function">contrastive_loss_param</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">legacy_version</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Dtype <span class="token function">loss</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// added by miao</span>
+    is_same_<span class="token punctuation">.</span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">(</span>bottom<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">2</span> <span class="token operator">*</span> i<span class="token punctuation">]</span> <span class="token operator">==</span> bottom<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">2</span> <span class="token operator">*</span> i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token operator">?</span> <span class="token number">1</span><span class="token operator">:</span><span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>is_same_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  <span class="token comment">// similar pairs</span>
+      loss <span class="token operator">+=</span> dist_sq_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>  <span class="token comment">// dissimilar pairs</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>legacy_version<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        loss <span class="token operator">+=</span> std<span class="token double-colon punctuation">::</span><span class="token function">max</span><span class="token punctuation">(</span>margin <span class="token operator">-</span> dist_sq_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        Dtype dist <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">max</span><span class="token punctuation">(</span>margin <span class="token operator">-</span> <span class="token function">sqrt</span><span class="token punctuation">(</span>dist_sq_<span class="token punctuation">.</span><span class="token function">cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                              <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        loss <span class="token operator">+=</span> dist<span class="token operator">*</span>dist<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  loss <span class="token operator">=</span> loss <span class="token operator">/</span> <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_cpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> loss<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+__global__ <span class="token keyword">void</span> <span class="token function">CLLBackward</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">int</span> count<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">int</span> channels<span class="token punctuation">,</span>
+    <span class="token keyword">const</span> Dtype margin<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">bool</span> legacy_version<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype alpha<span class="token punctuation">,</span>
+    <span class="token keyword">const</span> Dtype<span class="token operator">*</span> y<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype<span class="token operator">*</span> diff<span class="token punctuation">,</span> <span class="token keyword">const</span> Dtype<span class="token operator">*</span> dist_sq<span class="token punctuation">,</span>
+    Dtype <span class="token operator">*</span>bottom_diff<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">CUDA_KERNEL_LOOP</span><span class="token punctuation">(</span>i<span class="token punctuation">,</span> count<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> n <span class="token operator">=</span> i <span class="token operator">/</span> channels<span class="token punctuation">;</span>  <span class="token comment">// the num index, to access y and dist_sq</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>y<span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  <span class="token comment">// similar pairs</span>
+      bottom_diff<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> alpha <span class="token operator">*</span> diff<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>  <span class="token comment">// dissimilar pairs</span>
+      Dtype <span class="token function">mdist</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      Dtype <span class="token function">beta</span><span class="token punctuation">(</span><span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>legacy_version<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        mdist <span class="token operator">=</span> <span class="token punctuation">(</span>margin <span class="token operator">-</span> dist_sq<span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        beta <span class="token operator">=</span> <span class="token operator">-</span>alpha<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        Dtype dist <span class="token operator">=</span> <span class="token function">sqrt</span><span class="token punctuation">(</span>dist_sq<span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        mdist <span class="token operator">=</span> <span class="token punctuation">(</span>margin <span class="token operator">-</span> dist<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        beta <span class="token operator">=</span> <span class="token operator">-</span>alpha <span class="token operator">*</span> mdist <span class="token operator">/</span> <span class="token punctuation">(</span>dist <span class="token operator">+</span> <span class="token function">Dtype</span><span class="token punctuation">(</span><span class="token number">1e-4</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> diff<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>mdist <span class="token operator">></span> <span class="token number">0.0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        bottom_diff<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> beta<span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        bottom_diff<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+      <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">typename</span> <span class="token class-name">Dtype</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">ContrastiveLossLayer</span><span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">Backward_gpu</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> top<span class="token punctuation">,</span>
+    <span class="token keyword">const</span> vector<span class="token operator">&lt;</span><span class="token keyword">bool</span><span class="token operator">></span><span class="token operator">&amp;</span> propagate_down<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>Blob<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">*</span><span class="token operator">></span><span class="token operator">&amp;</span> bottom<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">2</span><span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>propagate_down<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">const</span> <span class="token keyword">int</span> count <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> <span class="token keyword">int</span> channels <span class="token operator">=</span> bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">channels</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      Dtype margin <span class="token operator">=</span> <span class="token keyword">this</span><span class="token operator">-></span>layer_param_<span class="token punctuation">.</span><span class="token function">contrastive_loss_param</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">margin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> <span class="token keyword">bool</span> legacy_version <span class="token operator">=</span>
+          <span class="token keyword">this</span><span class="token operator">-></span>layer_param_<span class="token punctuation">.</span><span class="token function">contrastive_loss_param</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">legacy_version</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> Dtype sign <span class="token operator">=</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token number">1</span> <span class="token operator">:</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> Dtype alpha <span class="token operator">=</span> sign <span class="token operator">*</span> top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">cpu_diff</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">/</span>
+          <span class="token generic-function"><span class="token function">static_cast</span><span class="token generic class-name"><span class="token operator">&lt;</span>Dtype<span class="token operator">></span></span></span><span class="token punctuation">(</span>bottom<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">num</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// NOLINT_NEXT_LINE(whitespace/operators)</span>
+      CLLBackward<span class="token operator">&lt;</span>Dtype<span class="token operator">></span><span class="token operator">&lt;&lt;</span><span class="token operator">&lt;</span><span class="token function">CAFFE_GET_BLOCKS</span><span class="token punctuation">(</span>count<span class="token punctuation">)</span><span class="token punctuation">,</span> CAFFE_CUDA_NUM_THREADS<span class="token operator">>></span><span class="token operator">></span><span class="token punctuation">(</span>
+          count<span class="token punctuation">,</span> channels<span class="token punctuation">,</span> margin<span class="token punctuation">,</span> legacy_version<span class="token punctuation">,</span> alpha<span class="token punctuation">,</span>
+          is_same_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// pair similarity 0 or 1  added by miao</span>
+          diff_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// the cached eltwise difference between a and b</span>
+          dist_sq_<span class="token punctuation">.</span><span class="token function">gpu_data</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// the cached square distance between a and b</span>
+          bottom<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token operator">-></span><span class="token function">mutable_gpu_diff</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      CUDA_POST_KERNEL_CHECK<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token function">INSTANTIATE_LAYER_GPU_FUNCS</span><span class="token punctuation">(</span>ContrastiveLossLayer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>  <span class="token comment">// namespace caffe</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>需要注意的时候，前馈和后馈都需要做一点代码上的修改，虽说十分的简单，但也要小心。 至此，基于Caffe的DeepID2的修改全部完成。</p>
+<p>最后，十分感谢小喵的师弟，胖喵的审查，每一篇博客都由胖喵第一手的阅读并提出意见。  </p>
+<p><strong>转载</strong>请注明出处~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/07/15/deepid2-3/" target="_blank" title="基于Caffe的DeepID2实现（下）">
+        https://www.miaoerduo.com/2016/07/15/deepid2-3/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/10/01/caffe-large-margin-softmax-1/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      基于Caffe的Large Margin Softmax Loss的实现（一）
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/07/15/deepid2-2/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">基于Caffe的DeepID2实现（中）</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

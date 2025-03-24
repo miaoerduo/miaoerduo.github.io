@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    基于Caffe的DeepID2实现（上） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-deepid2-1" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  基于Caffe的DeepID2实现（上）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/07/13/deepid2-1/" class="article-date">
+  <time datetime="2016-07-13T16:39:02.000Z" itemprop="datePublished">2016-07-13</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：小喵最近在做人脸识别的工作，打算将汤晓鸥前辈的DeepID，DeepID2等算法进行实验和复现。DeepID的方法最简单，而DeepID2的实现却略微复杂，并且互联网上也没有比较好的资源。因此小喵在试验之后，确定了实验结果的正确性之后，才准备写这篇博客，分享给热爱Deep Learning的小伙伴们。</p>
+</blockquote>
+<p>能够看到这篇博客的小伙伴们，相信已经对Deep Learning有了比较深入的了解。因此，小喵对亲作了如下的假定：</p>
+<ol type="1">
+<li>了解Deep Learning的基本知识</li>
+<li>目前在做人脸识别的相关工作</li>
+<li>仔细阅读过DeepID和DeepID2的论文</li>
+<li>使用Caffe作为训练框架</li>
+<li>即使不满足上述4个条件，也会持之以恒的学习</li>
+</ol>
+<span id="more"></span>
+<p>如果亲发现对上述的条件都不满足的话，那么这篇博文可能内容还是略显枯涩乏味，你可以从了解Caffe开始，慢慢学习。</p>
+<p>相关资源：</p>
+<ul>
+<li>DeepID：<a target="_blank" rel="noopener" href="http://mmlab.ie.cuhk.edu.hk/pdf/YiSun_CVPR14.pdf">http://mmlab.ie.cuhk.edu.hk/pdf/YiSun_CVPR14.pdf</a></li>
+<li>DeepID2：<a target="_blank" rel="noopener" href="http://papers.nips.cc/paper/5416-analog-memories-in-a-balanced-rate-based-network-of-e-i-neurons">http://papers.nips.cc/paper/5416-analog-memories-in-a-balanced-rate-based-network-of-e-i-neurons</a></li>
+<li>Caffe：<a target="_blank" rel="noopener" href="http://caffe.berkeleyvision.org/">http://caffe.berkeleyvision.org/</a></li>
+</ul>
+<p>由于篇幅较大，这里会分成几个部分，依次讲解。</p>
+<h2 id="一设计我们独特的data层">一、设计我们独特的Data层</h2>
+<p>在DeepID2中，有两种监督信号。一是<strong>Identity signal</strong>，这和DeepID中的实现方法一样，用给定label的人脸数据，进行分类的训练，这里使用 <code>softmax_with_loss</code> 层来实现(<code>softmax + cross-entropy loss</code>)。这里不再介绍。另一种就是<strong>verification signal</strong>，也就是人脸比对的监督。这里要求，输入的数据时成对存在，每一对都有一个公共的label，是否是同一个类别。如果是同一个identity，则要求他们的特征更接近，如果是不同的identity，则要求他们的特征尽可能远离。</p>
+<p>不论最终怎么实现，我们的第一步是确定的，构造合适的数据。</p>
+<p>使用Caffe训练的时候，第一步是打Batch，将训练数据写入LMDB或者LevelDB数据库中，训练的时候Caffe会从数据库中读取图片，因此一个简单的实现方法就是构造许多的pair，然后打Batch的时候就能保证每对图片都是相连的，然后在训练的时候做一些小Trick就可以实现。</p>
+<p>但是就如上面所说，打Batch的同时，图片的顺序就已经是确定的了，因此网络输入的图片pair也是固定的，这样似乎就缺乏了一些灵活性。</p>
+<p>那么如何动态的构造我们的训练数据呢？</p>
+<p><strong>设计我们独特的data层。</strong></p>
+<p>这里为了方便，使用Python来拓展Caffe的功能。Python是一门简洁的语言，非常适合做这种工作。不过Caffe中如果使用了Python的层，那么就不能使用多GPU了，这点需要注意（希望以后能增加这个支持）。</p>
+<h3 id="让你的caffe支持python拓展">1）让你的Caffe支持Python拓展</h3>
+<p>在Caffe根目录的Makefile.config中，有这么一句话。</p>
+<p><img src="caffe_with_python_layer.png" alt="with_python_layer" /></p>
+<p>我们需要使用Python层，因此需要取消这个注释。之后Make一下你的Caffe和pycaffe。这样Caffe就支持Python层了。</p>
+<h3 id="编写data层">2）编写data层</h3>
+<p>基于Python的data层的编写，Caffe是给了一个简单的例子的，在<code>/caffe_home/examples/pycaffe/layers/</code>中。我们简单的照着这个例子来写。</p>
+<p>首先，我们定义自己需要的参数。这里，我们需要：</p>
+<ol type="1">
+<li>batch_size: batch的大小，没什么好解释的，要求这个数是大于0的偶数</li>
+<li>mean_file：图像的均值文件的路径</li>
+<li>scale：图像减均值后变换的尺度</li>
+<li>image_root_dir：训练数据的根目录</li>
+<li>source：训练数据的list路径</li>
+<li>crop_size：图像crop的大小</li>
+<li>ratio：正样本所占的比例（0~1）</li>
+</ol>
+<p>caffe在train.prototxt中定义网络结构的时候，可以传入这些参数。我们目前只需要知道，这些参数一定可以获取到，就可以了。另外，source表示训练数据的list的文件地址，这里用到的训练数据的格式和Caffe打batch的数据一样。</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">file_path1 label1
+file_path2 label2<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>这样的格式。</p>
+<p>Data层的具体实现，首先需要继承caffe.Layer这个类，之后实现setup, forward, backward和reshape，不过data层并不需要backward和reshape。setup主要是为了初始化各种参数，并且设置top的大小。对于Data层来说，forward则是生成数据和label。</p>
+<p>闲话少说，代码来见。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment">#-*- encoding: utf-8 -*-</span>
+
+<span class="token keyword">import</span> sys
+<span class="token keyword">import</span> caffe
+<span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">import</span> os
+<span class="token keyword">import</span> os<span class="token punctuation">.</span>path <span class="token keyword">as</span> osp
+<span class="token keyword">import</span> random
+<span class="token keyword">import</span> cv2
+
+<span class="token keyword">class</span> <span class="token class-name">id2_data_layer</span><span class="token punctuation">(</span>caffe<span class="token punctuation">.</span>Layer<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    这个python的data layer用于动态的构造训练deepID2的数据
+    每次forward会产生多对数据，每对数据可能是相同的label或者不同的label
+    """</span>
+    <span class="token keyword">def</span> <span class="token function">setup</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> bottom<span class="token punctuation">,</span> top<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        self<span class="token punctuation">.</span>top_names <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token string">'label'</span><span class="token punctuation">]</span>
+
+        <span class="token comment"># 读取输入的参数</span>
+        params <span class="token operator">=</span> <span class="token builtin">eval</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>param_str<span class="token punctuation">)</span>
+        <span class="token keyword">print</span> <span class="token string">"init data layer"</span>
+        <span class="token keyword">print</span> params
+
+        self<span class="token punctuation">.</span>batch_size <span class="token operator">=</span> params<span class="token punctuation">[</span><span class="token string">'batch_size'</span><span class="token punctuation">]</span>  <span class="token comment"># batch_size</span>
+        self<span class="token punctuation">.</span>ratio <span class="token operator">=</span> <span class="token builtin">float</span><span class="token punctuation">(</span>params<span class="token punctuation">[</span><span class="token string">'ratio'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>scale <span class="token operator">=</span> <span class="token builtin">float</span><span class="token punctuation">(</span>params<span class="token punctuation">[</span><span class="token string">'scale'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token keyword">assert</span> self<span class="token punctuation">.</span>batch_size <span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">and</span> self<span class="token punctuation">.</span>batch_size <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">"batch size must be 2X"</span>
+        <span class="token keyword">assert</span> self<span class="token punctuation">.</span>ratio <span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">and</span> self<span class="token punctuation">.</span>ratio <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">"ratio must be in (0, 1)"</span>
+        self<span class="token punctuation">.</span>image_root_dir <span class="token operator">=</span> params<span class="token punctuation">[</span><span class="token string">'image_root_dir'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>mean_file <span class="token operator">=</span> params<span class="token punctuation">[</span><span class="token string">'mean_file'</span><span class="token punctuation">]</span>       
+        self<span class="token punctuation">.</span>source <span class="token operator">=</span> params<span class="token punctuation">[</span><span class="token string">'source'</span><span class="token punctuation">]</span>
+        self<span class="token punctuation">.</span>crop_size <span class="token operator">=</span> params<span class="token punctuation">[</span><span class="token string">'crop_size'</span><span class="token punctuation">]</span>
+
+        top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>reshape<span class="token punctuation">(</span>self<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> params<span class="token punctuation">[</span><span class="token string">'crop_size'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> params<span class="token punctuation">[</span><span class="token string">'crop_size'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        top<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>reshape<span class="token punctuation">(</span>self<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>batch_loader <span class="token operator">=</span> BatchLoader<span class="token punctuation">(</span>self<span class="token punctuation">.</span>image_root_dir<span class="token punctuation">,</span> self<span class="token punctuation">.</span>mean_file<span class="token punctuation">,</span> self<span class="token punctuation">.</span>scale<span class="token punctuation">,</span> self<span class="token punctuation">.</span>source<span class="token punctuation">,</span> self<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> self<span class="token punctuation">.</span>ratio<span class="token punctuation">)</span>
+
+    <span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> bottom<span class="token punctuation">,</span> top<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        blob<span class="token punctuation">,</span> label_list <span class="token operator">=</span> self<span class="token punctuation">.</span>batch_loader<span class="token punctuation">.</span>get_mini_batch<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        top<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>data<span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span> <span class="token operator">=</span> blob
+        top<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>data<span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span> <span class="token operator">=</span> label_list
+
+    <span class="token keyword">def</span> <span class="token function">backward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> bottom<span class="token punctuation">,</span> top<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">pass</span>
+
+    <span class="token keyword">def</span> <span class="token function">reshape</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> bottom<span class="token punctuation">,</span> top<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">pass</span>
+
+<span class="token keyword">class</span> <span class="token class-name">BatchLoader</span><span class="token punctuation">(</span><span class="token builtin">object</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> root_dir<span class="token punctuation">,</span> mean_file<span class="token punctuation">,</span> scale<span class="token punctuation">,</span> image_list_path<span class="token punctuation">,</span> batch_size<span class="token punctuation">,</span> ratio<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span> <span class="token string">"init batch loader"</span>
+        self<span class="token punctuation">.</span>batch_size <span class="token operator">=</span> batch_size
+        self<span class="token punctuation">.</span>ratio <span class="token operator">=</span> ratio <span class="token comment"># true pair / false pair</span>
+        self<span class="token punctuation">.</span>image2label <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>   <span class="token comment"># key:image_name    value:label</span>
+        self<span class="token punctuation">.</span>label2images <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>  <span class="token comment"># key:label         value: image_name array</span>
+        self<span class="token punctuation">.</span>images <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>        <span class="token comment"># store all image_name</span>
+        self<span class="token punctuation">.</span>mean <span class="token operator">=</span> np<span class="token punctuation">.</span>load<span class="token punctuation">(</span>mean_file<span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>scale <span class="token operator">=</span> scale
+        self<span class="token punctuation">.</span>root_dir <span class="token operator">=</span> root_dir
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>image_list_path<span class="token punctuation">)</span> <span class="token keyword">as</span> fp<span class="token punctuation">:</span>
+            <span class="token keyword">for</span> line <span class="token keyword">in</span> fp<span class="token punctuation">:</span>
+                data <span class="token operator">=</span> line<span class="token punctuation">.</span>strip<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token punctuation">)</span>
+                image_name <span class="token operator">=</span> data<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+                label <span class="token operator">=</span> data<span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span>
+                self<span class="token punctuation">.</span>images<span class="token punctuation">.</span>append<span class="token punctuation">(</span>image_name<span class="token punctuation">)</span>
+                self<span class="token punctuation">.</span>image2label<span class="token punctuation">[</span>image_name<span class="token punctuation">]</span> <span class="token operator">=</span> label
+                <span class="token keyword">if</span> label <span class="token keyword">not</span> <span class="token keyword">in</span> self<span class="token punctuation">.</span>label2images<span class="token punctuation">:</span>
+                    self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+                self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>image_name<span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>labels <span class="token operator">=</span> self<span class="token punctuation">.</span>label2images<span class="token punctuation">.</span>keys<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>label_num <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>labels<span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>image_num <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>image2label<span class="token punctuation">)</span>
+        <span class="token keyword">print</span> <span class="token string">"init batch loader over"</span>
+
+    <span class="token keyword">def</span> <span class="token function">get_mini_batch</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        image_list<span class="token punctuation">,</span> label_list <span class="token operator">=</span> self<span class="token punctuation">.</span>_get_batch<span class="token punctuation">(</span>self<span class="token punctuation">.</span>batch_size <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span>
+        cv_image_list <span class="token operator">=</span> <span class="token builtin">map</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> image_name<span class="token punctuation">:</span> <span class="token punctuation">(</span>self<span class="token punctuation">.</span>scale <span class="token operator">*</span> <span class="token punctuation">(</span>cv2<span class="token punctuation">.</span>imread<span class="token punctuation">(</span>os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>join<span class="token punctuation">(</span>self<span class="token punctuation">.</span>root_dir<span class="token punctuation">,</span> image_name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>astype<span class="token punctuation">(</span>np<span class="token punctuation">.</span>float32<span class="token punctuation">,</span> copy<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">.</span>transpose<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">-</span> self<span class="token punctuation">.</span>mean<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> image_list<span class="token punctuation">)</span>
+        blob <span class="token operator">=</span> np<span class="token punctuation">.</span>require<span class="token punctuation">(</span>cv_image_list<span class="token punctuation">)</span>
+        label_blob <span class="token operator">=</span> np<span class="token punctuation">.</span>require<span class="token punctuation">(</span>label_list<span class="token punctuation">,</span> dtype<span class="token operator">=</span>np<span class="token punctuation">.</span>float32<span class="token punctuation">)</span><span class="token punctuation">.</span>reshape<span class="token punctuation">(</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>batch_size<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> blob<span class="token punctuation">,</span> label_blob
+    
+    <span class="token keyword">def</span> <span class="token function">_get_batch</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> pair_num<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        image_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+        label_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+        <span class="token keyword">for</span> pair_idx <span class="token keyword">in</span> <span class="token builtin">xrange</span><span class="token punctuation">(</span>pair_num<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">if</span> random<span class="token punctuation">.</span>random<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> self<span class="token punctuation">.</span>ratio<span class="token punctuation">:</span> <span class="token comment"># true pair</span>
+                <span class="token keyword">while</span> <span class="token boolean">True</span><span class="token punctuation">:</span>
+                    label_idx <span class="token operator">=</span> random<span class="token punctuation">.</span>randint<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> self<span class="token punctuation">.</span>label_num <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+                    label <span class="token operator">=</span> self<span class="token punctuation">.</span>labels<span class="token punctuation">[</span>label_idx<span class="token punctuation">]</span>
+                    <span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">5</span><span class="token punctuation">:</span>
+                        <span class="token keyword">break</span>
+                first_idx <span class="token operator">=</span> random<span class="token punctuation">.</span>randint<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+                second_id <span class="token operator">=</span> random<span class="token punctuation">.</span>randint<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">2</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> second_id <span class="token operator">>=</span> first_idx<span class="token punctuation">:</span>
+                    second_id <span class="token operator">+=</span> <span class="token number">1</span>
+                image_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span>self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">[</span>first_idx<span class="token punctuation">]</span><span class="token punctuation">)</span>
+                image_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span>self<span class="token punctuation">.</span>label2images<span class="token punctuation">[</span>label<span class="token punctuation">]</span><span class="token punctuation">[</span>second_id<span class="token punctuation">]</span><span class="token punctuation">)</span>
+                label_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>label<span class="token punctuation">)</span><span class="token punctuation">)</span>
+                label_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>label<span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token keyword">else</span><span class="token punctuation">:</span>                   <span class="token comment"># false pair</span>
+                <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">xrange</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+                    image_id <span class="token operator">=</span> random<span class="token punctuation">.</span>randint<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> self<span class="token punctuation">.</span>image_num <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+                    image_name <span class="token operator">=</span> self<span class="token punctuation">.</span>images<span class="token punctuation">[</span>image_id<span class="token punctuation">]</span>
+                    label <span class="token operator">=</span> self<span class="token punctuation">.</span>image2label<span class="token punctuation">[</span>image_name<span class="token punctuation">]</span>
+                    image_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span>image_name<span class="token punctuation">)</span>
+                    label_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>label<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> image_list<span class="token punctuation">,</span> label_list<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上述的代码可以根据给定的list，batch size，ratio等参数生成符合要求的data和label。这里还有一些问题需要注意：</p>
+<ol type="1">
+<li>对输入的参数没有检验。</li>
+<li>没有对读取图像等操作做异常处理。因此如果很不幸地读到的图片路径不合法，那么程序突然死掉都是有可能的。。。小喵的数据都是可以读的，所以木有问题。</li>
+<li>在选取正负样本对的时候，对于正样本对，只有样本对应的label中的图片数大于5的时候，才选正样本（小喵的训练数据每个人都有至少几十张图片，所以木有出现问题），如果样本比较少的话，可以更改这个数（特别是有测试集的时候，测试集通常数目都很少，小喵训练的时候都是不用测试集的，因为会死循环。。。）。对于选取负样本对的时候，只是随便选了两张图片，而并没有真的保证这一对是不同label，这里考虑到训练数据是比较多的，所以不大可能选中同一个label的样本，因此可以近似代替负样本对。</li>
+<li>这里有个减均值的操作，这个均值文件是经过特殊转换求出的numpy的数组。Caffe生成的均值文件是不能直接用的，但是可以通过仿照Caffe中Classifier中的写法来代替（caffe.io.Transformer工具）。另外这里的图片数据和均值文件是一样大小的，但实际上可能并不一定相等。如果需要对输入图片做各种随机化的操作，还需要自己修改代码。</li>
+</ol>
+<p>至此，我们就完成了一个简单的Data层了。</p>
+<p>那么怎么调用自己的data层呢？</p>
+<p>这里有一个十分简单的写法。在我们用来训练的prototxt中，将Data层的定义改成如下的方式：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">layer &#123;
+    name: "data"
+    type: "Python"
+    top: "data"
+    top: "label"
+    include &#123;
+        phase: TRAIN
+    &#125;    
+    python_param &#123;
+        module: "id2_data_layer"
+        layer: "id2_data_layer"
+        param_str: "&#123;'crop_size' : 128, 'batch_size' : 96, 'mean_file': '/your/data/root/mean.npy', 'scale': 0.0078125, 'source': '/path/to/your/train_list', 'image_root_dir': '/path/to/your/image_root/'&#125;"    &#125;
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>python_param中的这三个参数需要注意：</p>
+<p><code>module</code>：模块名，我们先前编写的data层，本身就是一个文件，也就是一个模块，因此模块名就是文件名。</p>
+<p><code>layer</code>：层的名字，我们在文件中定义的类的名字。这里比较巧合，module和layer的名字相同。</p>
+<p><code>param_str</code>：所有的需要传给data层的参数都通过这个参数来传递。这里简单的使用了Python字典的格式的字符串，在data层中使用eval来执行（o(╯□╰)o  这其实并不是一个好习惯），从而获取参数，当然也可以使用别的方式来传递，比如json或者xml等。</p>
+<p>最后，你在训练的时候可能会报错，说找不到你刚刚的层，或者找不到caffe，只需要把这个层的代码所在的文件夹的路径加入到PYTHONPATH中即可。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable">PYTHONPATH</span><span class="token operator">=</span>PYTHONPATH:/path/to/your/layer/:/path/to/caffe/python<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>这样就完成了我们的Data层的编写，是不是非常简单？</p>
+<div style="background-color: #ddd; padding: 20px">
+<p>重要更新：<br/> 1，小喵最近发现直接在image_data_layer.cpp中进行修改，可以更好的实现这个目标，而且支持多GPU。<br/> 2，训练的数据可以只用正样本对，因为identity signal已经十分强调不同identity的feature之间的距离，因此verification signal只需要强调相同的identity的feature相近就好。<br/> 3，小喵新的训练数据，构造pair的方式也做了修改。每次使用所有的数据构造pair，然后用来训练，每个epoch后都重新生成一次list。这样可以保证identity signal能够每次训练所有的图片，而verification signal也能每次训练不同的样本对。</p>
+</div>
+<p><strong>转载</strong>请注明出处~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2016/07/13/deepid2-1/" target="_blank" title="基于Caffe的DeepID2实现（上）">
+        https://www.miaoerduo.com/2016/07/13/deepid2-1/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/07/15/deepid2-2/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      基于Caffe的DeepID2实现（中）
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2016/06/11/redis-list/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">三、Redis基本操作——List</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

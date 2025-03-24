@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    关于CUDA |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-about-cuda" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  关于CUDA
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2015/12/18/about-cuda/" class="article-date">
+  <time datetime="2015-12-18T20:54:51.000Z" itemprop="datePublished">2015-12-18</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/CUDA/">CUDA</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.7k 字</div>
+      <div class="wordcount wordcount-time">大约需要 5 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：小喵的研究生生涯做的事图像识别相关的内容，主要使用的技术是深度学习。由于研究需要，不免会用到一些开源的程序，比如caffe（一个卷积神经网络的训练框架）等。使用卷积神经网络，可以很好的解决各类问题，但同时也面临着高昂的计算的问题，而GPU机器，就是一个很好的超级计算机。虽然小喵很少直接编写GPU的程序，但是通过对GPU的更深入理解，可以帮助很好的理解各种框架，以及做必要的修改。 好啦，闲话少说，我们言归正传。 本文中，我们主要介绍以下几个问题：</p>
+</blockquote>
+<span id="more"></span>
+<ol type="1">
+<li><strong>什么是GPU</strong></li>
+<li><strong>什么是CUDA</strong></li>
+<li><strong>如何学习CUDA</strong></li>
+</ol>
+<h2 id="一我们每个人都拥有自己的超级计算机">一、我们每个人都拥有自己的超级计算机</h2>
+<p>现在，主流的电脑都会配置一个或多个GPU，也叫做显卡。我们都知道，玩大型游戏少不了一块好显卡，做视频编辑也需要好显卡，现在我要说，做科学计算更需要一块好显卡。 那么显卡具体有什么功能呢？ 答案是：计算 是的，显卡的实际功能就是计算，尤其是简单的大量的计算。 我们在玩游戏的时候，会有很多华丽的场景，特效，然而只有好的显卡才能让我们开启全特效。场景的渲染其实就是一个计算的过程。比如，游戏中人物的影子，精细的游戏中的影子并不是简单的贴图，而是根据光照，物体的空间分布和大小形状，来计算出物体在地面或者其他物体上的投影，所以才能达到以假乱真的强烈视觉体验。 视频编辑也是如此，尤其是渲染动画的时候，同样是通过GPU强大的计算能力，才能将各种指令设置，变成我们所见到的各种形形色色的特效。 最后，我们知道科研过程的关键有一点就是计算，既然GPU有这如此强大的能力（有多强大，我们稍后介绍），如果可以用于科研，岂不是很强大的工具？ 除此之外，GPU还可以用于轨道模拟，3D建模等等，总之只要是需要计算的地方，都很可能可以通过使用GPU来优化。</p>
+<p>那么GPU的计算能力有多强呢？这里引用NVIDIA的一张图像来说明。</p>
+<p><img src="012516_1253_CUDA.png" alt="cuda" /></p>
+<center>
+图1 CPU和GPU的每秒钟的浮点数处理次数
+</center>
+<p>这是一张摘自NVIDIA官网的一张图，有木有很吃惊。随着时间的推进，GPU的发展速度远超过CPU，目前GPU的计算能力已然超过CPU几十倍！ 单从构造上说，一个GPU通常会有16个SM（可以理解为CPU的核，目前CPU常见的是双核和四核），每个SM又同时存在32个SP（现在应该变成了更多数目的CUDA core），即可以同时处理32个数（CPU一个核一次只能处理一个数），另外GPU拥有远多于CPU的寄存器和运算单元。除此之外，GPU的指令模式（SPMD）和CPU（MIMD）完全不同，内存管理也最大化的显示的交给程序员来掌控。如果设计合理，将程序加速100倍也毫不过分。</p>
+<p>这就是GPU，隐藏在我们电脑中的超级计算器。</p>
+<h2 id="二我们如何使用gpu">二、我们如何使用GPU</h2>
+<p>早期的GPU主要用于图像处理。而一群脑洞大开的科学家发现GPU的具有强大的计算潜能，如果合理挖掘，定前途无可限量。于是开始了早期的GPU用于科学计算的编程。由于GPU本身主要用于处理对象，因此访问GPU，必须通过相关的图像接口。但是只要，将待处理的数据和运算构造成GPU中定义的图像和操作的形式，那么GPU就可以求解。</p>
+<p>从而就出现了两个问题：</p>
+<ol type="1">
+<li>早期的GPU只支持OpenGL等图像处理接口，因此，在用于计算之前，我们不得不先学习图像操作的这些知识。</li>
+<li>我们掌握了图像接口的编程以后，还要把我们要处理的问题合理设计成能够用图像处理方式解决的问题。</li>
+</ol>
+<p>从各种意义上来说，这都不是一件很容易的事情。 那么，既然我们对GPU的计算能力如此垂涎，为什么不能创造出适合普通程序员编写GPU程序的方法呢？</p>
+<p>当然可以！</p>
+<p>这时就不得不提NVIDIA这家公司。我们的显卡通常分为两类，A卡和N卡。A是AMD，N就是NVIDIA（最近似乎AMD也开始支持CUDA了）。NVIDIA为了让GPU变得更通用，便选取了当时最流行的C语言作为基本语言（现在也很流行），通过对C语言进行拓展（增加了一些关键字等），实现了使用C语言编写GPU程序的壮举，同时很好的封装了GPU的图像接口，抽象出独立于图像的程序和内存模型，让程序员们在不了解图像接口的情况下，也能编写出高效的GPU程序，受过广大程序员，科研人员的宠爱！这就是CUDA！一个我们最熟悉的全新的语言！</p>
+<p>目前CUDA已经支持C，C++和Python。并且有了很多快速运算的代数库，可以满足大多数的应用的需求。</p>
+<h2 id="三cuda学习会不会很难">三、CUDA学习会不会很难</h2>
+<p>最后，当然就要说到如何学习CUDA。</p>
+<p>之前也提到过，CUDA语言就是拓展版的C语言，语法上没有什么难度。我们只需要知道几个拓展修饰关键字，以及工作方式即可。之后我们需要学习CUDA的硬件结构与线程网格模型。再然后是最重要的主要的内存（GPU上的内存，通常也称为显存）的知识。GPU有寄存器内存，共享内存，全局内存，常量内存，纹理内存五种，每种都有其独特的特性。熟悉各种内存的特性，会对之后的GPU编程有极大地帮助。最后了解CUDA编程的常用的算法策略，熟悉CUDA的代数库，多显卡编程等。</p>
+<p>小喵会一直持续更新该类别的博客，学习并分享。</p>
+<p>以上便是这篇博客的主要内容。</p>
+<p><strong>最后，转载请注明出处。</strong></p>
+<p>欢迎转载和分享~</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2015/12/18/about-cuda/" target="_blank" title="关于CUDA">
+        https://www.miaoerduo.com/2015/12/18/about-cuda/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2016/01/26/tutorial-to-build-caffe/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      从0到1，手把手教你配置Caffe环境
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2015/12/18/sina-crawler/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">新浪微博爬虫实现</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

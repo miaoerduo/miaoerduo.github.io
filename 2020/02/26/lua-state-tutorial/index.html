@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    C程序优雅地调用Lua?一篇博客带你全面了解lua_State |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-lua-state-tutorial" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  C程序优雅地调用Lua?一篇博客带你全面了解lua_State
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2020/02/26/lua-state-tutorial/" class="article-date">
+  <time datetime="2020-02-26T12:00:18.000Z" itemprop="datePublished">2020-02-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Lua/">Lua</a>
+</div>
+
+      <div class="wordcount wordcount-num">3.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 14 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <h2 id="一前言">一、前言</h2>
+<p>Lua是一种使用十分方便的脚本语言，同时又能C/C++无缝的粘合在一起，在速度上也比很多其他的脚本语言快了一个数量级，在使用LuaJit的情况下，速度甚至可以与C语言比肩。同时Lua支持模块的热更新，在游戏等行业受到广泛的应用。</p>
+<p>同时Lua虚拟机十分的轻量，在占用极少内存和依赖的情况下，可以方便的嵌入到我们的项目中。</p>
+<p>本文中，主要介绍了在C/C++项目中，使用Lua虚拟机的技巧，着重介绍Lua_State的原理和使用。简单的说就是用C去调用Lua。另一个技术是用Lua调用C库，可以为Lua程序加速，这个在以后的文章中再介绍。</p>
+<span id="more"></span>
+<p>本文中使用的LuaJit作为我们Lua脚本的执行引擎。对应的Lua的版本是Lua5.1。</p>
+<h2 id="二c调用lua的案例">二、C调用Lua的案例</h2>
+<p>在下面的程序中，我们的Lua脚本中，使用一个全局变量<code>version</code>表示程序的版本，定义一个<code>add</code>函数，负责计算两个数组的和。之后通过在C程序中加载Lua虚拟机，打印版本号和调用<code>add</code>函数。</p>
+<p>下面是对应的C++程序：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">extern</span> <span class="token string">"C"</span> <span class="token punctuation">&#123;</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;lualib.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;lauxlib.h></span></span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>lua_script <span class="token operator">=</span> <span class="token raw-string string">R"(
+version = '1.0.0'
+function add(a, b)
+    return a + b;
+end
+)"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    lua_State <span class="token operator">*</span>L <span class="token operator">=</span> <span class="token function">luaL_newstate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>L <span class="token operator">==</span> <span class="token constant">NULL</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"create state failed!"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+        <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">luaL_dostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> lua_script<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"cannot run lua script!"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+        <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">// get global variable</span>
+    <span class="token function">lua_getglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"version"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>version <span class="token operator">=</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"version: "</span> <span class="token operator">&lt;&lt;</span> version <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// call global function</span>
+    <span class="token function">lua_getglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"add"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> b <span class="token operator">=</span> <span class="token number">200</span><span class="token punctuation">;</span>
+    <span class="token function">lua_pushnumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> a<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_pushnumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">lua_pcall</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"call func failed, got error: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+        <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">int</span> sum <span class="token operator">=</span> <span class="token function">lua_tonumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> a <span class="token operator">&lt;&lt;</span> <span class="token string">" + "</span> <span class="token operator">&lt;&lt;</span> b <span class="token operator">&lt;&lt;</span> <span class="token string">" = "</span> <span class="token operator">&lt;&lt;</span> sum <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_close</span><span class="token punctuation">(</span>L<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译和运行，我这里用的luajit，所以链接的库可能略有不同，使用lua的话，使用<code>-llua</code>：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># compile</span>
+g++ lua_sample.cpp <span class="token parameter variable">-o</span> lua_sample <span class="token parameter variable">-I</span> /path/to/lua/include/ <span class="token parameter variable">-L</span> /path/to/lua/lib -lluajit-5.1 <span class="token parameter variable">-std</span><span class="token operator">=</span>c++11 <span class="token parameter variable">-o</span> lua_sample
+<span class="token comment"># run</span>
+<span class="token assign-left variable">LD_LIBRARY_PATH</span><span class="token operator">=</span>/path/to/lua/lib ./lua_sample<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>就可以得到如下的输出：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">version: 1.0.0
+100 + 200 = 300<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<h2 id="三交互与栈">三、交互与栈</h2>
+<p>C与Lua的交互，是通过lua_State和相关的函数接口来实现的（<code>lua_getglobal</code>, <code>lua_pushnumber</code>等）。但是具体的值的获取和函数调用，其实是利用了一套栈机制。</p>
+<p>C与Lua的交互，本质上是对Lua栈做相关的操作。<code>lua_pushxxx</code>是将数据压入栈中，而<code>lua_pop</code>就是出栈操作。<code>lua_toxxx</code>是将栈中对应位置的数据转换成我们期望的数据类型，而输出。</p>
+<p>下面我们按情况分别介绍。</p>
+<h2 id="四全局变量">四、全局变量</h2>
+<h3 id="全局的基本类型数据">1. 全局的基本类型数据</h3>
+<p>获取和设置全局变量，是一个重要的功能。</p>
+<p>例子中的是获取全局变量的实例。我们现在知道所谓的交互都是堆栈做操作。<code>lua_getglobal</code>的作用就是把输入的变量名对应的数据放入栈顶。</p>
+<p><img src="lua_getglobal.png" alt="lua_getglobal" /></p>
+<p>之后，我们只需要根据栈中的位置，获取对应的数据即可。比如上图中，<code>version</code>就在栈顶的位置，索引号为101。由于我们一般都是对栈顶做操作，使用负数的索引会更方便。<code>lua_tostring(L, -1)</code>就可以把索引号为<code>-1</code>的数据（即栈顶的数据）转换成<code>string</code>类型输出。</p>
+<p>在数据使用结束后，我们需要将数据pop出栈（<code>lua_pop(L, 1)</code>出栈一个数据），不然这个栈的大小会越来越大，导致最终程序内存很大，但是又不是因为内存泄漏，难以用valgrind等程序查到问题。</p>
+<p>那么如何设置一个全局变量呢？</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"hello world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">lua_setglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"greet"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>通过<code>lua_pushxxx</code>，在栈中push一个数据，之后使用<code>lua_setglobal</code>即可。<code>lua_setglobal</code>的功能是，pop出<strong>栈顶</strong>的数据，并使用给定的名字把它设置为全局变量。这样，我们在<code>lua</code>虚拟机就新建了名字为<code>greet</code>，值为字符串<code>"hello world"</code>的全局变量了。由于该操作本身就会pop出栈顶数据，我们随后就不需要再自行pop了。</p>
+<h3 id="全局table">2. 全局Table</h3>
+<p>Table的创建和读取，比一般变量要稍微复杂一点。主要使用<code>lua_newtable</code>或<code>lua_createtable</code>创建Table。之后使用<code>lua_settable</code>设置Table的键值对，<code>lua_gettable</code>去读取对应的值。</p>
+<p>下面是一个完整的Demo。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+
+<span class="token keyword">extern</span> <span class="token string">"C"</span> <span class="token punctuation">&#123;</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;lualib.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;lauxlib.h></span></span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    lua_State <span class="token operator">*</span>L <span class="token operator">=</span> <span class="token function">luaL_newstate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 创建table</span>
+    <span class="token function">lua_newtable</span><span class="token punctuation">(</span>L<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// t = &#123;&#125; 创建没有名字的table，这里用t代替</span>
+                        <span class="token comment">// 也可以使用lua_createtable创建，该函数可以指定预分配的大小</span>
+    <span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"key1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"val1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_settable</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// t["key1"] = "val1"</span>
+
+    <span class="token function">lua_pushinteger</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"val2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_settable</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// t[1] = "val2"</span>
+
+    <span class="token comment">// setfield 可以稍微简化创建的操作，但是key只能是字符串</span>
+    <span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"val3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_setfield</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">"key3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// t["key3"] = "val3"</span>
+
+    <span class="token function">lua_setglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"my_table"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 给这个匿名的table一个名字</span>
+
+    <span class="token comment">// 读取table</span>
+    <span class="token function">lua_getglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"my_table"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">lua_pushstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"key1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_gettable</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"v1: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">lua_pushinteger</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">lua_gettable</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"v2: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// getfield可以简化</span>
+    <span class="token function">lua_getfield</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">"key3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"v3: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// pop table</span>
+
+    <span class="token function">lua_close</span><span class="token punctuation">(</span>L<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>为了方便理解，这里我绘制了一个栈空间的示意图：</p>
+<p><img src="lua_table.png" alt="lua table" /></p>
+<p>首先是table的创建，使用<code>lua_newtable</code>可以创建一个table对象，并且在栈顶。之后我们将键、值分别push进栈，使用<code>lua_settable</code>，就可以将键值出栈，并设置进table中。这个过程也可以使用<code>lua_setfield</code>函数进行简化，在demo里面有写。最后我们使用<code>lua_setglobal</code>给栈顶的数据设置一个名字，并且出栈。这样，就创建好了一个Table。</p>
+<p>读取的操作也类似。首先，我们使用<code>lua_getglobal</code>将对应的table放入栈顶。之后push想要获取的key值，最后使用<code>lua_gettable</code>，该函数在pop出key值后，会获取key值对应的value，并放入栈顶。这样就可以完成table的读取了。<code>lua_gettable</code>可以通过<code>lua_getfield</code>来简化操作。demo中也给出了例子。</p>
+<h2 id="五函数调用">五、函数调用</h2>
+<p>在前面，我们知道了变量的读取和设置。本节将介绍函数的调用。我们知道对于一个函数而言，最重要的有三个部分：</p>
+<ol type="1">
+<li>函数入口</li>
+<li>参数</li>
+<li>返回值</li>
+</ol>
+<p>这是第一个例子的节选。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token function">lua_getglobal</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"add"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> b <span class="token operator">=</span> <span class="token number">200</span><span class="token punctuation">;</span>
+<span class="token function">lua_pushnumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> a<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">lua_pushnumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">lua_pcall</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"call func failed, got error: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+    <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">int</span> sum <span class="token operator">=</span> <span class="token function">lua_tonumber</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>调用示意图：</p>
+<p><img src="lua_function_call.png" alt="lua function call" /></p>
+<p>首选，我们使用<code>lua_getglobal</code>将函数入口入栈。之后使用<code>lua_pushxxx</code>向栈中push入参数。之后我们调用该函数，可以使用的函数有<code>lua_call</code>和<code>lua_pcall</code>。</p>
+<p><code>lua_pcall</code>表示<code>protected mode</code>。简单理解，<code>lua_call</code>没有返回值，我们不能知道函数调用的状态。而<code>lua_pcall</code>有返回值，并且支持设定错误处理函数。速度上<code>lua_call</code>更快一点。我这边只使用了<code>lua_pcall</code>最简单的用法，简单的检查一下返回值。</p>
+<p>在函数调用完成后，函数入口和参数都均会出栈，如果调用没出现问题的话，返回值会被依次入栈。当一个函数有多个返回值，它的第一个返回值会首先入栈，因此栈顶是最终的返回值。如果调用出错的话，错误信息会放在栈顶。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">void</span> <span class="token function">lua_call</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">int</span> nargs<span class="token punctuation">,</span> <span class="token keyword">int</span> nresults<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">lua_pcall</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">int</span> nargs<span class="token punctuation">,</span> <span class="token keyword">int</span> nresults<span class="token punctuation">,</span> <span class="token keyword">int</span> errfunc<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>nargs</code>表示函数的参数数目，<code>nresults</code>表示返回值的数目。<code>errfunc</code>是异常处理函数在栈中的位置，如果填写0的话，出错时，<code>lua_pcall</code>会把错误信息直接放在栈顶。<code>lua_pcall</code>的返回值表示是否出错，返回0则表示一切运行正常。</p>
+<p>我们例子中的<code>lua_pcall(L, 2, 1, 0)</code>的意思就很明确了：帮忙调用一个函数，它的输入参数有2个，返回值有1个，如果程序出错的话，麻烦把错误信息放栈顶，谢谢。</p>
+<p>函数返回值，我们通过<code>lua_toxxx(L, index)</code>来进行获取。该函数会把栈中对应<code>index</code>的值，转换成<code>xxx</code>的类型返回。这里的内存是由lua维护，我们在C中一般不需要释放的。</p>
+<p>那么Lua支持哪些类型的数据呢？</p>
+<p>建议使用这个参考文档：<a target="_blank" rel="noopener" href="https://pgl.yoyo.org/luai/i/_">https://pgl.yoyo.org/luai/i/_</a></p>
+<p>入栈<code>lua_pushxxx</code>:</p>
+<ul>
+<li>lua_pushboolean</li>
+<li>lua_pushcclosure</li>
+<li>lua_pushcfunction</li>
+<li>lua_pushfstring</li>
+<li>lua_pushinteger</li>
+<li>lua_pushlightuserdata</li>
+<li>lua_pushliteral</li>
+<li>lua_pushlstring</li>
+<li>lua_pushnil</li>
+<li>lua_pushnumber</li>
+<li>lua_pushstring</li>
+<li>lua_pushthread</li>
+<li>lua_pushvalue</li>
+<li>lua_pushvfstring</li>
+</ul>
+<p>取值<code>lua_toxxx</code>:</p>
+<ul>
+<li>lua_toboolean</li>
+<li>lua_tocfunction</li>
+<li>lua_tointeger</li>
+<li>lua_tolstring</li>
+<li>lua_tonumber</li>
+<li>lua_topointer</li>
+<li>lua_tostring</li>
+<li>lua_tothread</li>
+<li>lua_touserdat</li>
+</ul>
+<p>这里我碰到了需要传递指针的情况，这里就使用lightuserdata类型。我们可以把它看成<code>void *</code>。</p>
+<p>对于更复杂的自定义数据类型，需要使用<code>lua_newuserdata</code>来创建。不过C和Lua交互，能用指针还是用指针吧，这样会方便很多，也符合C程序的特点。</p>
+<h2 id="六package-loader">六、Package Loader</h2>
+<p>对于一段Lua的程序字符串，我们怎么把它加载进Lua虚拟机并且编译成可以操作的变量和函数呢？Lua提供了若干个函数，可以将数据装载进Lua。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">luaL_loadbuffer</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span>
+                     <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>buff<span class="token punctuation">,</span>
+                     size_t sz<span class="token punctuation">,</span>
+                     <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">luaL_loadfile</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>filename<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">luaL_loadstring</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这几个函数的功能都是把数据加载进Lua虚拟机，<code>luaL_loadbuffer</code>是加载一段数据，并且给个命名，用于debug等用处。<code>luaL_loadfile</code>是从文件中读取。<code>luaL_loadstring</code>是读取字符串。返回值不为0的话，表示加载出错。这三个函数最终都是调用了<code>lua_load</code>进行代码编译，并将编译后的代码放与栈顶。</p>
+<p>上述的函数只是完成程序文本的加载，编译，只有在执行之后才能变成虚拟机中的变量和函数。由于代码已经在栈顶了，我们也没有需要传入的参数。因此只需要随后调用<code>lua_pcall(L, 0, LUA_MULTRET, 0)</code>即可。这里的<code>LUA_MULTRET</code>表示多个返回值。Lua会帮我们自动处理这些返回值。</p>
+<p>因此，我们常见的加载Lua代码的逻辑是：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">luaL_loadstring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> str<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token function">lua_pcall</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> LUA_MULTRET<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// load fail or pcall fail</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>Lua中提供了一套简单的函数，和前面的写法等价：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">luaL_dofile</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>filename<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">luaL_dostring</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>str<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>所以在最开始的例子中，使用了<code>luaL_dostring</code>这个函数。</p>
+<p>在Lua程序中，我们使用<code>require</code>关键字去加载模块，在写入<code>local my_module = require("my_module")</code>之后，Lua会从<code>package.path</code>和<code>package.cpath</code>依次去查找。</p>
+<p>但是存在这么一种情况。我们的产品中，有许多的Lua模块，这些模块一起被打包和加密，只能通过特定接口去获取对应的数据，而且为了安全，数据必须在内存中，不能写入文件。这种情况下，Lua的默认行为就不能很好的加载我们的这些模块，这时候该怎么办？</p>
+<p>这里就用到了Package Loader。Lua支持注册我们自己的包加载器。在Lua中，包的加载并不是严格的去根据文件名去查找，而是将包名传递给package loaders，让他们自行处理。Lua中可以有多种package loaders，在<code>require</code>时会依次调用<code>package.loaders</code>中的loader去加载，如果都没有加载成功，才会报错。</p>
+<p>这样我们就可以注册一个自己的package loader，完成自定义的模块数据的加载。</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">int</span> <span class="token function">my_package_loader</span><span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>required_module_name <span class="token operator">=</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>string data <span class="token operator">=</span> <span class="token function">user_defined_load</span><span class="token punctuation">(</span>required_module_name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">luaL_loadbuffer</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token function">c_str</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> required_module_name<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"error load: "</span> <span class="token operator">&lt;&lt;</span> <span class="token function">lua_tostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+        <span class="token function">lua_pop</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    lua_State <span class="token operator">*</span>L <span class="token operator">=</span> <span class="token function">luaL_newstate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">luaL_openlibs</span><span class="token punctuation">(</span>L<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 要装载系统库，比如math、table等。</span>
+    <span class="token function">lua_register</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"my_loader"</span><span class="token punctuation">,</span> my_package_loader<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">luaL_dostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token string">"table.insert(package.loaders, 2, my_loader)\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// do whatever you enjoy</span>
+
+    <span class="token function">lua_close</span><span class="token punctuation">(</span>L<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里，我们在C/C++程序中，编写了package loader，lua中对loader的定义就是<code>int xxx(lua_State *L)</code>。之后我们使用<code>lua_register</code>，该函数可以将C函数注册为Lua的函数。之后，通过<code>"table.insert(package.loaders, 2, my_loader)</code>语句，将自定义的<code>my_loader</code>插入进<code>package.loaders</code>数组中。这样就完成的loader的注册了。由此，我们就可以封装数据读取的接口<code>user_defined_load</code>，从而完成内存中的Lua package的加载了。</p>
+<h2 id="七沙盒环境">七、沙盒环境</h2>
+<p>我们有很多时候，希望用户可以编写自己的插件，以增强软件的功能。比如VS Code就支持自己编写插件。但是这个插件，我们又需要较为严格的权限管理。比如，不能访问本地文件，删除文件等等。那么有什么比较合适的办法呢？</p>
+<p>其实十分简单，Lua的全局函数都是存放在<code>_G</code>这个表里面的。由于虚拟机是由程序创建和提供的，我们只需要在虚拟机创建的时候，手动的禁用掉一些函数就可以了。</p>
+<p>比如：</p>
+<pre class="line-numbers language-cpp" data-language="cpp"><code class="language-cpp"><span class="token keyword">static</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>sandbox_env <span class="token operator">=</span> <span class="token string">"_G.os.execute = nil\n"</span>
+                                 <span class="token string">"_G.os.exit = nil\n"</span>
+                                 <span class="token string">"_G.os.remove = nil\n"</span>
+                                 <span class="token string">"_G.os.rename = nil\n"</span>
+                                 <span class="token string">"_G.io = nil\n"</span>
+                                 <span class="token string">"_G.debug = nil\n"</span><span class="token punctuation">;</span>
+
+<span class="token function">LuaL_dostring</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> sandbox_env<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这样就可以禁用掉<code>execute</code>、<code>exit</code>等函数了。所以针对你期望的沙盒环境，可以选择性的开放相关的函数即可。</p>
+<p>如果出现不存在<code>_G</code>或者<code>require</code>的错误，可能是没有启用Lua的对应的模块，使用<code>void luaL_openlibs (lua_State *L);</code>可以打开所有的标准库。</p>
+<p>当然，我们还可以定制化的打开，参考 <a target="_blank" rel="noopener" href="https://www.bookstack.cn/read/lua-5.3/6.md">LUA标准库</a>：</p>
+<blockquote>
+<p>要使用这些（Lua所有的标准）库，<code>C</code> 的宿主程序需要先调用一下 <code>luaL_openlibs</code> 这个函数，这样就能打开所有的标准库。或者宿主程序也可以用<code>luaL_requiref</code> 分别打开这些库：<code>luaopen_base</code> （基础库），<code>luaopen_package</code> （包管理库），<code>luaopen_coroutine</code> （协程库），<code>luaopen_string</code> （字符串库），<code>luaopen_utf8</code> （UTF8 库），<code>luaopen_table</code> （表处理库），<code>luaopen_math</code> （数学库），<code>luaopen_io</code> （I/O 库），<code>luaopen_os</code> （操作系统库），<code>luaopen_debug</code> （调试库）。这些函数都定义在 <code>lualib.h</code> 中。</p>
+</blockquote>
+<h2 id="八结束语">八、结束语</h2>
+<p>至此，我们学习完了C调用Lua的相关知识，相信对于常见的功能需求都可以很好的满足了，针对个别的特殊的功能，还需要通过文档等进行学习。有时间，我会再整理一篇Lua调用C的文章。</p>
+<p><strong>转载</strong>请注明出处。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2020/02/26/lua-state-tutorial/" target="_blank" title="C程序优雅地调用Lua?一篇博客带你全面了解lua_State">
+        https://www.miaoerduo.com/2020/02/26/lua-state-tutorial/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2020/02/28/hexo-trick/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      hexo的小技巧
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2020/02/02/20200202/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">20200202</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

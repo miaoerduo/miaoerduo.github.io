@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="jumbotron">
+  <div class="video">
+    
+    <div class="video-frame">
+      <img src="/images/ocean/overlay-hero.png" alt="Decorative image frame">
+    </div>
+    
+    <div class="video-media">
+      <video playsinline="" autoplay="" loop="" muted="" data-autoplay="" poster="/images/ocean/ocean.png"
+        x5-video-player-type="h5">
+        <source src="/images/ocean/ocean.mp4" type="video/mp4">
+        <source src="/images/ocean/ocean.ogv" type="video/ogg">
+        <source src="/images/ocean/ocean.webm" type="video/webm">
+        <p>Your user agent does not support the HTML5 Video element.</p>
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+    <div class="video-inner text-center text-white">
+      <h1><a href="/">喵耳朵</a></h1>
+      <p>略懂算法 | 在学架构 | 梦想成为 | Top插画师</p>
+      <div><img src="/images/MED-logo-white.png" class="brand" alt="喵耳朵"></div>
+    </div>
+    <div class="video-learn-more">
+      <a class="anchor" href="#landingpage"><i class="fe fe-mouse"></i></a>
+    </div>
+  </div>
+</section>
+<div id="landingpage">
+  <section class="outer">
+  <article class="articles">
+    
+    <h1 class="page-type-title"></h1>
+    
+    
+    <article id="post-caffe-large-margin-softmax-2" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/10/08/caffe-large-margin-softmax-2/">基于Caffe的Large Margin Softmax Loss的实现（二）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/10/08/caffe-large-margin-softmax-2/" class="article-date">
+  <time datetime="2016-10-08T17:16:17.000Z" itemprop="datePublished">2016-10-08</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：前一篇博客，我们做完了L-Softmax的准备工作。而这一章，我们开始进行前馈的研究。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/10/08/caffe-large-margin-softmax-2/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-caffe-large-margin-softmax-1" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/10/01/caffe-large-margin-softmax-1/">基于Caffe的Large Margin Softmax Loss的实现（一）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/10/01/caffe-large-margin-softmax-1/" class="article-date">
+  <time datetime="2016-10-01T16:09:42.000Z" itemprop="datePublished">2016-10-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.4k 字</div>
+      <div class="wordcount wordcount-time">大约需要 11 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：在写完上一次的博客之后，已经过去了2个月的时间，小喵在此期间，做了大量的实验工作，最终在使用的DeepID2的方法之后，取得了很不错的结果。这次呢，主要讲述一个比较新的论文中的方法，L-Softmax，据说单model在LFW上能达到98.71%的等错误率。更重要的是，小喵觉得这个方法和DeepID2并不冲突，如果二者可以互补，或许单model达到99%+将不是梦想。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/10/01/caffe-large-margin-softmax-1/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-deepid2-3" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/07/15/deepid2-3/">基于Caffe的DeepID2实现（下）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/07/15/deepid2-3/" class="article-date">
+  <time datetime="2016-07-15T22:24:18.000Z" itemprop="datePublished">2016-07-15</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：这次的博客，真心累伤了小喵的心。但考虑到知识需要巩固和分享，小喵决定这次把剩下的内容都写完。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/07/15/deepid2-3/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-deepid2-2" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/07/15/deepid2-2/">基于Caffe的DeepID2实现（中）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/07/15/deepid2-2/" class="article-date">
+  <time datetime="2016-07-15T15:06:34.000Z" itemprop="datePublished">2016-07-15</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.9k 字</div>
+      <div class="wordcount wordcount-time">大约需要 8 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：我们在上一篇博客里面，介绍了Caffe的Data层的编写。有了Data层，下一步则是如何去使用生成好的训练数据。也就是这一篇的内容。  </p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/07/15/deepid2-2/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-deepid2-1" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/07/13/deepid2-1/">基于Caffe的DeepID2实现（上）</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/07/13/deepid2-1/" class="article-date">
+  <time datetime="2016-07-13T16:39:02.000Z" itemprop="datePublished">2016-07-13</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">2.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：小喵最近在做人脸识别的工作，打算将汤晓鸥前辈的DeepID，DeepID2等算法进行实验和复现。DeepID的方法最简单，而DeepID2的实现却略微复杂，并且互联网上也没有比较好的资源。因此小喵在试验之后，确定了实验结果的正确性之后，才准备写这篇博客，分享给热爱Deep Learning的小伙伴们。</p>
+</blockquote>
+<p>能够看到这篇博客的小伙伴们，相信已经对Deep Learning有了比较深入的了解。因此，小喵对亲作了如下的假定：</p>
+<ol type="1">
+<li>了解Deep Learning的基本知识</li>
+<li>目前在做人脸识别的相关工作</li>
+<li>仔细阅读过DeepID和DeepID2的论文</li>
+<li>使用Caffe作为训练框架</li>
+<li>即使不满足上述4个条件，也会持之以恒的学习</li>
+</ol>
+      
+      <a class="article-more-link" href="/2016/07/13/deepid2-1/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-redis-list" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/06/11/redis-list/">三、Redis基本操作——List</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/06/11/redis-list/" class="article-date">
+  <time datetime="2016-06-11T14:02:08.000Z" itemprop="datePublished">2016-06-11</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">5.6k 字</div>
+      <div class="wordcount wordcount-time">大约需要 21 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：前面我们介绍了Redis的string的数据结构的原理和操作。当时我们提到Redis的键值对不仅仅是字符串。而这次我们就要介绍Redis的第二个数据结构了，List（链表）。由于List在原理上的实现并不是特别的复杂，我们在这里将原理和具体的命令都放在一起介绍。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/06/11/redis-list/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-redis-string-practice" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/05/01/redis-string-practice/">二、Redis基本操作——String(实战篇)</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/05/01/redis-string-practice/" class="article-date">
+  <time datetime="2016-05-01T14:30:00.000Z" itemprop="datePublished">2016-05-01</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">5.5k 字</div>
+      <div class="wordcount wordcount-time">大约需要 22 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：上一周因为实验室要用GIT作为版本控制器，导致小喵花了一周的时间研究GIT，Redis这边，就没来得及继续研究。前几天看到有人搜索Redis怎么向数组里面添加内容，搜到了我的上一篇文章，可惜上一篇只讲到了String的原理，所以小喵痛定思痛，决定还是爬起来写这篇博客，免得搜索String操作的小伙伴又空手而归。</p>
+</blockquote>
+      
+      <a class="article-more-link" href="/2016/05/01/redis-string-practice/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+    <article id="post-redis-string-principles" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h2 itemprop="name">
+  <a class="article-title" href="/2016/04/25/redis-string-principles/">一、Redis基本操作——String(原理篇)</a>
+</h2>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2016/04/25/redis-string-principles/" class="article-date">
+  <time datetime="2016-04-25T23:37:09.000Z" itemprop="datePublished">2016-04-25</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/C/">C++</a> / <a class="article-category-link" href="/categories/Redis/">Redis</a>
+</div>
+
+      <div class="wordcount wordcount-num">3k 字</div>
+      <div class="wordcount wordcount-time">大约需要 10 分钟</div>
+    </div>
+    
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <blockquote>
+<p>小喵的唠叨话：最近京东图书大减价，小喵手痒了就买了本《Redis设计与实现》[<a target="_blank" rel="noopener" href="http://redisbook.com/">1</a>]来看看。这里权当小喵看书的笔记啦。这一系列的模式，主要是先介绍Redis的实现原理（可能很大一部分会直接照搬原作者的描述），加上小喵自己的想法，之后配合Redis官网上的各种相关的操作命令（原书上貌似没有很多的介绍命令）。</p>
+</blockquote>
+<p>本章介绍Redis中最常用到的字符串(String)。</p>
+      
+      <a class="article-more-link" href="/2016/04/25/redis-string-principles/">
+        Read More...
+      </a>
+      
+      
+    </div>
+    <footer class="article-footer">
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+
+  
+
+</article>
+    
+  </article>
+  
+
+  
+  <nav class="page-nav">
+    <a class="extend prev" rel="prev" href="/page/4/">上一页</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/6/">下一页</a>
+  </nav>
+  
+</section>
+</div>
+
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>

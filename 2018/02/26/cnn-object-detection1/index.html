@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>
+    CNN的目标检测概述（一） |
+    
+    喵耳朵</title>
+  
+  <link rel="shortcut icon" href="/favicon.png">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<script src="/js/pace.min.js"></script>
+
+  <link href="https://cdn.bootcdn.net/ajax/libs/firacode/5.2.0/fira_code.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet">
+<meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="喵耳朵" type="application/atom+xml">
+</head>
+
+<body>
+  <main class="content">
+    <section class="outer">
+  <article id="post-cnn-object-detection1" class="article article-type-post" itemscope
+  itemprop="blogPost" data-scroll-reveal>
+
+  <div class="article-inner">
+    
+    <header class="article-header">
+      
+
+<h1 class="article-title" itemprop="name">
+  CNN的目标检测概述（一）
+</h1>
+
+
+
+    </header>
+    
+
+    
+    <div class="article-meta">
+      <a href="/2018/02/26/cnn-object-detection1/" class="article-date">
+  <time datetime="2018-02-26T23:48:18.000Z" itemprop="datePublished">2018-02-26</time>
+</a>
+      
+<div class="article-category">
+  <a class="article-category-link" href="/categories/Deep-Learning/">Deep Learning</a>
+</div>
+
+      <div class="wordcount wordcount-num">1.1k 字</div>
+      <div class="wordcount wordcount-time">大约需要 3 分钟</div>
+    </div>
+    
+
+    
+    
+<div class="tocbot"></div>
+
+    
+
+    <div class="article-entry" itemprop="articleBody">
+      
+      
+      
+      <p>在2012年的ImageNet中，AlexNet拔得头筹。之后，CNN成为了图像识别中的一大利器。</p>
+<p>在目标检测中引入CNN，开山之作就是2013年的 Rich feature hierarchies for accurate object detection and semantic segmentation，之后简称R-CNN。</p>
+<span id="more"></span>
+<h2 id="一r-cnn">一、R-CNN</h2>
+<h3 id="算法原理">1）算法原理</h3>
+<p>R-CNN中，将目标检测分成两步来实现：</p>
+<ol type="1">
+<li>首先是生成Region proposals，也就是候选框。有许多的基于图像的低维特征生成候选框的算法，例如selective search等。</li>
+<li>训练一个分类和回归的网络。这个网络可以根据候选框的区域的图片，判断这个图片的类别，以及它应该回归到的位置。</li>
+</ol>
+<h3 id="检测过程">2）检测过程</h3>
+<p>这样，在具体的一张图片的目标检测的时候，我们可以通过下面的过程来得到结果：</p>
+<p><img src="RCNN-Framework.jpg" alt="RCNN-Framework" /></p>
+<ol type="1">
+<li>对于给定一张图片，通过算法得到大量的候选框(2k个左右)。</li>
+<li>将候选框的图片裁剪出，然后输入到CNN网络中。</li>
+<li>网络的输出为分类的结果和回归的结果。然后我们就知道这个区域是不是目标，如果是，计算出它的回归的位置。</li>
+<li>得到大量的有类别的框，通过NMS算法，得到最终的目标的框。</li>
+</ol>
+<h3 id="网络训练">3）网络训练</h3>
+<p>对于目标检测这个任务，我们现有的标注数据其实并不多。所以通常都是使用ImageNet等大的公开的数据进行预训练，或者直接使用预训练好的模型在finetune。</p>
+<h4 id="预训练supervised-pre-training">1. 预训练（Supervised pre-training）</h4>
+<p>这里使用ILSVRC 2012（也就是ImageNet的训练数据集）进行分类任务的CNN网络的预训练。</p>
+<p>在我们自己复现论文的时候，可以选择现有的开源模型。在各种框架的Model Zoo中可以方便的下载各种网络的模型。常见的有AlexNet，VGGNet，GoogleNet，ResNet等的模型。据师弟的实验，VGGNet在目标检测中使用的频率最高，效果也最好。</p>
+<h4 id="微调domain-specific-fine-tuning">2. 微调（Domain-specific fine-tuning）</h4>
+<p>之前的模型是用于分类的模型，因此对于VOC中的目标检测并不完全的切合。这里需要再使用VOC的数据进行fine-tuning。</p>
+<p>VOC中需要检测的目标共有20种，因此我们的分类任务需要的类别数为21类，其中包含一个背景类。</p>
+<p>训练数据使用VOC的数据，首先用Selective search等方法得到候选框，截取候选框的图片。根据候选框和Groundtruth直接的IOU（交比并，通常认为大于0.5就是目标）判断这个候选框是不是目标，如果是目标，再计算出应该的回归值。这里选择的IOU的阈值为0.3。</p>
+<h4 id="目标分类器object-category-classifiers">3. 目标分类器（Object category classifiers）</h4>
+<p>对每个类别的特征训练SVM。由于训练数据过大，这里使用了难负样本最小化策略。最终的分类按照SVM的输出打分而不是上面的网络的21分类的输出。</p>
+<p>通常，我们可以使用CNN的输出表示类别的得分，但有时候为了得到更好地结果，会将最后一个隐含层的输出作为特征，然后给每个类别再训练一个SVM模型。</p>
+<h4 id="bounding-box回归">4. Bounding Box回归</h4>
+<p>这里使用了每个proposal的最后的卷积的输出（pool5）作为特征，训练了线性回归模型，用来预测新的窗口的位置。</p>
+<h3 id="个人理解">4）个人理解</h3>
+<p>R-CNN作为目标检测的开山之作，提出了一套目标检测的框架，是两段式的目标检测的代表。相比于传统的目标检测算法，他并不依赖手工设计的特征算子，而是通过CNN这一工具完成特征提取和分类回归的任务。</p>
+<p>当然，R-CNN的缺点也很明显。首先是，速度慢。由于一张图片可以提取大量的候选框（~2K），每个候选框都要通过网络进行前馈，这样造成大量的计算量。其次是训练的过程需要人工的处理数据，相比于之后的目标检测的方法，并不是十分的方便。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      
+        <div>
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>
+        作者: 
+      </strong>
+      Zhao Yu</a>
+    </li>
+    <li class="post-copyright-link">
+      <strong>
+        文章链接: 
+      </strong>
+      <a href="/2018/02/26/cnn-object-detection1/" target="_blank" title="CNN的目标检测概述（一）">
+        https://www.miaoerduo.com/2018/02/26/cnn-object-detection1/
+      </a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>
+        版权声明: 
+      </strong>
+      本网站所有文章除特别声明外,均采用 <a rel="license"
+          href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-Hans" target="_blank"
+          title="Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-SA 4.0)">CC BY-SA 4.0</a>
+        许可协议。转载请注明出处!
+    </li>
+  </ul>
+<div>
+      
+      
+      
+    </footer>
+
+  </div>
+
+  
+  
+<nav class="article-nav">
+  
+  <a href="/2018/03/01/cnn-object-detection2/" class="article-nav-link">
+    <strong class="article-nav-caption">前一篇</strong>
+    <div class="article-nav-title">
+      
+      CNN的目标检测概述（二）
+      
+    </div>
+  </a>
+  
+  
+  <a href="/2018/02/12/my-wordpress-plugins/" class="article-nav-link">
+    <strong class="article-nav-caption">后一篇</strong>
+    <div class="article-nav-title">本站的WordPress插件一览</div>
+  </a>
+  
+</nav>
+
+  
+
+  
+  
+<div class="vcomments" id="vcomments"></div>
+
+<script src="https://unpkg.com/valine/dist/Valine.min.js"></script>
+
+<script>
+  new Valine({
+    el: '#vcomments',
+    appId: 'mABH5OG3C2B5Ix9WzfF7vjiE-gzGzoHsz',
+    appKey: 'EObjAwnwQdyltsmlS48XLJ19',
+    notify: 'true',
+    verify: 'true',
+    avatar: 'mp',
+    pageSize: '10',
+    placeholder: '请输入...'
+  })
+</script>
+
+  
+  
+
+</article>
+  
+    
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+    });
+    MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2.7.8/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+</section>
+    <footer class="footer">
+  <div class="outer">
+    <ul class="list-inline">
+      <li>喵耳朵 &copy; 2025</li>
+      
+        <li><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/" class="beian">京ICP备16004318号-1</a></li>
+      
+    </ul>
+  </div>
+</footer>
+  </main>
+  <aside class="sidebar">
+    <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/MED-logo-black.png" alt="喵耳朵"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">首页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Architecture">架构</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories/Illustration">插画</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/about">关于</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link nav-item-search" title="搜索">
+        <i class="fe fe-search"></i>
+        搜索
+      </a>
+    </li>
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      <div class="totop" id="totop">
+  <i class="fe fe-rocket"></i>
+</div>
+    </li>
+    <li class="nav-item">
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="fe fe-feed"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+  </aside>
+  
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/jquery.justifiedGallery.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+
+
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  // Tocbot_v4.7.0  http://tscanlin.github.io/tocbot/
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto',
+  });
+</script>
+
+
+
+<script src="/js/ocean.js"></script>
+
+</body>
+
+</html>
